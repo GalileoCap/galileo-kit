@@ -96,8 +96,8 @@ def main() -> None:
             {
                 "systemMessage": (
                     "This Bash call is a Python heredoc doing a single file edit "
-                    "(read + one replace + write). Measured on this project's own "
-                    "history, a single Edit tool call for this same change is "
+                    "(read + one replace + write). Measured on past sessions, "
+                    "a single Edit tool call for this same change is "
                     "~35% cheaper in tokens, and — unlike Bash — it runs the "
                     "project's post-edit hooks (formatters, linters)."
                 )

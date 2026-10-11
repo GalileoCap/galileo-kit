@@ -30,7 +30,7 @@ claude plugin marketplace add ~/devel/galileo/misc/claude-kit
 claude plugin install session-kit@galileo-kit
 ```
 
-Both default to user scope, so every project gets it. A marketplace added by a local path loads in place: an edit takes effect at the next session start or `/reload-plugins`.
+Both default to user scope, so every project gets it. The install copies the plugin into `~/.claude/plugins/cache`, so a change reaches a machine only after a version bump in `plugin.json` and `claude plugin update session-kit@galileo-kit`, then the next session start or `/reload-plugins`.
 
 A project that depends on the kit declares it in `.claude/settings.json` with a git URL, since a local path does not resolve on another machine:
 
