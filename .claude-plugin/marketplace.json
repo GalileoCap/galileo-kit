@@ -1,0 +1,12 @@
+{
+  "name": "galileo-kit",
+  "description": "Galileo's hooks and skills for every project.",
+  "owner": { "name": "Galileo Cappella" },
+  "plugins": [
+    {
+      "name": "session-kit",
+      "source": "./plugins/session-kit",
+      "description": "Context-pressure hooks, git and test-run guards, a direnv environment and a handoff skill."
+    }
+  ]
+}

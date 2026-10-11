@@ -1,0 +1,6 @@
+{
+  "name": "session-kit",
+  "version": "0.1.0",
+  "description": "Hooks and a handoff skill that every project can use: context-pressure warnings, git and test-run guards, a direnv environment, and CLAUDE.local.md handoffs.",
+  "author": { "name": "Galileo Cappella" }
+}
