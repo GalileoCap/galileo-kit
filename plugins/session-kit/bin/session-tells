@@ -1,0 +1,5 @@
+#!/bin/sh
+# The plugin's prose tells engine. Claude Code puts bin/ on the Bash tool's
+# PATH while the plugin is enabled. Its environment is the tells hook's.
+. "$(dirname "$0")/../lib/uv_package.sh"
+run_package tells venv session-tells "$@"

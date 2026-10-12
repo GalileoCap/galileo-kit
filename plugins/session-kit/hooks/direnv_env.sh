@@ -46,4 +46,9 @@ case "$exports" in
 esac
 
 printf '%s\n' "$exports" >>"$CLAUDE_ENV_FILE"
+# direnv's PATH replaces the whole PATH, so the plugin's own commands go back
+# on its end, behind the project's tools.
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+    printf 'export PATH="$PATH":%q\n' "$CLAUDE_PLUGIN_ROOT/bin" >>"$CLAUDE_ENV_FILE"
+fi
 exit 0

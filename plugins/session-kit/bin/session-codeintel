@@ -1,0 +1,6 @@
+#!/bin/sh
+# The plugin's code-intelligence tools. Claude Code puts bin/ on the Bash
+# tool's PATH while the plugin is enabled. Its environment is the
+# pyright_env hook's.
+. "$(dirname "$0")/../lib/uv_package.sh"
+run_package codeintel venv-codeintel session-codeintel "$@"

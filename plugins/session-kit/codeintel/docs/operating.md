@@ -56,7 +56,11 @@ direnv allow .          # once per project checkout: direnv's own trust model
 ```
 
 The script links both names in `~/.local/bin` (or `$CODEINTEL_BIN`) to the
-shim, so a pull of the checkout updates them. A name already holding a copy
+shim, so a pull of the checkout updates them. Claude Code's clone of the
+marketplace, `~/.claude/plugins/marketplaces/galileo-kit/`, is such a
+checkout, and `claude plugin marketplace update` pulls it. The plugin's
+cache is not: each version gets a directory of its own, and an update
+leaves links into the old one dangling. A name already holding a copy
 of the shim is replaced by the link; a name holding anything else is left
 alone and named, with exit 2.
 

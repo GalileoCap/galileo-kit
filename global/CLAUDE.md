@@ -2,6 +2,8 @@
 
 These come from the `session-kit` repository (`global/CLAUDE.md`). A project's own `CLAUDE.md` adds to them and wins where it says otherwise. The rules marked **(refused)** are enforced by the plugin's guard and no longer depend on being read. The reason behind each rule is in `RATIONALE.md` beside this file in that repository (the link at `~/.claude/CLAUDE.md`, or the `@` line that imports this file, names the directory), under the same heading: read it when a rule looks arbitrary or you are about to argue with one.
 
+The plugin's commands, `session-tells` and `session-codeintel`, are on the Bash tool's PATH while it is enabled. The language-server shims are put on PATH once per machine by `plugins/session-kit/codeintel/shims/install.sh`, run from the marketplace's clone at `~/.claude/plugins/marketplaces/galileo-kit/`: it links to the directory it runs from, and the plugin's own copy moves with every version.
+
 ## How to work
 
 - **Say what you are about to do, then do it.** Restate a multi-part ask and its deliverables before exploring. Ask clarifying questions up front rather than mid-flight. Otherwise work autonomously and record the assumptions you made, so they can be reviewed.
@@ -35,7 +37,7 @@ These come from the `session-kit` repository (`global/CLAUDE.md`). A project's o
 
 - **Quality gates are zero warnings.** A warning is a failure, and the bar is not lowered to pass it.
 - **Suppressions and type escapes need the owner's approval**: `noqa`, `type: ignore`, `pyright: ignore`, `@ts-ignore`, `@ts-expect-error`, `Any`, a cast out of `object` or `unknown`, a rule relaxed in config. Surface the trade-off, and the owner picks refactor, suppress or re-scope. Deleting one needs no approval.
-- **Test output goes to a file**, which is then searched. Never pipe it inline to `grep`, `head` or `tail` (**refused**), never stop at the first failure with `-x` (**refused**), and never wrap a Bash call in shell `timeout`, since the tool has its own (**refused**).
+- **Test output goes to a file**, which is then searched. Never pipe it inline to `grep`, `head` or `tail` (**refused**), never stop at the first failure with `-x` (**refused**), and never wrap a Bash call in shell `timeout`, since the tool has its own (**refused**). The plugin also keeps the last test run's whole output in `<tempdir>/claude-kit-last-test-<session id>.log` and names that file when a run fails.
 - **A slow test is a smell, and a danger until it is acknowledged.** Give every test a timeout of a few seconds. A test that needs more is a finding, kept only when the owner accepts it and its reason is written beside it (a marker, a tier of its own). A run that outgrows the tool's timeout is the same finding: raising the cap to fit it removes the signal.
 - **Tests are written blind, before the implementation.** Write a test before reading the code it exercises, or hand it to a sub-agent that has not seen that code. A test written with the code in view tends to agree with whatever the code does, bug included. The exception is a test that is necessarily shaped by the implementation, such as one asserting an internal helper's own behaviour, which is written with its code. A blind test may change once the implementation is real: say which and why.
 - **A defect fix lands with a regression test that failed before it.** A weak test's fix is the strengthened assertion.
