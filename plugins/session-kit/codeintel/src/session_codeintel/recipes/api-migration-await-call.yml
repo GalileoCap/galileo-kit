@@ -1,0 +1,64 @@
+# Template rule — an API migration that makes a call site async.
+#
+# NOT a check. Copy this file, retarget the pattern at the method whose
+# signature went async (`store.history` is the example), and rewrite with
+#
+#     ast-grep scan -U -r <your copy> <paths>
+#
+# `session-codeintel recipes path api-migration-await-call` prints where the
+# original lives once the package is installed.
+#
+# Written from a real conversion that made a store's methods async and needed
+# ~200 call sites awaited across two packages. That sweep was first attempted
+# with regex and produced two bug classes; both are why this file exists.
+#
+# ── Bug class 1: matching mid-chain ────────────────────────────────────────
+# A regex for `store\.history\(` also matches INSIDE `harness.store.history(`,
+# yielding the syntactically-broken `harness.await store.history(`. ast-grep
+# cannot do this: `$OBJ.store.history($$$A)` is a single AST node, so the
+# match either covers the whole attribute chain or does not fire.
+#
+# ── Bug class 2: await precedence ──────────────────────────────────────────
+# `await` binds looser than subscript and attribute access, so rewriting
+# `f(x)[-1]` to `await f(x)[-1]` awaits the SUBSCRIPT of a coroutine, not the
+# call. ast-grep reproduces this if you only write the rule below. Fix it by
+# running a parenthesising rule FIRST, for each postfix form:
+#
+#     # pass 1 — subscripted
+#     ast-grep run -U -l py \
+#       -p '$OBJ.store.history($$$A)[$I]' \
+#       -r '(await $OBJ.store.history($$$A))[$I]'
+#     # pass 2 — attribute access
+#     ast-grep run -U -l py \
+#       -p '$OBJ.store.history($$$A).$F' \
+#       -r '(await $OBJ.store.history($$$A)).$F'
+#     # pass 3 — this rule, for whatever is left
+#     ast-grep scan -U -r <your copy> <paths>
+#
+# ── Why the `not: inside await` guard is load-bearing ──────────────────────
+# Without it, pass 3 re-matches the calls passes 1 and 2 already awaited and
+# emits `await await …`. With it the rule is idempotent: safe to re-run, and
+# safe on a tree that is half-converted — which is the normal state during a
+# migration driven by typechecker errors.
+#
+# ── The other half of the job ─────────────────────────────────────────────
+# ast-grep finds SHAPES, not call graphs. It cannot tell you which sites need
+# converting. For that, let the typechecker enumerate them — `basedpyright` or
+# `pyright`, per package, each under its own environment. Rewrite, re-run,
+# repeat until zero. A sync helper containing a new `await` must also become
+# `async def`, and its own callers awaited — the typechecker reports each wave.
+
+id: api-migration-await-call
+language: python
+severity: hint
+message: >-
+  Template: retarget this pattern to the method whose signature went async.
+  Read the header comment first — run the parenthesising passes BEFORE this
+  rule, or subscripted call sites will be silently mis-awaited.
+rule:
+  pattern: $OBJ.store.history($$$ARGS)
+  not:
+    inside:
+      kind: await
+      stopBy: end
+fix: 'await $OBJ.store.history($$$ARGS)'

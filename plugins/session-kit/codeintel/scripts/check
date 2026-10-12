@@ -1,0 +1,8 @@
+#!/bin/bash
+# The package's gate: ruff, the formatter's check and basedpyright, zero warnings.
+cd "$(dirname "$0")/.." || exit 1
+status=0
+uv run --quiet ruff check . || status=1
+uv run --quiet ruff format --check . || status=1
+uv run --quiet basedpyright --warnings || status=1
+exit $status

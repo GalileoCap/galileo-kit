@@ -1,0 +1,5 @@
+# One line per recipe, keyed by its file's stem: what it is for. The ast-grep
+# rule format has no field for this, and every <name>.yml beside this file
+# needs an entry here — `bundled()` refuses one that has none.
+
+api-migration-await-call = "Await every call site of a method that went async: whole attribute chains, idempotent on a half-converted tree"

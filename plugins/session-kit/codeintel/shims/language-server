@@ -1,0 +1,63 @@
+#!/bin/sh
+# A language server from the project's own toolchain, for an editor or
+# agent that starts servers from its own PATH (Claude Code's language
+# server plugins among them). Installed once per machine, under the
+# server's own name, into a directory on that PATH: ~/.local/bin/
+# pyright-langserver and ~/.local/bin/typescript-language-server are
+# both copies of this file.
+#
+# It runs the server through `direnv exec` over the project, so the
+# version is the one the project pins, and a project without one fails
+# here, loudly, instead of finding this file again.
+#
+# typescript-language-server is started with one option of ours: no
+# separate syntax server. By default it runs two tsservers, and the second
+# (`--serverMode partialSemantic`) only answers sooner while somebody
+# types, which an agent never does; measured at 90–110 MB each on a large
+# console. The option reaches the server only through `initialize`, and
+# the plugins send none, so a few lines of node add it to that one message
+# and pass everything else through untouched.
+name=$(basename "$0")
+if [ -n "${CODEINTEL_SHIM:-}" ]; then
+    echo "$name: the project's toolchain has no $name" >&2
+    exit 127
+fi
+export CODEINTEL_SHIM=1 DIRENV_LOG_FORMAT=
+project="${CLAUDE_PROJECT_DIR:-$PWD}"
+if [ "$name" != typescript-language-server ]; then
+    exec direnv exec "$project" "$name" "$@"
+fi
+exec direnv exec "$project" node --input-type=module -e '
+import { spawn } from "node:child_process";
+const server = spawn("typescript-language-server", process.argv.slice(1), { stdio: ["pipe", "inherit", "inherit"] });
+server.on("exit", (code, signal) => process.exit(code ?? (signal ? 1 : 0)));
+for (const s of ["SIGTERM", "SIGINT", "SIGHUP"]) process.on(s, () => server.kill(s));
+let pending = Buffer.alloc(0);
+let passing = false;
+process.stdin.on("end", () => server.stdin.end());
+process.stdin.on("data", (chunk) => {
+  if (passing) return void server.stdin.write(chunk);
+  pending = Buffer.concat([pending, chunk]);
+  for (;;) {
+    const end = pending.indexOf("\r\n\r\n");
+    if (end < 0) return;
+    const length = Number(/content-length:\s*(\d+)/i.exec(pending.subarray(0, end).toString())?.[1]);
+    if (pending.length < end + 4 + length) return;
+    let body = pending.subarray(end + 4, end + 4 + length);
+    const rest = pending.subarray(end + 4 + length);
+    const message = JSON.parse(body.toString());
+    if (message.method === "initialize") {
+      const options = (message.params.initializationOptions ??= {});
+      options.tsserver = { ...options.tsserver, useSyntaxServer: "never" };
+      body = Buffer.from(JSON.stringify(message));
+      passing = true;
+    }
+    server.stdin.write(Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`), body]));
+    pending = rest;
+    if (passing) {
+      if (rest.length) server.stdin.write(rest);
+      return;
+    }
+  }
+});
+' -- "$@"

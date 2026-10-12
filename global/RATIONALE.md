@@ -16,6 +16,8 @@
 
 **When a signature changes, the typechecker finds the callers.** A text search for a name misses aliases, re-exports and calls through a variable, and finds comments and strings. A language server can be wrong in the quiet way: one started at the root of a repository of several packages found 2 of 50 call sites until it was configured per package, and said nothing about the other 48. The typechecker reads the program the runtime will run, and its error list after the change is complete for everything the types can see.
 
+**A mechanical sweep goes through a parser.** A regex matches characters, so it also matches inside a longer expression, in comments and in strings, and misses a call split over two lines. In the first project about 200 call sites had to be awaited when a store's methods went async. The regex sweep matched `store.history(` inside `harness.store.history(` and wrote `harness.await store.history(`, and it awaited `f(x)[-1]` as a whole, which awaits the subscript of a coroutine. A parser sees the whole attribute chain as one node, and a tested rule carries the extra pass the precedence case needs.
+
 **Surface unrelated failures immediately.** A failure fixed silently loses its cause and whoever owns it. One called flaky stays in the suite and teaches everyone to rerun until green. A deterministic suite has no flaky tests until one is shown to be, and that showing is the finding.
 
 **A fix that has not worked after two tries stops and shows evidence.** A third attempt made blind usually repeats the first two with variations. Evidence lets somebody with other context decide, and it costs less of their time than the loop costs. A mismatch papered over in the consuming layer leaves the producing layer wrong for every other consumer.

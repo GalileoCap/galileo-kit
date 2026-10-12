@@ -1,0 +1,4 @@
+#!/bin/bash
+# The package's tests, from the package directory. Extra arguments go to pytest.
+cd "$(dirname "$0")/.." || exit 1
+exec uv run --quiet pytest -p no:cacheprovider "$@"

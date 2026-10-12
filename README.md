@@ -88,6 +88,16 @@ claude plugin validate . && claude plugin validate plugins/session-kit --strict
 
 The guard's cases live in a file because the guard matches the text of a command: a shell harness whose own arguments carry the patterns is denied by the rules it checks.
 
+## Code intelligence
+
+`plugins/session-kit/codeintel/` is a Python package, `session-codeintel`: pinned `ast-grep` and `import-linter`, tested rewrite recipes, `pyright-env` (a root `pyrightconfig.json` that lets a language server see every package of a multi-package repository), and a shim that starts a project's own language server through direnv. A project runs it from git at a pinned commit through a small wrapper; [its README](plugins/session-kit/codeintel/docs/README.md) has the wrapper and the rest.
+
+```bash
+plugins/session-kit/codeintel/shims/install.sh    # the shim, linked into ~/.local/bin under both servers' names
+plugins/session-kit/codeintel/scripts/check       # its gate
+plugins/session-kit/codeintel/scripts/test        # its tests
+```
+
 ## Global instructions
 
 A plugin cannot ship a `CLAUDE.md`, so the rules that belong in every project live in `global/CLAUDE.md` and are linked into `~/.claude/CLAUDE.md` by a script:
