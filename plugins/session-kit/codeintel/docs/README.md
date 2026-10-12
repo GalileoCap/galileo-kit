@@ -105,6 +105,9 @@ scripts/codeintel session-codeintel pyright-env .
 pyrightconfig.json: 2 package(s)
 ```
 
+With the `session-kit` plugin installed, `"pyright_env": true` in the project's
+`.claude/claude-kit.json` runs this at every session start.
+
 Add `/pyrightconfig.json` to `.gitignore`. The file names each venv's
 `site-packages`, whose path carries the interpreter's minor version, so
 it is right on one machine only. Then move each package's checker

@@ -90,6 +90,15 @@
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/direnv_env.sh\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/pyright_env.py\"",
+            "timeout": 150
+          }
+        ]
       }
     ],
     "CwdChanged": [

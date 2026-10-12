@@ -14,6 +14,7 @@ Hooks and a skill for Claude Code that every project can use. It is a plugin mar
 | `format.py` | PostToolUse (Edit, Write, Bash) | Formats the files an edit wrote with the project's own tools, chosen by its config: ruff (`uv run ruff` beside a `uv.lock`), oxlint and biome (from `node_modules/.bin`). Passes on the lint the fix could not clear. |
 | `test_log.py` | PostToolUse, PostToolUseFailure (Bash) | Keeps the last test run's whole output in `<tempdir>/claude-kit-last-test-<session>.log`, and on a failure says where it is. |
 | `direnv_env.sh` | SessionStart, CwdChanged, FileChanged | Puts the project's direnv environment in front of every Bash command. A project with no `.envrc` is left alone. |
+| `pyright_env.py` | SessionStart | For a project whose `.claude/claude-kit.json` sets `"pyright_env": true`, writes the root `pyrightconfig.json` with `session-codeintel pyright-env`, one execution environment per uv package, and names any package it left out. Off by default, because it would replace a root config kept by hand. |
 | `handoff` skill | `/session-kit:handoff` | Writes `CLAUDE.local.md`, the working state a session reads first after a compaction. |
 
 ## Configuration
@@ -26,6 +27,7 @@ Hooks and a skill for Claude Code that every project can use. It is a plugin mar
   { "test_commands": ["scripts/test", "scripts/check"] }
   ```
 
+- `"pyright_env": true` in the same file turns on the root `pyrightconfig.json` for a repository of several uv packages, each an immediate subdirectory with its own `.venv`.
 - The prose tells read Markdown everywhere. The same file's `tells` key turns on the rest, every key optional (the full shape is in `tells/src/session_tells/config.py`):
 
   ```json
