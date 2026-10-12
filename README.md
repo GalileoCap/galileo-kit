@@ -26,18 +26,18 @@ Hooks and a skill for Claude Code that every project can use. It is a plugin mar
 ## Install
 
 ```bash
-claude plugin marketplace add ~/devel/galileo/misc/claude-kit
+claude plugin marketplace add https://github.com/GalileoCap/session-kit.git
 claude plugin install session-kit@galileo-kit
 ```
 
 Both default to user scope, so every project gets it. The install copies the plugin into `~/.claude/plugins/cache`, so a change reaches a machine only after a version bump in `plugin.json` and `claude plugin update session-kit@galileo-kit`, then the next session start or `/reload-plugins`.
 
-A project that depends on the kit declares it in `.claude/settings.json` with a git URL, since a local path does not resolve on another machine:
+A project that depends on the kit declares it in `.claude/settings.json`, so anyone opening it is asked to install it. The marketplace is added over HTTPS because Claude Code's own clone does not use SSH keys:
 
 ```json
 {
   "extraKnownMarketplaces": {
-    "galileo-kit": { "source": { "source": "git", "url": "<the repository's URL>" } }
+    "galileo-kit": { "source": { "source": "git", "url": "https://github.com/GalileoCap/session-kit.git" } }
   },
   "enabledPlugins": { "session-kit@galileo-kit": true }
 }
