@@ -111,6 +111,13 @@ def test_typescript_reads_what_it_can_of_a_broken_file() -> None:
 # Rust.
 
 
+def test_a_file_with_many_comments_is_read_whole() -> None:
+    """Every comment of a long file is read, on lines past the small integers Python caches."""
+    source = "".join(f"const a{n} = {n};\n// Note {n}.\n" for n in range(400))
+    units = typescript("long.ts", source)
+    assert [unit.pieces for unit in units] == [((2 * n + 2, f"Note {n}."),) for n in range(400)]
+
+
 def test_rust_keeps_comment_kinds_apart() -> None:
     """A ``///`` run and a ``//`` run on adjacent lines are two units, markers left out."""
     source = (

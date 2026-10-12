@@ -46,14 +46,13 @@ class _Comment:
 def comment_units(rel: str, source: bytes, root: Node, style: Style) -> list[Unit]:
     """Every unit of prose in the comments under ``root``, in file order."""
     lines = source.split(b"\n")
-    found = [
-        _Comment(
-            node.start_point.row,
-            not lines[node.start_point.row][: node.start_point.column].strip(),
-            (node.text or b"").decode("utf-8", "replace"),
-        )
-        for node in _walk(root, style.node_types)
-    ]
+    found: list[_Comment] = []
+    for node in _walk(root, style.node_types):
+        # Unpacked: on Python 3.14, reading ``Point.row`` by name corrupts the
+        # count of an integer above 256 and the process crashes later.
+        row, column = node.start_point
+        text = (node.text or b"").decode("utf-8", "replace")
+        found.append(_Comment(row, not lines[row][:column].strip(), text))
     units: list[Unit] = []
     run: list[tuple[int, str]] = []
     run_marker = ""
