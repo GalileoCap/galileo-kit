@@ -4,7 +4,10 @@
       {
         "matcher": "Bash|Artifact",
         "hooks": [
-          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.py\"" }
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.py\""
+          }
         ]
       },
       {
@@ -19,36 +22,83 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/doc_length.py\"" }
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/doc_length.py\""
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/format.py\""
+          },
+          {
+            "type": "command",
+            "command": "command -v uv >/dev/null 2>&1 || exit 0; UV_PROJECT_ENVIRONMENT=\"${CLAUDE_PLUGIN_DATA:-${CLAUDE_PLUGIN_ROOT}}/venv\" uv run --quiet --frozen --project \"${CLAUDE_PLUGIN_ROOT}/tells\" session-tells hook"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "json=$(cat); case \"$json\" in *'\"bashEditDiff\"'*) printf '%s' \"$json\" | python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/format.py\"; printf '%s' \"$json\" | { command -v uv >/dev/null 2>&1 || exit 0; UV_PROJECT_ENVIRONMENT=\"${CLAUDE_PLUGIN_DATA:-${CLAUDE_PLUGIN_ROOT}}/venv\" uv run --quiet --frozen --project \"${CLAUDE_PLUGIN_ROOT}/tells\" session-tells hook; } ;; esac"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/test_log.py\""
+          }
         ]
       },
       {
         "matcher": "*",
         "hooks": [
-          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context_pressure.py\"" }
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context_pressure.py\""
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/test_log.py\""
+          }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context_pressure.py\" stop" }
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context_pressure.py\" stop"
+          }
         ]
       }
     ],
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/direnv_env.sh\"" }
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/direnv_env.sh\""
+          }
         ]
       }
     ],
     "CwdChanged": [
       {
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/direnv_env.sh\"" }
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/direnv_env.sh\""
+          }
         ]
       }
     ],
@@ -56,7 +106,10 @@
       {
         "matcher": ".envrc|flake.nix|flake.lock",
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/direnv_env.sh\"" }
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/direnv_env.sh\""
+          }
         ]
       }
     ]

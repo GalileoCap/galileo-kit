@@ -10,6 +10,9 @@ Hooks and a skill for Claude Code that every project can use. It is a plugin mar
 | `guard.py` | PreToolUse (Bash, Artifact) | Refuses `git commit --no-verify`, `git push --force` (not `--force-with-lease`), `git rebase -i`, `git reset --hard`, a bare `git stash` or `stash pop`, `-x` on a test run, shell `timeout` around a Bash call, test output piped inline to `grep`/`head`/`tail`, amending a commit already on a remote, and publishing an Artifact. |
 | `nudge_single_edit.py` | PreToolUse (Bash) | A Python heredoc doing one read, one replace and one write is told to use the Edit tool. |
 | `doc_length.py` | PostToolUse (Edit, Write) | Says so when a `docs/*.md` file passes 1500 lines. |
+| `session-tells hook` | PostToolUse (Edit, Write, Bash) | Lists the banned prose tells on the lines an edit wrote, each with its fix, and counts the rest of the file's. Never blocks. Bash edits are read from the `bashEditDiff` Claude Code reports. |
+| `format.py` | PostToolUse (Edit, Write, Bash) | Formats the files an edit wrote with the project's own tools, chosen by its config: ruff (`uv run ruff` beside a `uv.lock`), oxlint and biome (from `node_modules/.bin`). Passes on the lint the fix could not clear. |
+| `test_log.py` | PostToolUse, PostToolUseFailure (Bash) | Keeps the last test run's whole output in `<tempdir>/claude-kit-last-test-<session>.log`, and on a failure says where it is. |
 | `direnv_env.sh` | SessionStart, CwdChanged, FileChanged | Puts the project's direnv environment in front of every Bash command. A project with no `.envrc` is left alone. |
 | `handoff` skill | `/session-kit:handoff` | Writes `CLAUDE.local.md`, the working state a session reads first after a compaction. |
 
@@ -17,11 +20,38 @@ Hooks and a skill for Claude Code that every project can use. It is a plugin mar
 
 - `CLAUDE_KIT_CTX_WINDOW` (default 1000000), `CLAUDE_KIT_CTX_THRESHOLD` (0.50) and `CLAUDE_KIT_CTX_STEP` (25000) tune the context warnings. No API reports the window, so a session on a smaller one sets it.
 - `CLAUDE_KIT_DOC_LINES` (1500) sets the doc-length warning.
-- A project names its own test runners in `.claude/claude-kit.json`, so the `-x` and piped-output rules cover them:
+- A project names its own test runners in `.claude/claude-kit.json`, so the `-x` and piped-output rules and the test log cover them:
 
   ```json
   { "test_commands": ["scripts/test", "scripts/check"] }
   ```
+
+- The prose tells read Markdown everywhere. The same file's `tells` key turns on the rest, every key optional (the full shape is in `tells/src/session_tells/config.py`):
+
+  ```json
+  {
+    "tells": {
+      "readers": ["python", "typescript", "rust"],
+      "guide": ["docs/guide/"],
+      "languages": {"es-419": "es", "pt-BR": "pt"},
+      "history_codes": "\\bJIRA-\\d+\\b",
+      "commands": [{"under": "web/", "run": ["node", "scripts/prose.ts"], "suffixes": [".ts"]}]
+    }
+  }
+  ```
+
+  `guide` names the pages a product's users read, which the guide's own rules hold. `languages` maps a directory name to the language of the files under it (English otherwise; Spanish and Portuguese have their own rules). `history_codes` adds a project's own codes to the rule that treats an issue number in a comment as history. `commands` hands files to a reader of the project's own, which prints `{"units": [{"path", "text", "pieces"}]}`.
+
+## The prose tells
+
+`plugins/session-kit/tells/` is a Python package, `session-tells`: one rule per habit of machine-written prose (the em dash, `X, not Y`, negative parallelism, inflated vocabulary, intensifiers, signposting, history in comments and the rest), each with text it must fire on and a near miss it must leave alone. *Banned* rules are reported; *rationed* ones (`rather than`, semicolons, bold lead-ins) are fine once and a habit in bulk, so `show` lists them and the hook does not. A line carrying `tells: allow <rule>` allows that rule there.
+
+```bash
+uv run --project plugins/session-kit/tells session-tells show docs/a.md src/b.py   # every tell, with its fix
+uv run --project plugins/session-kit/tells session-tells check docs/a.md           # the banned ones; exits 1 on any
+```
+
+The hook runs it with `uv` (silent without it), its environment kept in `CLAUDE_PLUGIN_DATA`. TypeScript and Rust are read through tree-sitter, so no Node or Rust toolchain is needed.
 
 ## Install
 
@@ -49,6 +79,10 @@ A project that depends on the kit declares it in `.claude/settings.json`, so any
 python3 plugins/session-kit/hooks/test_guard.py
 python3 plugins/session-kit/hooks/test_context_pressure.py
 bash global/test_install.sh
+python3 plugins/session-kit/hooks/test_format.py
+python3 plugins/session-kit/hooks/test_test_log.py
+plugins/session-kit/tells/scripts/check     # ruff ALL, basedpyright strict, zero warnings
+plugins/session-kit/tells/scripts/test
 claude plugin validate . && claude plugin validate plugins/session-kit --strict
 ```
 

@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "session-tells"
+version = "0.1.0"
+description = "The tells of machine-written prose, found in Markdown, Python, TypeScript and Rust"
+requires-python = ">=3.12"
+dependencies = [
+    "markdown-it-py>=4",
+    "tree-sitter>=0.25",
+    "tree-sitter-rust>=0.24",
+    "tree-sitter-typescript>=0.23.2",
+]
+
+[project.scripts]
+session-tells = "session_tells.cli:main"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.32.2",
+    "pytest>=9.0.1",
+    "pytest-timeout>=2.4.0",
+    "ruff>=0.15.7",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/session_tells"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 10
+addopts = "--strict-markers --strict-config"
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["ALL"]
+# The owner's bar, as abstract-template writes it for their other projects.
+ignore = [
+    "D203",    # one-blank-line-before-class: D211 is kept, and ruff warns on the pair
+    "D213",    # multi-line-summary-second-line: D212 is kept, likewise
+    "COM812",  # missing-trailing-comma: conflicts with the formatter
+    "CPY001",  # per-file copyright headers: licensing lives in LICENSE
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 8
+
+[tool.ruff.lint.pylint]
+max-statements = 35
+max-branches = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",    # assert: the point of a test
+    "PLR2004", # magic value in comparison: the expected value is the assertion
+]
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+include = ["src", "tests"]
