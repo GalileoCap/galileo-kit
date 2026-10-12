@@ -67,6 +67,18 @@ def test_a_file_may_be_given_absolute_inside_the_root(
     assert "docs/a.md:1" in capsys.readouterr().out
 
 
+def test_a_file_outside_the_root_is_refused_by_name(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A file outside the root exits 2 and names the file and ``--root``."""
+    _plant(tmp_path, "project/docs/a.md", "Plain.\n")
+    outside = _plant(tmp_path, "elsewhere/b.md", "Plain.\n")
+    assert main(["check", "--root", str(tmp_path / "project"), str(outside)]) == 2
+    error = capsys.readouterr().err
+    assert str(outside) in error
+    assert "--root" in error
+
+
 def test_the_root_defaults_to_the_current_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

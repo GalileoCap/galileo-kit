@@ -44,7 +44,11 @@ def main(argv: list[str] | None = None) -> int:
     rules = config.rules()
     if args.verb == "check":
         rules = tuple(rule for rule in rules if rule.kind == "banned")
-    files = [_relative(root, one) for one in args.files]
+    try:
+        files = [_relative(root, one) for one in args.files]
+    except ValueError as error:
+        sys.stderr.write(f"session-tells: {error}\n")
+        return 2
     try:
         units = readers.read(root, files, config)
     except readers.CommandError as error:
@@ -64,6 +68,9 @@ def main(argv: list[str] | None = None) -> int:
 
 def _relative(root: Path, given: str) -> str:
     path = Path(given)
-    if path.is_absolute():
-        return path.resolve().relative_to(root).as_posix()
-    return path.as_posix()
+    if not path.is_absolute():
+        return path.as_posix()
+    if not path.resolve().is_relative_to(root):
+        message = f"{given} is outside the root {root}; pass the project's directory as --root"
+        raise ValueError(message)
+    return path.resolve().relative_to(root).as_posix()
