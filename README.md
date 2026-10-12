@@ -98,3 +98,5 @@ global/install.sh --check  # say what the state is, change nothing
 ```
 
 It never replaces a file. If `~/.claude/CLAUDE.md` already exists, it is left alone and the script prints the line to add to it, `@<path>/global/CLAUDE.md`, which imports the kit's text. Because the install is a link, `git pull` in the kit's working copy updates the rules. The cases are in `global/test_install.sh`.
+
+`global/RATIONALE.md` holds the reason behind each rule, under the same headings. It is not linked or loaded: a session opens it when a rule looks arbitrary, and the rules work without it.
