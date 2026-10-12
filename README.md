@@ -48,11 +48,19 @@ A project that depends on the kit declares it in `.claude/settings.json`, so any
 ```bash
 python3 plugins/session-kit/hooks/test_guard.py
 python3 plugins/session-kit/hooks/test_context_pressure.py
+bash global/test_install.sh
 claude plugin validate . && claude plugin validate plugins/session-kit --strict
 ```
 
 The guard's cases live in a file because the guard matches the text of a command: a shell harness whose own arguments carry the patterns is denied by the rules it checks.
 
-## Not here yet
+## Global instructions
 
-Global instructions. A plugin cannot ship a `CLAUDE.md`, so the rules that belong in `~/.claude/CLAUDE.md` need another route (a script that links the file, or a SessionStart hook that adds the text as context).
+A plugin cannot ship a `CLAUDE.md`, so the rules that belong in every project live in `global/CLAUDE.md` and are linked into `~/.claude/CLAUDE.md` by a script:
+
+```bash
+global/install.sh          # link it (config dir: $CLAUDE_CONFIG_DIR, else ~/.claude)
+global/install.sh --check  # say what the state is, change nothing
+```
+
+It never replaces a file. If `~/.claude/CLAUDE.md` already exists, it is left alone and the script prints the line to add to it, `@<path>/global/CLAUDE.md`, which imports the kit's text. Because the install is a link, `git pull` in the kit's working copy updates the rules. The cases are in `global/test_install.sh`.
