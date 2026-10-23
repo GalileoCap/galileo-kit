@@ -217,6 +217,20 @@ def nested_package_runs_from_itself(base: Path) -> bool:
 case("ruff runs from the package directory that holds the config", nested_package_runs_from_itself)
 
 
+def excluded_file_stays_excluded(base: Path) -> bool:
+    """Ruff applies the project's ``exclude`` to a file named on its command line only with
+    ``--force-exclude``, and the hook always names the file, so a generated file the project
+    keeps out of ruff would be reformatted without it."""
+    root = base / "proj"
+    plant(root, {"pyproject.toml": RUFF_PYPROJECT, "uv.lock": "", "src/models.py": "x = 1\n"})
+    on_path(base / "bin", "uv", "ruff")
+    steps = fmt.steps_for(str(root / "src" / "models.py"))
+    return len(steps) == 2 and all("--force-exclude" in step.argv for step in steps)
+
+
+case("both ruff steps keep a file the project excludes excluded", excluded_file_stays_excluded)
+
+
 # TypeScript and JavaScript.
 
 

@@ -8,7 +8,8 @@ The tools are chosen by what the project has, never assumed:
   ``pyproject.toml``, or that ``pyproject.toml`` has a ``[tool.ruff`` table. Run
   as ``uv run ruff`` when that directory has a ``uv.lock`` and ``uv`` is on PATH,
   otherwise as ``ruff`` from PATH, otherwise not at all. ``ruff check --fix``,
-  then ``ruff format``, from that directory.
+  then ``ruff format``, from that directory, each with ``--force-exclude``: ruff
+  skips a file its config excludes only when told to, and the hook names the file.
 - TypeScript and JavaScript (``.ts``, ``.tsx``, ``.mts``, ``.cts``, ``.js``,
   ``.jsx``, ``.mjs``, ``.cjs``): oxlint when an ``.oxlintrc.json`` or
   ``oxlint.json`` is found, then biome when a ``biome.json`` or ``biome.jsonc``
@@ -108,7 +109,10 @@ def _ruff(path: str) -> list[Step]:
         runner = ("ruff",)
     else:
         return []
-    return [Step((*runner, "check", "--fix", path), home), Step((*runner, "format", path), home)]
+    return [
+        Step((*runner, "check", "--fix", "--force-exclude", path), home),
+        Step((*runner, "format", "--force-exclude", path), home),
+    ]
 
 
 def _node(path: str) -> list[Step]:
