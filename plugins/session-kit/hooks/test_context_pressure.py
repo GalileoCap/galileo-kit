@@ -53,7 +53,7 @@ def run(
             "transcript_path": transcript(Path(folder), tokens, reply),
             **extra,
         }
-        args = [sys.executable, HOOK] + (["stop"] if event == "Stop" else [])
+        args = [sys.executable, HOOK]
         env = {**os.environ, "TMPDIR": folder, "CLAUDE_PROJECT_DIR": "/somewhere/case"}
         return subprocess.run(
             args, input=json.dumps(payload), capture_output=True, text=True, env=env, timeout=30
@@ -78,26 +78,11 @@ def case(name: str, ok: bool) -> None:
     CASES.append((name, ok))
 
 
-# The end of a turn.
-case("a turn ending under half the window ends quietly", run("Stop", 400_000) == "")
-
-held = run("Stop", 600_000, "P107a is built except for the console.")
+# The end of a turn is never held. The warnings during it are the signal.
+WIRING = json.loads((Path(HOOK).parent / "hooks.json").read_text())["hooks"]
 case(
-    "a turn ending over half the window, silent about compacting, is held once",
-    field(held, "decision") == "block",
-)
-reason = field(held, "reason")
-case("the hold names the size", "600,000" in reason)
-case("the hold asks for CLAUDE.local.md", "CLAUDE.local.md" in reason)
-case("the hold asks for the line about compacting", "compact" in reason)
-
-case(
-    "a stop already held is let through",
-    run("Stop", 600_000, "Still silent.", stop_hook_active=True) == "",
-)
-case(
-    "a reply that already says whether to compact ends quietly",
-    run("Stop", 600_000, "Context at 600k tokens: safe to compact.") == "",
+    "no Stop hook runs the context check",
+    not any("context_pressure" in h["command"] for m in WIRING.get("Stop", []) for h in m["hooks"]),
 )
 
 # In the middle of a turn.

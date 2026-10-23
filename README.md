@@ -6,7 +6,7 @@ Hooks and a skill for Claude Code that every project can use. It is a plugin mar
 
 | Piece | Event | What it does |
 | --- | --- | --- |
-| `context_pressure.py` | PostToolUse, Stop | Warns every 25k tokens once the context passes half the window, firmer past 65% and 80%. A turn that ends over half the window without saying whether it is safe to compact is held once and asked for `CLAUDE.local.md` and that line. |
+| `context_pressure.py` | PostToolUse | Warns every 25k tokens once the context passes half the window, firmer past 65% and 80%. It never holds a tool call or the end of a turn. |
 | `guard.py` | PreToolUse (Bash, Artifact) | Refuses `git commit --no-verify`, `git push --force` (not `--force-with-lease`), `git rebase -i`, `git reset --hard`, a bare `git stash` or `stash pop`, `-x` on a test run, shell `timeout` around a Bash call, test output piped inline to `grep`/`head`/`tail`, amending a commit already on a remote, and publishing an Artifact. |
 | `nudge_single_edit.py` | PreToolUse (Bash) | A Python heredoc doing one read, one replace and one write is told to use the Edit tool. |
 | `doc_length.py` | PostToolUse (Edit, Write) | Says so when a `docs/*.md` file passes 1500 lines. |

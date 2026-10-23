@@ -16,23 +16,18 @@ cache_creation_input_tokens` is exactly what was sent. Nothing in the
 hook payload, the environment or the transcript exposes the context
 *limit*, so the denominator below is a constant that a model change edits.
 
-Two events. After a tool call (PostToolUse) it warns, every STEP tokens
-past the threshold. At the end of a turn (Stop, run with the argument
-``stop``) it holds the stop once when the reply says nothing about
-compacting, and asks for CLAUDE.local.md and one closing line. The warning
-alone arrives in the middle of a turn, and a session deep in a long task
-carried on past it and ended without telling the owner. The reader sees the
-closing line, so the end of the turn is where it has to be made sure of.
+When. After every tool call (PostToolUse), every STEP tokens past the
+threshold. The end of a turn is left alone: the warnings reach the session
+while it can still choose where to stop, and a held stop costs every long
+turn a closing paragraph.
 
-What it does not do. It never blocks a tool call, and it holds a stop at
-most once: a stop already held (``stop_hook_active``) goes through.
-Anything unexpected exits silently. A monitor that breaks the session it
+What it does not do. It never blocks a tool call or a stop. Anything
+unexpected exits silently. A monitor that breaks the session it
 is monitoring is worse than no monitor.
 """
 
 import json
 import os
-import re
 import sys
 import tempfile
 
@@ -49,9 +44,6 @@ STEP = int(os.environ.get("CLAUDE_KIT_CTX_STEP", "25000"))
 TAIL_BYTES = 256 * 1024
 
 
-# A reply that already speaks of compacting has said what the hold would ask.
-SPOKEN = re.compile(r"\bcompact", re.IGNORECASE)
-
 
 def tail(path: str) -> list[str]:
     """The transcript's last lines, as many as TAIL_BYTES holds."""
@@ -64,26 +56,6 @@ def tail(path: str) -> list[str]:
             return fh.read().decode("utf-8", "replace").splitlines()
     except OSError:
         return []
-
-
-def last_reply(lines: list[str]) -> str:
-    """The text of the most recent assistant message that has any."""
-    for line in reversed(lines):
-        try:
-            entry = json.loads(line)
-            if entry.get("type") != "assistant":
-                continue
-            blocks = entry["message"]["content"]
-        except (ValueError, KeyError, TypeError, AttributeError):
-            continue
-        if isinstance(blocks, str):
-            return blocks
-        text = " ".join(
-            b.get("text", "") for b in blocks if isinstance(b, dict) and b.get("type") == "text"
-        )
-        if text:
-            return text
-    return ""
 
 
 def last_context_size(path: str) -> int | None:
@@ -145,35 +117,12 @@ def advice(pct: float) -> str:
     )
 
 
-def hold(payload: dict[str, object]) -> None:
-    """At the end of a turn over the threshold, hold the stop once for the line."""
-    if payload.get("stop_hook_active"):
-        return
-    transcript = payload.get("transcript_path")
-    if not isinstance(transcript, str) or not transcript:
-        return
-    tokens = last_context_size(transcript)
-    if tokens is None or tokens < int(WINDOW * THRESHOLD):
-        return
-    if SPOKEN.search(last_reply(tail(transcript))):
-        return
-    reason = (
-        f"Context at {tokens:,} tokens ({tokens / WINDOW:.0%} of {WINDOW:,}). Before "
-        "ending this turn, write CLAUDE.local.md, then end your reply with one line "
-        "for the user: that it is safe to compact now, or what is not safe yet and why."
-    )
-    json.dump({"decision": "block", "reason": reason}, sys.stdout)
-
-
 def main() -> None:
     try:
         payload = json.load(sys.stdin)
     except ValueError:
         return
     if not isinstance(payload, dict):
-        return
-    if sys.argv[1:] == ["stop"]:
-        hold(payload)
         return
 
     transcript = payload.get("transcript_path")
