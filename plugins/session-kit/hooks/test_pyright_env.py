@@ -163,7 +163,7 @@ def case(name: str, run: Callable[[Path], object]) -> None:
         base = Path(real(folder))
         try:
             ok = bool(run(base))
-        except Exception as error:  # noqa: BLE001 - a case that raises is a failed case
+        except Exception as error:  # noqa: BLE001  (decisions.md, 3)
             print(f"      {name}: {type(error).__name__}: {error}")
             ok = False
     CASES.append((name, ok))

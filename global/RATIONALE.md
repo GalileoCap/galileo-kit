@@ -46,7 +46,7 @@
 
 ## Git
 
-**Commit proactively.** Uncommitted work is lost to a crash, a wrong checkout or another session's stash. A commit is the unit the owner can read, review and revert.
+**Commit proactively.** Uncommitted work is lost to a crash, a wrong checkout or another session's stash. A commit is the unit the owner can read, review and revert. The plugin says at the end of a turn how many changes the tree holds, and whether the handoff predates the last commit, because in the first project a lane's handoff went stale for days and a session read it as current.
 
 **Never deliver red.** What is handed back as done is what others build on, and a red delivery moves the debugging to someone without the context. Green means the checks the author was asked to run. A whole suite before every merge made each change wait on every other one, and a project with an integration branch and someone who proves the union may let that branch go red for a while. The exception is the two-tries rule seen from the other side: a fix that failed twice is handed back with its evidence instead of looping.
 
@@ -60,7 +60,7 @@
 
 **Quality gates are zero warnings.** A gate that tolerates warnings stops being read: a new warning arrives among fifty old ones and nobody sees it. At zero, every new one is visible the moment it appears.
 
-**Suppressions and type escapes need the owner's approval.** Each one decides that the check is wrong at this site, and they accumulate without anybody deciding that in aggregate. Refactor, suppress or re-scope is a trade-off with costs on each side, and the owner is the one who carries them. Deleting a suppression only gives a check back.
+**Suppressions and type escapes need the owner's approval.** Each one decides that the check is wrong at this site, and they accumulate without anybody deciding that in aggregate. Refactor, suppress or re-scope is a trade-off with costs on each side, and the owner is the one who carries them. The approval lived in a transcript until generic-app put it in a numbered row beside the code's citation, where a check can hold the two together and a reader finds the reason. Deleting a suppression only gives a check back.
 
 **Test output goes to a file.** Piped into `head`, `tail` or `grep`, a run keeps only what the filter guessed, and a second look means running the suite again. `-x` hides every failure after the first, so a change is proved one failure at a time. A shell `timeout` around a call duplicates the tool's own cap in another unit (seconds against milliseconds), and its kill truncates a summary into something that reads as a failing gate.
 

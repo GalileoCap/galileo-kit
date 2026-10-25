@@ -1,0 +1,4 @@
+#!/bin/sh
+# The ledger check over a project's suppressions. Claude Code puts bin/ on
+# the Bash tool's PATH while the plugin is enabled. Standard library only.
+exec python3 "$(dirname "$0")/../suppressions/session_suppressions.py" "$@"

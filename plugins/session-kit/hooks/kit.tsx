@@ -3,9 +3,11 @@
 
 import type { Register } from 'claude-code'
 
+import { register as checkout } from './checkout'
 import { register as context } from './context'
 import { register as docLength } from './doc_length'
 import { register as nudge } from './nudge'
+import { register as suppressions } from './suppressions'
 import { register as testLog } from './test_log'
 
 export const register: Register = (on, options) => {
@@ -13,4 +15,6 @@ export const register: Register = (on, options) => {
   testLog(on, options)
   docLength(on, options)
   nudge(on, options)
+  checkout(on, options)
+  suppressions(on, options)
 }
