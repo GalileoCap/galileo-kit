@@ -19,7 +19,7 @@ def rewrite(recipe: Path, source: str, tmp_path: Path) -> str:
     """Run one recipe over one file, rewriting in place; the file's new text."""
     target = tmp_path / "target.py"
     target.write_text(source)
-    subprocess.run(  # noqa: S603  (decisions.md, 1)
+    subprocess.run(  # noqa: S603  the pinned ast-grep over the test's own paths, no shell
         [str(AST_GREP), "scan", "-r", str(recipe), "-U", str(target)],
         check=True,
         capture_output=True,

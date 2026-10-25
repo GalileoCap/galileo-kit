@@ -173,7 +173,7 @@ def scan(root: Path, settings: Settings, ast_grep: Path = AST_GREP) -> list[Site
     src = root / settings.src
     if not src.is_dir():
         return []
-    done = subprocess.run(  # noqa: S603  (decisions.md, 5)
+    done = subprocess.run(  # noqa: S603  the pinned ast-grep binary with a fixed argument list and no shell
         [str(ast_grep), "scan", "--inline-rules", RULES, "--json=compact", str(src)],
         capture_output=True,
         text=True,

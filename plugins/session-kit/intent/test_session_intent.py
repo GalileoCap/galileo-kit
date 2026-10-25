@@ -204,6 +204,44 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
 ids = {out.strip() for _, out in results}
 case("eight claims at once get eight distinct ids", all(code == 0 for code, _ in results) and ids == {f"A{n}" for n in range(6, 14)}, str(sorted(ids)))
 
+LEVELS_SETTINGS = (
+    '{"intent": {"directory": "notes/intent", "levels": ['
+    '{"letter": "E", "word": "epic", "statuses": ["open", "done", "retired"], "waiting": "open", "ask": "close", "listed": true}, '
+    '{"letter": "T", "word": "task", "from": ["E"], "statuses": ["planned", "done", "retired"], "waiting": "planned", "ask": "plan", "fields": ["kind"]}'
+    "]}}"
+)
+EPIC = "---\nid: E1\nsource: owner\nstatus: open 2026-10-01\n---\n\n# E1 An epic\n\nText.\n"
+TASK = "---\nid: T1\nfrom: [E1]\nsource: session\nstatus: planned 2026-10-02\nkind: step\n---\n\n# T1 A task\n\nText.\n"
+CUSTOM = {
+    ".claude/claude-kit.json": LEVELS_SETTINGS,
+    "notes/intent/E1-an-epic.md": EPIC,
+    "notes/intent/T1-a-task.md": TASK,
+    "CLAUDE.md": "# P\n\n## Intent\n\n- `E1` An epic.\n",
+}
+root = project(CUSTOM)
+code, out = run(root, "index")
+case("the levels and the directory come from the settings", code == 0 and "2 entries" in out, out)
+index = Path(root, "notes/intent/INDEX.md").read_text(encoding="utf-8")
+case("a root level is a section named by its word, its children nested", "## Epics" in index and "- [E1 An epic](E1-an-epic.md): open 2026-10-01\n  - [T1 A task](T1-a-task.md): planned 2026-10-02 (step)" in index, index)
+case("the waiting status and its ask come from the level", "(an epic to close)" in index and "(a task to plan)" in index, index)
+code, out = run(root, "check")
+case("a record under its own levels passes", code == 0 and out == "", out)
+state = tempfile.mkdtemp(prefix="session-intent-state-")
+code, out = run(root, "next", "T", "--state", state)
+case("next takes a level from the settings", code == 0 and out.strip() == "T2", out)
+code, out = run(root, "next", "task", "--state", state)
+case("a settings level may be named by its word", code == 0 and out.strip() == "T3", out)
+code, out = run(root, "next", "A", "--state", state)
+case("a level outside the settings is refused, naming the ones there", code == 2 and "one of E, T" in out, out)
+code, out = run(root, "names")
+case("names prints the ladder in the settings' order", code == 0 and out == "E1 An epic\nT1 A task\n", out)
+code, out = run(project(with_change(CUSTOM, "notes/intent/T1-a-task.md", "planned 2026-10-02", "decided 2026-10-02")), "check")
+case("a status outside the level's list is a problem naming the level", code == 1 and "none of planned, done, retired for a task" in out, out)
+code, out = run(project(with_change(CUSTOM, "notes/intent/T1-a-task.md", "kind: step\n", "")), "check")
+case("a level's own fields are required", code == 1 and "a task without `kind`" in out, out)
+code, out = run(project(with_change(CUSTOM, "CLAUDE.md", "- `E1` An epic.\n", "- `T1` A task.\n")), "check")
+case("the Intent block lists the levels marked listed and no other", code == 1 and "lacks the active entry `E1`" in out and "lists `T1`, which is retired or not listed" in out, out)
+
 if failures:
     print(f"\n{len(failures)} failed")
     for f in failures:

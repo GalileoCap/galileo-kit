@@ -252,7 +252,7 @@ def size_of(path: Path) -> Size:
 
 
 def _run(argv: list[str], cwd: Path) -> subprocess.CompletedProcess[bytes]:
-    return subprocess.run(  # noqa: S603  (decisions.md, 7)
+    return subprocess.run(  # noqa: S603  the pinned ruff and ast-grep and git archive, fixed argument lists, no shell
         argv, capture_output=True, check=False, cwd=cwd
     )
 

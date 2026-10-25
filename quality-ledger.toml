@@ -705,24 +705,6 @@ why = "the refusal is printed at the site and the status returned is the verdict
 
 [[fallbacks]]
 site = "plugins/session-kit/intent/session_intent.py"
-where = "names"
-form = "get"
-code = "ladder.get(e.level, 9)"
-class = "declared"
-disposition = "keep"
-why = "a level outside the ladder sorts last"
-
-[[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
-where = "names"
-form = "if-none"
-code = "sorted(entries.values(), key=lambda e: (ladder.get(e.level, 9), e.key())) if not wanted else []"
-class = "declared"
-disposition = "keep"
-why = "a call naming ids lists those and no other, a choice and no absence"
-
-[[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
 where = "read_entry"
 form = "get"
 code = "fields.get('id', '')"
@@ -752,33 +734,6 @@ why = "an empty field is what the check reports as a problem"
 site = "plugins/session-kit/intent/session_intent.py"
 where = "render_index"
 form = "get"
-code = "action.fields.get('kind', '')"
-class = "declared"
-disposition = "keep"
-why = "a goal with no objective, an objective with no action, an entry without the list render empty"
-
-[[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
-where = "render_index"
-form = "get"
-code = "children.get(goal.id, [])"
-class = "declared"
-disposition = "keep"
-why = "a goal with no objective, an objective with no action, an entry without the list render empty"
-
-[[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
-where = "render_index"
-form = "get"
-code = "children.get(objective.id, [])"
-class = "declared"
-disposition = "keep"
-why = "a goal with no objective, an objective with no action, an entry without the list render empty"
-
-[[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
-where = "render_index"
-form = "get"
 code = "e.lists.get('from', [])"
 count = 2
 class = "declared"
@@ -798,25 +753,7 @@ why = "a goal with no objective, an objective with no action, an entry without t
 site = "plugins/session-kit/intent/session_intent.py"
 where = "render_index"
 form = "or"
-code = "[line(e) + (' (an objective to approve)' if e.level == 'O' else ' (a constraint to state)' if e.level == 'C' else ' (an…"
-class = "spoken"
-disposition = "keep"
-why = "the substituted word is what the reader sees printed"
-
-[[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
-where = "render_index"
-form = "or"
 code = "[line(e) + (', superseded by ' + ', '.join((f'`{s}`' for s in successors[e.id])) if e.id in successors else ', nothing …"
-class = "spoken"
-disposition = "keep"
-why = "the substituted word is what the reader sees printed"
-
-[[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
-where = "render_index"
-form = "or"
-code = "[line(e) for e in ordered if e.level == 'C' and (not e.retired)] or ['None.']"
 class = "spoken"
 disposition = "keep"
 why = "the substituted word is what the reader sees printed"
@@ -1369,3 +1306,147 @@ code = "except ValueError: return 2"
 class = "spoken"
 disposition = "keep"
 why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "names"
+form = "if-none"
+code = "sorted(entries.values(), key=lambda e: (ladder.rank(e.level), e.key())) if not wanted else []"
+class = "declared"
+disposition = "keep"
+why = "a call naming ids lists those and no other, a choice and no absence"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_ladder"
+form = "if-none"
+code = "[l for l in (read_level(e) for e in given) if l] if isinstance(given, list) else []"
+class = "declared"
+disposition = "keep"
+why = "no levels listed means the default ladder, as the module says"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_ladder"
+form = "or"
+code = "tuple(levels) or DEFAULT_LEVELS"
+class = "declared"
+disposition = "keep"
+why = "no levels listed means the default ladder, a named constant"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_level"
+form = "get"
+code = "entry.get('listed', False)"
+class = "declared"
+disposition = "keep"
+why = "the documented default of the settings file, read when the level leaves it out"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_level"
+form = "or"
+code = "entry.get('ask') or ''"
+class = "declared"
+disposition = "keep"
+why = "the documented default of the settings file, read when the level leaves it out"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_level"
+form = "or"
+code = "entry.get('needs_child_when') or ''"
+class = "declared"
+disposition = "keep"
+why = "the documented default of the settings file, read when the level leaves it out"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_level"
+form = "or"
+code = "entry.get('waiting') or ''"
+class = "declared"
+disposition = "keep"
+why = "the documented default of the settings file, read when the level leaves it out"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_level"
+form = "or"
+code = "strings(entry.get('statuses')) or ('stated', 'retired')"
+class = "declared"
+disposition = "keep"
+why = "the documented default of the settings file, read when the level leaves it out"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "or"
+code = "[line(e) + f' ({article(waiting[e.level].word)} {waiting[e.level].word} to {waiting[e.level].ask})' for e in queue] or …"
+class = "spoken"
+disposition = "keep"
+why = "an empty queue prints Nothing, in words"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "or"
+code = "[line(e) for e in ordered if e.level == level.letter and (not e.retired)] or ['None.']"
+class = "spoken"
+disposition = "keep"
+why = "an empty section prints None, in words"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index.nested"
+form = "get"
+code = "children.get(entry.id, [])"
+class = "declared"
+disposition = "keep"
+why = "an entry with no children renders alone"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index.nested"
+form = "if-none"
+code = "kind if depth else ''"
+class = "declared"
+disposition = "keep"
+why = "a root line carries no kind, a choice by depth and no absence"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "strings"
+form = "if-none"
+code = "tuple((s for s in value if isinstance(s, str))) if isinstance(value, list) else ()"
+class = "declared"
+disposition = "keep"
+why = "a setting that is no list reads as empty, the module's reading of the file"
+
+[[fallbacks]]
+site = "plugins/session-kit/suppressions/session_suppressions.py"
+where = "comment_of"
+form = "get"
+code = "parts.get(n, [])"
+class = "declared"
+disposition = "keep"
+why = "a line with no searchable parts has no comment"
+
+[[fallbacks]]
+site = "plugins/session-kit/suppressions/session_suppressions.py"
+where = "describe"
+form = "or"
+code = "site.reason or 'unjustified'"
+class = "spoken"
+disposition = "keep"
+why = "a marker with no reason is printed as unjustified, in words"
+
+[[fallbacks]]
+site = "plugins/session-kit/suppressions/session_suppressions.py"
+where = "render_index"
+form = "or"
+code = "s.reason or 'unjustified'"
+class = "spoken"
+disposition = "keep"
+why = "a marker with no reason is listed as unjustified, in words"

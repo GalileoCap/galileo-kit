@@ -1,9 +1,9 @@
 // The suppression warning, in-process: after an Edit or a Write that puts a
 // suppression or a type escape into a source file (the noqa and ignore
 // comments, the ts directives, the lint disables, the any casts), the model is told
-// it needs the owner's approval and, once approved, a numbered row in the
-// project's decisions file cited beside the marker, which
-// `session-suppressions check` holds together. A marker an Edit only moves
+// to write its reason beside it, on its line or the line above, and to
+// regenerate the index the owner reviews, which `session-suppressions check`
+// holds together. A marker an Edit only moves
 // (already in the text it replaces) is not warned about again. Prose files
 // are left alone, since a rule names the markers it bans. The names below
 // are spelled in pieces so this file holds none of them whole. A hook that
@@ -11,7 +11,7 @@
 
 import type { EngineInterface, Register } from 'claude-code'
 
-export const DEFAULT_LEDGER = 'docs/decisions.md'
+export const DEFAULT_INDEX = 'docs/suppressions.md'
 const PROSE = ['.md', '.mdx', '.txt', '.rst']
 
 export const MARKERS: readonly { name: string; pattern: RegExp }[] = [
@@ -36,28 +36,29 @@ export function isProse(path: string): boolean {
   return PROSE.some((suffix) => path.toLowerCase().endsWith(suffix))
 }
 
-export function warning(names: readonly string[], ledger: string): string {
+export function warning(names: readonly string[], index: string): string {
   return (
-    `This edit writes a suppression (${names.join(', ')}). It needs the owner's approval: put the ` +
-    'trade-off to them (refactor, suppress or re-scope) and, once approved, give it a numbered row in ' +
-    `${ledger} and cite the row beside the marker. session-suppressions check holds the two together.`
+    `This edit writes a suppression (${names.join(', ')}). Write its reason beside it, a comment of a ` +
+    'few words on its line or the line above saying why the rule does not hold there, then run ' +
+    `session-suppressions index, which writes ${index} for the owner's review. ` +
+    'session-suppressions check fails on a marker without its reason and on a stale index.'
   )
 }
 
-async function ledgerOf($: EngineInterface, cwd: string): Promise<string> {
+async function indexOf($: EngineInterface, cwd: string): Promise<string> {
   try {
     const parsed: unknown = JSON.parse(await $.fs.read(`${cwd}/.claude/claude-kit.json`))
     if (typeof parsed === 'object' && parsed !== null && 'suppressions' in parsed) {
       const settings = parsed.suppressions
-      if (typeof settings === 'object' && settings !== null && 'ledger' in settings && typeof settings.ledger === 'string' && settings.ledger !== '') {
-        return settings.ledger
+      if (typeof settings === 'object' && settings !== null && 'index' in settings && typeof settings.index === 'string' && settings.index !== '') {
+        return settings.index
       }
     }
   } catch {
-    return DEFAULT_LEDGER
+    return DEFAULT_INDEX
   }
 
-  return DEFAULT_LEDGER
+  return DEFAULT_INDEX
 }
 
 async function note($: EngineInterface, path: string, added: string, before: string): Promise<string | null> {
@@ -67,7 +68,7 @@ async function note($: EngineInterface, path: string, added: string, before: str
   const was = new Set(suppressionsIn(before))
   const names = suppressionsIn(added).filter((name) => !was.has(name))
 
-  return names.length === 0 ? null : warning(names, await ledgerOf($, await $.session.cwd()))
+  return names.length === 0 ? null : warning(names, await indexOf($, await $.session.cwd()))
 }
 
 export const register: Register = (on) => {

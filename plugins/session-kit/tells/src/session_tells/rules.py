@@ -390,6 +390,22 @@ BANNED: tuple[Rule, ...] = (
         ),
         texts=HISTORY,
     ),
+    Rule(
+        "history-now",
+        "banned",
+        rx(
+            r"\bno longer\b(?! than)|\bpreviously\b|\bformerly\b|\buntil now\b|\bfrom now on\b"
+            r"|\bnow instead\b|\b(?:is|are|was|were|has been|have been) replaced by\b"
+        ),
+        "describe what holds; what was done before is in git",
+        fires=(
+            "The rules marked refused no longer depend on being read.",
+            "Previously the hook warned at 500k.",
+            "From now on the gate runs every leg.",
+            "The ledger was replaced by the index.",
+        ),
+        misses=("a line no longer than 100 characters", "the key is replaced each year"),
+    ),
 )
 
 RATIONED: tuple[Rule, ...] = (

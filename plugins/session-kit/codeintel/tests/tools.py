@@ -19,4 +19,4 @@ def tree(root: Path, files: dict[str, str]) -> None:
 
 def run(argv: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     """Run a pinned tool or git in a temporary project with a fixed argument list."""
-    return subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False, timeout=20)  # noqa: S603  (decisions.md, 6)
+    return subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False, timeout=20)  # noqa: S603  a pinned tool or git over a temporary project, fixed arguments, no shell

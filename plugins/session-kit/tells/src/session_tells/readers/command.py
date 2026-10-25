@@ -41,7 +41,7 @@ def run(root: Path, command: Command, files: Sequence[str]) -> list[Unit]:
     named = " ".join(command.run)
     try:
         # The argv is the project's own config and paths it chose; no shell between.
-        done = subprocess.run(  # noqa: S603  (decisions.md, 4)
+        done = subprocess.run(  # noqa: S603  the project's own prose command from its settings, run without a shell
             [*command.run, *(one.removeprefix(command.under) for one in files)],
             cwd=root / command.under,
             capture_output=True,

@@ -88,7 +88,7 @@ def case(name: str, run: Callable[[Path], object]) -> None:
         base = Path(real(folder))
         try:
             ok = bool(run(base))
-        except Exception as error:  # noqa: BLE001  (decisions.md, 2)
+        except Exception as error:  # noqa: BLE001  the runner reports a case that raises as a failed case instead of stopping the run
             print(f"      {name}: {type(error).__name__}: {error}")
             ok = False
         finally:

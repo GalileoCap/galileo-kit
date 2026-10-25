@@ -2,7 +2,7 @@
 id: A26
 from: [O8, O6]
 source: session
-status: decided 2026-10-25
+status: retired 2026-10-25
 kind: check
 implemented_by: [plugins/session-kit/hooks/suppressions.ts, plugins/session-kit/suppressions/session_suppressions.py, plugins/session-kit/bin/session-suppressions, global/CLAUDE.md]
 proven_by: [plugins/session-kit/hooks/suppressions.test.ts, plugins/session-kit/suppressions/test_session_suppressions.py]

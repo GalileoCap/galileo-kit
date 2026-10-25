@@ -1,35 +1,46 @@
-"""The index and check over a project's ``docs/intent/``.
+"""The index, check, names and next id over a project's intent record.
 
-``session-intent index`` writes ``docs/intent/INDEX.md``: the entries that
-wait on the owner first, oldest first, then the ladder downward (each goal
-with its objectives, each objective with its actions), the constraints, and
+``session-intent index`` writes the record's ``INDEX.md``: the entries that
+wait on the owner first, oldest first, then each root level's entries with
+their children nested, the levels that stand in a section of their own, and
 the retired entries with their successors. ``session-intent check`` reads
 the record and prints one line per problem: an id that does not resolve, a
-path in ``implemented_by`` or ``proven_by`` that does not exist, an approved
-objective with no action, an action that names no objective, a status
-without a date, a retired entry nothing supersedes, a file whose name does
-not carry its id, a missing field, the ``CLAUDE.md`` Intent block out of
-step with the active entries, and an ``INDEX.md`` that is missing or stale.
-It exits 1 on any. ``session-intent names [id ...]`` prints each entry's
-id and name, every entry when no id is given, so a session that lost the
-names to a compaction gets them back in one call; an unknown id is a
-problem. ``session-intent next <level>`` claims the next id of a level
-(``G``, ``O``, ``A`` or ``C``) under a lock and prints it: the floor is the
-highest id the record holds or the last one claimed, whichever is higher,
-so a fresh clone needs no seeding, and an id once claimed is never given
-again, since by then it is usually in a reply, a commit message or a
-handoff that outlives the claim. The claims live outside every checkout,
-under ``~/.claude/session-kit/intent/``, one directory per clone (named
-after its git common directory, so every worktree shares it), with one
-``<level>.next`` file per level and an append-only ``claims.log`` saying
-which checkout took each id, at which commit, with what title. Links are
-written upward only, so everything downward is derived here and never kept
-by hand.
+path in ``implemented_by`` or ``proven_by`` that does not exist, an entry
+whose status asks for a child and has none, an entry that names no parent,
+a status without a date, a retired entry nothing supersedes, a file whose
+name does not carry its id, a missing field, the ``CLAUDE.md`` Intent block
+out of step with the active entries, and an ``INDEX.md`` that is missing or
+stale. It exits 1 on any. ``session-intent names [id ...]`` prints each
+entry's id and name, every entry when no id is given, so a session that
+lost the names to a compaction gets them back in one call; an unknown id is
+a problem. ``session-intent next <level>`` claims the next id of a level
+under a lock and prints it: the floor is the highest id the record holds or
+the last one claimed, whichever is higher, so a fresh clone needs no
+seeding, and an id once claimed is never given again, since by then it is
+usually in a reply, a commit message or a handoff that outlives the claim.
+The claims live outside every checkout, under ``~/.claude/session-kit/intent/``,
+one directory per clone (named after its git common directory, so every
+worktree shares it), with one ``<level>.next`` file per level and an
+append-only ``claims.log`` saying which checkout took each id, at which
+commit, with what title. Links are written upward only, so everything
+downward is derived here and never kept by hand.
+
+The levels are the project's. By default they are the ladder of
+``goals-objectives-actions.md``: ``G`` goals, ``O`` objectives under them,
+``A`` actions under those, ``C`` constraints in a section of their own.
+``.claude/claude-kit.json`` may set, under ``intent``, the ``directory``
+(``docs/intent``) and the ``levels``, each with its ``letter``, ``word``,
+``from`` (the letters it hangs from), ``statuses``, ``waiting`` (the status
+that waits on the owner) with its ``ask``, ``fields`` (required beyond id,
+source and status), ``listed`` (in the Intent block when active), ``place``
+(``root``, ``under`` or ``section``) and ``needs_child_when`` (a status at
+which a child must name it).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -39,20 +50,109 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-LEVELS = {"G": "goal", "O": "objective", "A": "action", "C": "constraint"}
-LEVEL_OF_WORD = {word: letter for letter, word in LEVELS.items()}
 LOCK_WAIT_SECONDS = 10.0
-STATUSES = {
-    "G": ("stated", "retired"),
-    "O": ("proposed", "approved", "retired"),
-    "A": ("decided", "validated", "retired"),
-    "C": ("proposed", "stated", "retired"),
-}
-QUEUED = {"O": "proposed", "A": "decided", "C": "proposed"}
-ACTION_FIELDS = ("kind", "implemented_by", "proven_by", "supersedes")
-ID = re.compile(r"^([GOAC])(\d+)$")
 STATUS = re.compile(r"^(\w+)(?:\s+(\d{4}-\d{2}-\d{2}))?$")
-BLOCK_ID = re.compile(r"^- `([GOAC]\d+)`")
+PATH_FIELDS = ("implemented_by", "proven_by")
+DEFAULT_DIRECTORY = "docs/intent"
+
+
+@dataclass(frozen=True)
+class Level:
+    letter: str
+    word: str
+    parents: tuple[str, ...] = ()
+    statuses: tuple[str, ...] = ("stated", "retired")
+    waiting: str = ""
+    ask: str = ""
+    fields: tuple[str, ...] = ()
+    listed: bool = False
+    place: str = "root"
+    needs_child_when: str = ""
+
+    @property
+    def plural(self) -> str:
+        return self.word + "s"
+
+
+DEFAULT_LEVELS = (
+    Level("G", "goal", listed=True),
+    Level("O", "objective", ("G",), ("proposed", "approved", "retired"), "proposed", "approve", listed=True, place="under", needs_child_when="approved"),
+    Level("A", "action", ("O",), ("decided", "validated", "retired"), "decided", "validate", ("kind", "implemented_by", "proven_by", "supersedes"), place="under"),
+    Level("C", "constraint", (), ("proposed", "stated", "retired"), "proposed", "state", listed=True, place="section"),
+)
+
+
+@dataclass(frozen=True)
+class Ladder:
+    levels: tuple[Level, ...]
+    directory: str = DEFAULT_DIRECTORY
+
+    def __post_init__(self) -> None:
+        letters = "".join(l.letter for l in self.levels)
+        object.__setattr__(self, "id_pattern", re.compile(rf"^([{letters}])(\d+)$"))
+        object.__setattr__(self, "block_pattern", re.compile(rf"^- `([{letters}]\d+)`"))
+
+    def by_letter(self, letter: str) -> Level:
+        return next(l for l in self.levels if l.letter == letter)
+
+    def level_of(self, word: str) -> str | None:
+        for l in self.levels:
+            if word == l.letter or word.lower() == l.word:
+                return l.letter
+        return None
+
+    def rank(self, letter: str) -> int:
+        return next((n for n, l in enumerate(self.levels) if l.letter == letter), len(self.levels))
+
+    @property
+    def letters(self) -> str:
+        return ", ".join(l.letter for l in self.levels)
+
+    def children_of(self, letter: str) -> list[Level]:
+        return [l for l in self.levels if letter in l.parents]
+
+
+def article(word: str) -> str:
+    return "an" if word[:1].lower() in "aeiou" else "a"
+
+
+def read_ladder(root: Path) -> Ladder:
+    try:
+        parsed = json.loads((root / ".claude" / "claude-kit.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return Ladder(DEFAULT_LEVELS)
+    block = parsed.get("intent") if isinstance(parsed, dict) else None
+    if not isinstance(block, dict):
+        return Ladder(DEFAULT_LEVELS)
+    directory = block.get("directory")
+    directory = directory.strip("/") if isinstance(directory, str) and directory.strip("/") else DEFAULT_DIRECTORY
+    given = block.get("levels")
+    levels = [l for l in (read_level(e) for e in given) if l] if isinstance(given, list) else []
+    return Ladder(tuple(levels) or DEFAULT_LEVELS, directory)
+
+
+def strings(value: object) -> tuple[str, ...]:
+    return tuple(s for s in value if isinstance(s, str)) if isinstance(value, list) else ()
+
+
+def read_level(entry: object) -> Level | None:
+    if not isinstance(entry, dict):
+        return None
+    letter, word = entry.get("letter"), entry.get("word")
+    if not (isinstance(letter, str) and len(letter) == 1 and letter.isalpha() and isinstance(word, str) and word):
+        return None
+    parents = strings(entry.get("from"))
+    statuses = strings(entry.get("statuses")) or ("stated", "retired")
+    if "retired" not in statuses:
+        statuses = (*statuses, "retired")
+    place = entry.get("place")
+    if place not in ("root", "under", "section"):
+        place = "under" if parents else "root"
+    return Level(
+        letter.upper(), word.lower(), parents, statuses,
+        str(entry.get("waiting") or ""), str(entry.get("ask") or ""), strings(entry.get("fields")),
+        bool(entry.get("listed", False)), place, str(entry.get("needs_child_when") or ""),
+    )
 
 
 @dataclass
@@ -64,7 +164,7 @@ class Entry:
     lists: dict[str, list[str]] = field(default_factory=dict)
     status: str = ""
     date: str = ""
-    says_no_action: bool = False
+    body: str = ""
 
     @property
     def level(self) -> str:
@@ -75,7 +175,7 @@ class Entry:
         return self.status == "retired"
 
     def key(self) -> tuple[str, int]:
-        m = ID.match(self.id)
+        m = re.match(r"^([A-Z])(\d+)$", self.id)
         return (self.id[0], int(m.group(2))) if m else (self.id, 0)
 
 
@@ -111,9 +211,8 @@ def read_entry(path: Path, problems: list[str]) -> Entry | None:
     entry_id = fields.get("id", "")
     if entry_id and title.startswith(entry_id + " "):
         title = title[len(entry_id) + 1:]
-    entry = Entry(id=entry_id, path=path, title=title, fields=fields)
-    entry.says_no_action = "no action yet" in "\n".join(lines[end:]).lower()
-    for key in ("from", "supersedes", "implemented_by", "proven_by"):
+    entry = Entry(id=entry_id, path=path, title=title, fields=fields, body="\n".join(lines[end:]).lower())
+    for key in ("from", "supersedes", *PATH_FIELDS):
         if key in fields:
             entry.lists[key] = split_list(fields[key])
     m = STATUS.match(fields.get("status", ""))
@@ -122,7 +221,7 @@ def read_entry(path: Path, problems: list[str]) -> Entry | None:
     return entry
 
 
-def read_record(intent: Path) -> tuple[dict[str, Entry], list[str]]:
+def read_record(intent: Path, ladder: Ladder) -> tuple[dict[str, Entry], list[str]]:
     problems: list[str] = []
     entries: dict[str, Entry] = {}
     for path in sorted(intent.glob("*.md")):
@@ -132,8 +231,8 @@ def read_record(intent: Path) -> tuple[dict[str, Entry], list[str]]:
         if entry is None:
             continue
         stem_id = path.name.split("-", 1)[0]
-        if not ID.match(entry.id):
-            problems.append(f"{path.name}: id `{entry.id}` is not G, O, A or C followed by a number")
+        if not ladder.id_pattern.match(entry.id):
+            problems.append(f"{path.name}: id `{entry.id}` is not one of {ladder.letters} followed by a number")
             continue
         if stem_id != entry.id:
             problems.append(f"{path.name}: the file name does not carry its id `{entry.id}`")
@@ -144,56 +243,59 @@ def read_record(intent: Path) -> tuple[dict[str, Entry], list[str]]:
     return entries, problems
 
 
-def check_entry(entry: Entry, entries: dict[str, Entry], root: Path, problems: list[str]) -> None:
+def check_entry(entry: Entry, entries: dict[str, Entry], root: Path, ladder: Ladder, problems: list[str]) -> None:
     name = entry.path.name
-    level = entry.level
-    if entry.status not in STATUSES[level]:
-        allowed = ", ".join(STATUSES[level])
-        problems.append(f"{name}: status `{entry.fields.get('status', '')}` is none of {allowed} for a {LEVELS[level]}")
+    level = ladder.by_letter(entry.level)
+    if entry.status not in level.statuses:
+        allowed = ", ".join(level.statuses)
+        problems.append(f"{name}: status `{entry.fields.get('status', '')}` is none of {allowed} for {article(level.word)} {level.word}")
     elif not entry.date:
         problems.append(f"{name}: status `{entry.status}` has no date")
-    if level in ("O", "A") and "from" not in entry.lists:
+    if level.parents and "from" not in entry.lists:
         problems.append(f"{name}: no `from` field")
     for key in ("from", "supersedes"):
         for target in entry.lists.get(key, []):
             if target not in entries:
                 problems.append(f"{name}: `{key}` names `{target}`, which does not exist")
-    wanted = {"O": "G", "A": "O"}.get(level)
-    if wanted:
+    if level.parents and not entry.retired:
         named = [t for t in entry.lists.get("from", []) if t in entries]
-        if not entry.retired and not any(t.startswith(wanted) for t in named):
-            problems.append(f"{name}: a {LEVELS[level]} names no {LEVELS[wanted]} in `from`")
-    if level == "A":
-        for key in ACTION_FIELDS:
-            if key not in entry.fields:
-                problems.append(f"{name}: an action without `{key}`")
-        if entry.retired:
-            # What implemented it may be gone by design; git keeps it.
-            return
-        for key in ("implemented_by", "proven_by"):
-            items = entry.lists.get(key, [])
-            if is_placeholder(items):
-                continue
-            for item in items:
-                if not (root / item).exists():
-                    problems.append(f"{name}: `{key}` names `{item}`, which does not exist")
+        if not any(t[0] in level.parents for t in named):
+            wanted = " or ".join(ladder.by_letter(p).word for p in level.parents)
+            problems.append(f"{name}: {article(level.word)} {level.word} names no {wanted} in `from`")
+    for key in level.fields:
+        if key not in entry.fields:
+            problems.append(f"{name}: {article(level.word)} {level.word} without `{key}`")
+    if entry.retired:
+        # What implemented it may be gone by design; git keeps it.
+        return
+    for key in PATH_FIELDS:
+        items = entry.lists.get(key, [])
+        if key not in entry.fields or is_placeholder(items):
+            continue
+        for item in items:
+            if not (root / item).exists():
+                problems.append(f"{name}: `{key}` names `{item}`, which does not exist")
 
 
-def check_record(entries: dict[str, Entry], root: Path) -> list[str]:
+def check_record(entries: dict[str, Entry], root: Path, ladder: Ladder) -> list[str]:
     problems: list[str] = []
     for entry in entries.values():
-        check_entry(entry, entries, root, problems)
+        check_entry(entry, entries, root, ladder, problems)
     superseded = {t for e in entries.values() for t in e.lists.get("supersedes", [])}
-    served = {t for e in entries.values() if e.level == "A" and not e.retired for t in e.lists.get("from", [])}
+    served = {t for e in entries.values() if not e.retired for t in e.lists.get("from", [])}
     for entry in entries.values():
+        level = ladder.by_letter(entry.level)
         if entry.retired and entry.id not in superseded:
             problems.append(f"{entry.path.name}: retired, and no entry names it in `supersedes`")
-        if entry.level == "O" and entry.status == "approved" and entry.id not in served and not entry.says_no_action:
-            problems.append(f"{entry.path.name}: approved, no action names it in `from`, and it does not say \"no action yet\"")
+        children = ladder.children_of(level.letter)
+        if level.needs_child_when and entry.status == level.needs_child_when and entry.id not in served and children:
+            phrase = f"no {children[0].word} yet"
+            if phrase not in entry.body:
+                problems.append(f"{entry.path.name}: {entry.status}, no {children[0].word} names it in `from`, and it does not say \"{phrase}\"")
     return problems
 
 
-def check_block(entries: dict[str, Entry], root: Path) -> list[str]:
+def check_block(entries: dict[str, Entry], root: Path, ladder: Ladder) -> list[str]:
     claude = root / "CLAUDE.md"
     if not claude.exists():
         return ["CLAUDE.md: missing, so no Intent block lists the active entries"]
@@ -204,20 +306,20 @@ def check_block(entries: dict[str, Entry], root: Path) -> list[str]:
         if line.startswith("## "):
             inside = line.strip() == "## Intent"
             continue
-        m = BLOCK_ID.match(line) if inside else None
+        m = ladder.block_pattern.match(line) if inside else None
         if m:
             listed.append(m.group(1))
     if not listed:
         return ["CLAUDE.md: no `## Intent` block lists the active entries"]
     problems: list[str] = []
-    active = {e.id for e in entries.values() if e.level in ("G", "O", "C") and not e.retired}
-    for id_ in sorted(active - set(listed), key=lambda i: (i[0], int(i[1:]))):
+    active = {e.id for e in entries.values() if ladder.by_letter(e.level).listed and not e.retired}
+    for id_ in sorted(active - set(listed), key=lambda i: (ladder.rank(i[0]), int(i[1:]))):
         problems.append(f"CLAUDE.md: the Intent block lacks the active entry `{id_}`")
     for id_ in listed:
         if id_ not in entries:
             problems.append(f"CLAUDE.md: the Intent block lists `{id_}`, which does not exist")
         elif id_ not in active:
-            problems.append(f"CLAUDE.md: the Intent block lists `{id_}`, which is retired or an action")
+            problems.append(f"CLAUDE.md: the Intent block lists `{id_}`, which is retired or not listed")
     return problems
 
 
@@ -230,33 +332,38 @@ def line(entry: Entry) -> str:
     return f"- {link(entry)}: {entry.status}{when}"
 
 
-def render_index(entries: dict[str, Entry]) -> str:
-    ordered = sorted(entries.values(), key=Entry.key)
+def render_index(entries: dict[str, Entry], ladder: Ladder) -> str:
+    ordered = sorted(entries.values(), key=lambda e: (ladder.rank(e.level), e.key()))
     out = ["# Intent index", "", "Generated by `session-intent index` from the entries beside it. Do not edit by hand: the check fails when it is stale.", ""]
-    queue = sorted(
-        (e for e in ordered if e.status == QUEUED.get(e.level)),
-        key=lambda e: (e.date, e.key()),
-    )
+    waiting = {l.letter: l for l in ladder.levels if l.waiting}
+    queue = sorted((e for e in ordered if e.level in waiting and e.status == waiting[e.level].waiting), key=lambda e: (e.date, ladder.rank(e.level), e.key()))
     out += ["## Waiting on the owner", ""]
-    out += [line(e) + (" (an objective to approve)" if e.level == "O" else " (a constraint to state)" if e.level == "C" else " (an action to validate)") for e in queue] or ["Nothing."]
-    out += ["", "## Goals", ""]
+    out += [line(e) + f" ({article(waiting[e.level].word)} {waiting[e.level].word} to {waiting[e.level].ask})" for e in queue] or ["Nothing."]
     children: dict[str, list[Entry]] = {}
     for e in ordered:
         if e.retired:
             continue
         for parent in e.lists.get("from", []):
             children.setdefault(parent, []).append(e)
-    for goal in (e for e in ordered if e.level == "G" and not e.retired):
-        out.append(line(goal))
-        for objective in children.get(goal.id, []):
-            out.append("  " + line(objective))
-            for action in children.get(objective.id, []):
-                out.append("    " + line(action) + f" ({action.fields.get('kind', '')})")
-    orphans = [e for e in ordered if e.level in ("O", "A") and not e.retired and not any(p in entries for p in e.lists.get("from", []))]
+
+    def nested(entry: Entry, depth: int) -> list[str]:
+        kind = f" ({entry.fields['kind']})" if "kind" in entry.fields else ""
+        rows = ["  " * depth + line(entry) + (kind if depth else "")]
+        for child in children.get(entry.id, []):
+            if ladder.by_letter(child.level).place == "under":
+                rows += nested(child, depth + 1)
+        return rows
+
+    for level in (l for l in ladder.levels if l.place == "root"):
+        out += ["", f"## {level.plural.capitalize()}", ""]
+        for entry in (e for e in ordered if e.level == level.letter and not e.retired):
+            out += nested(entry, 0)
+    orphans = [e for e in ordered if ladder.by_letter(e.level).place == "under" and not e.retired and not any(p in entries for p in e.lists.get("from", []))]
     if orphans:
         out += ["", "## Without a parent", ""] + [line(e) for e in orphans]
-    out += ["", "## Constraints", ""]
-    out += [line(e) for e in ordered if e.level == "C" and not e.retired] or ["None."]
+    for level in (l for l in ladder.levels if l.place == "section"):
+        out += ["", f"## {level.plural.capitalize()}", ""]
+        out += [line(e) for e in ordered if e.level == level.letter and not e.retired] or ["None."]
     successors: dict[str, list[str]] = {}
     for e in ordered:
         for target in e.lists.get("supersedes", []):
@@ -270,12 +377,11 @@ def render_index(entries: dict[str, Entry]) -> str:
     return "\n".join(out) + "\n"
 
 
-def names(entries: dict[str, Entry], wanted: list[str]) -> tuple[list[str], list[str]]:
-    """Each entry's id and name, goals first and the ladder downward, a retired one marked."""
+def names(entries: dict[str, Entry], wanted: list[str], ladder: Ladder) -> tuple[list[str], list[str]]:
+    """Each entry's id and name, in the ladder's order, a retired one marked."""
     lines: list[str] = []
     problems: list[str] = []
-    ladder = {"G": 0, "O": 1, "A": 2, "C": 3}
-    chosen = sorted(entries.values(), key=lambda e: (ladder.get(e.level, 9), e.key())) if not wanted else []
+    chosen = sorted(entries.values(), key=lambda e: (ladder.rank(e.level), e.key())) if not wanted else []
     for id_ in wanted:
         if id_ in entries:
             chosen.append(entries[id_])
@@ -385,43 +491,38 @@ def claim(entries: dict[str, Entry], level: str, state: Path, root: Path, title:
     return id_
 
 
-def level_of(word: str) -> str | None:
-    if word in LEVELS:
-        return word
-    return LEVEL_OF_WORD.get(word.lower())
-
-
 def main() -> int:
-    parser = argparse.ArgumentParser(description="The index, check, names and next id over docs/intent.")
+    parser = argparse.ArgumentParser(description="The index, check, names and next id over the intent record.")
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--root", default=".", help="the project root; its docs/intent and CLAUDE.md are read")
+    common.add_argument("--root", default=".", help="the project root; its intent directory, CLAUDE.md and settings are read")
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("index", parents=[common], help="write docs/intent/INDEX.md")
+    commands.add_parser("index", parents=[common], help="write the record's INDEX.md")
     commands.add_parser("check", parents=[common], help="the problems in the record, one per line")
     names_parser = commands.add_parser("names", parents=[common], help="each entry's id and name")
     names_parser.add_argument("ids", nargs="*", help="the ids to print, all when none")
     next_parser = commands.add_parser("next", parents=[common], help="claim the next id of a level")
-    next_parser.add_argument("level", help="G, O, A or C, or goal, objective, action, constraint")
+    next_parser.add_argument("level", help="a level's letter or word, as the settings or the default ladder name them")
     next_parser.add_argument("--title", default="", help="what the entry will be, kept in the claims log")
     next_parser.add_argument("--state", default=None, help="where the claims live, instead of ~/.claude/session-kit/intent/<clone>")
     args = parser.parse_args()
     root = Path(args.root).resolve()
-    intent = root / "docs" / "intent"
+    ladder = read_ladder(root)
+    intent = root / ladder.directory
     if not intent.is_dir():
         print(f"{intent}: no such directory")
         return 2
-    entries, problems = read_record(intent)
+    entries, problems = read_record(intent, ladder)
     if args.command == "names":
-        lines, missing = names(entries, args.ids)
+        lines, missing = names(entries, args.ids, ladder)
         for l in lines:
             print(l)
         for p in problems + missing:
             print(p)
         return 1 if missing else 0
     if args.command == "next":
-        level = level_of(args.level)
+        level = ladder.level_of(args.level)
         if level is None:
-            print(f"{args.level}: no such level; one of G, O, A, C")
+            print(f"{args.level}: no such level; one of {ladder.letters}")
             return 2
         try:
             print(claim(entries, level, state_dir(root, args.state), root, args.title))
@@ -430,18 +531,19 @@ def main() -> int:
             return 1
         return 0
     index = intent / "INDEX.md"
+    shown = f"{ladder.directory}/INDEX.md"
     if args.command == "index":
-        index.write_text(render_index(entries), encoding="utf-8")
+        index.write_text(render_index(entries, ladder), encoding="utf-8")
         for p in problems:
             print(p)
         print(f"{index}: {len(entries)} entries")
         return 0
-    problems += check_record(entries, root)
-    problems += check_block(entries, root)
+    problems += check_record(entries, root, ladder)
+    problems += check_block(entries, root, ladder)
     if not index.exists():
-        problems.append("docs/intent/INDEX.md: missing; run `session-intent index`")
-    elif index.read_text(encoding="utf-8") != render_index(entries):
-        problems.append("docs/intent/INDEX.md: stale; run `session-intent index`")
+        problems.append(f"{shown}: missing; run `session-intent index`")
+    elif index.read_text(encoding="utf-8") != render_index(entries, ladder):
+        problems.append(f"{shown}: stale; run `session-intent index`")
     for p in problems:
         print(p)
     return 1 if problems else 0
