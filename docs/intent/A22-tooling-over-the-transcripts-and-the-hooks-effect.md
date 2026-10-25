@@ -27,7 +27,7 @@ Designed 2026-10-25 in `docs/session-tooling-design.md`, put to the owner before
 
 ## Shape as built (2026-10-25, the reader)
 
-The owner answered: all projects, reports committed under `docs/measurements/`, the warning's effect and the cache share first. `session-transcripts` has `list`, `session`, `warnings`, `cache`, `compactions`, `hooks` and `report`, standard-library Python behind `bin/session-transcripts`, reading 39 transcripts in about a second. Not built yet: `rules` (the patterns of a rule not held) and the `measure` module, which waits on the first real session with the modules.
+The owner answered: all projects, reports committed under `docs/measurements/`, the warning's effect and the cache share first. `session-transcripts` has `list`, `session`, `warnings`, `cache`, `compactions`, `hooks` and `report`, standard-library Python behind `bin/session-transcripts`, reading 39 transcripts in about a second. Not built yet: `rules` (the patterns of a rule not held). The `measure` module is built as `A55` (a timeline of turns and tool calls with the kit's time per concern), with the engine's count of the memory files as `A56`.
 
 Its first report, `docs/measurements/sessions-2026-10-25.md`, found that the kit's context warning has never fired: no request in 39 sessions carried more than 515,000 tokens, and the 145 compactions were all manual, at a median of 152,000 tokens before, with none by the engine's own trigger. The warning's effect is therefore nil so far, and `A16`'s threshold of half the window sits above where the owner compacts by hand. The cache share runs 91% to 99% of input per session, with cold sends after gaps concentrated in the long sessions.
 

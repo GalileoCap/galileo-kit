@@ -1,6 +1,6 @@
 # Tooling over the transcripts and the hooks' effect: the shape, for the owner
 
-The design behind `A22`, from `O17`: the system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. Written 2026-10-25 against Claude Code 2.1.308 and session-kit 0.9.0, before anything is built. The questions at the end are the owner's to answer. Answered 2026-10-25: all projects, reports committed, the warning's effect and the cache share first. The reader is built as `session-transcripts`, with `rules` and the module still to come.
+The design behind `A22`, from `O17`: the system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. Written 2026-10-25 against Claude Code 2.1.308 and session-kit 0.9.0, before anything is built. The questions at the end are the owner's to answer. Answered 2026-10-25: all projects, reports committed, the warning's effect and the cache share first. The reader is built as `session-transcripts`, and the module as `A55`, with `rules` still to come.
 
 ## What there is to read
 
@@ -64,6 +64,8 @@ A transcript holds the owner's words and the model's. The reader prints counts, 
 A fourth file behind `kit.tsx`, written once the first real session shows what the transcript keeps of a module's `context` entries. It hooks `turn.complete`, `tool.call`, `session.compact` and `session.measure`, and appends one JSON line per event to `<CLAUDE_PLUGIN_DATA>/measure/<session id>.jsonl`: the event, the time, the context figure, the cost, and for each of the kit's own hooks whether it fired, what it added, and the milliseconds around `next`. The reader joins the file to the transcript by session id, which makes questions 7 and 8 answerable, and makes question 1 exact where the transcript only shows the warning's text.
 
 It writes to the plugin's data directory alone, where the tells environment already lives, and costs one file append per event.
+
+Built on 2026-10-25 as `A55` (a timeline of turns and tool calls with the kit's time per concern), in another shape than this one. The engine's file system has no append and no plugin data directory, so each main-loop turn end writes a new file, `~/.claude/session-kit/measure/<session id>/<epoch ms>.jsonl`. The validator refuses a wrapper on `on`, so stopwatch hooks between the concerns in `kit.tsx` time each one by name. The transcript records each compaction, so the timeline has no line for one, and the context figure and the cost ride on the turn end's line in place of `session.measure`. The memory files' tokens are `A56`, read by `session-rulebook`.
 
 ## What is not proposed
 

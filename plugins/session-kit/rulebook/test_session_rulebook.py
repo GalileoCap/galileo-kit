@@ -6,6 +6,7 @@ directories, runs the command over them and reads its exit code and lines.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -23,9 +24,9 @@ def tree(files: dict[str, str]) -> str:
     return root
 
 
-def run(root: str, claude_dir: str) -> tuple[int, str]:
+def run(root: str, claude_dir: str, measure_dir: str | None = None) -> tuple[int, str]:
     out = subprocess.run(
-        [sys.executable, TOOL, "--root", root, "--claude-dir", claude_dir],
+        [sys.executable, TOOL, "--root", root, "--claude-dir", claude_dir, "--measure-dir", measure_dir or tree({})],
         capture_output=True, text=True, timeout=30,
     )
     return out.returncode, out.stdout + out.stderr
@@ -71,6 +72,29 @@ case("skills_from adds a plugin's skills to the skills group", "plugins/x/skills
 root = tree({"CLAUDE.md": "@CLAUDE.md\n@gone.md\n" + five(4)})
 code, out = run(root, tree({}))
 case("a missing file or import is skipped and a loop is read once", code == 0 and "rules: 6 of 5,000 words" in out, out)
+
+# The engine's own count, from the timeline the session-kit module writes: the newest memory line that
+# lists one of this project's files is read, an older one and another project's are not.
+root = tree({"CLAUDE.md": five(20), "CLAUDE.local.md": five(7)})
+here = Path(root).resolve()
+
+
+def memory(files: list[tuple[Path, str, int]]) -> str:
+    return '{"at": 1, "ev": "turn.end"}\n' + json.dumps({"at": 2, "ev": "memory", "files": [{"path": str(p), "type": t, "tokens": n} for p, t, n in files]}) + "\n"
+
+
+measured = tree({
+    "sess-old/1700000000000.jsonl": memory([(here / "CLAUDE.md", "Project", 999)]),
+    "sess-new/1700000005000.jsonl": memory([(here / "CLAUDE.md", "Project", 31), (here / "CLAUDE.local.md", "Local", 12), (Path("/elsewhere/MEMORY.md"), "AutoMem", 40)]),
+    "sess-other/1700000009000.jsonl": memory([(Path("/another/CLAUDE.md"), "Project", 5)]),
+})
+code, out = run(root, tree({}), measured)
+case("each file the engine measured shows its tokens beside its words, from the newest line of this project",
+     code == 0 and "     20  CLAUDE.md  (31 tokens)" in out and "      7  CLAUDE.local.md  (12 tokens)" in out and "999" not in out, out)
+case("a memory file the engine loads and the rulebook does not count is listed apart, with the total",
+     "/elsewhere/MEMORY.md" in out and "AutoMem" in out and "83 tokens" in out and "sess-new" in out, out)
+code, out = run(root, tree({}))
+case("with no timeline the words stand alone", code == 0 and "tokens" not in out, out)
 
 if failures:
     print(f"\n{len(failures)} failed")

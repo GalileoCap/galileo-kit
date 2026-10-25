@@ -11,6 +11,13 @@ rulebook over its budget removes another. ``.claude/claude-kit.json`` may
 set, under ``rulebook``, the ``rules`` and ``skills`` budgets in words and
 ``skills_from``, globs of further skill files from the root (a plugin
 repository names its own). Standard library only.
+
+The budget is in words, which the standard library counts. Beside them, the
+engine's own token estimate of each memory file a turn loads is read from
+the timeline session-kit's module writes under
+``~/.claude/session-kit/measure/`` (its ``memory`` lines), the newest that
+lists a file of this project. A file the engine loads and the rulebook does
+not count (auto memory, a managed file) is listed apart.
 """
 
 from __future__ import annotations
@@ -24,6 +31,7 @@ from pathlib import Path
 RULES_BUDGET = 5000
 SKILLS_BUDGET = 16000
 IMPORT_DEPTH = 5
+MEASURE_DIR = Path.home() / ".claude" / "session-kit" / "measure"
 
 
 @dataclass
@@ -104,26 +112,84 @@ def shown(path: Path, root: Path) -> str:
         return str(path)
 
 
-def report(name: str, files: list[Path], budget: int, root: Path) -> tuple[list[str], bool]:
+@dataclass
+class Measured:
+    """One memory line of the timeline: the session it came from and each file's tokens, by resolved path."""
+    session: str
+    tokens: dict[Path, int]
+    kinds: dict[Path, str]
+
+
+def memory_line(text: str, session: str) -> Measured | None:
+    """The last memory line of a timeline file, or None."""
+    for line in reversed(text.splitlines()):
+        try:
+            record = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(record, dict) or record.get("ev") != "memory" or not isinstance(record.get("files"), list):
+            continue
+        measured = Measured(session, {}, {})
+        for f in record["files"]:
+            if isinstance(f, dict) and isinstance(f.get("path"), str) and isinstance(f.get("tokens"), int):
+                path = Path(f["path"]).resolve()
+                measured.tokens[path] = f["tokens"]
+                measured.kinds[path] = str(f.get("type") or "?")
+        return measured
+    return None
+
+
+def latest_measured(measure_dir: Path, wanted: set[Path]) -> Measured | None:
+    """The newest memory line that lists one of the wanted files. A timeline file is named for the epoch milliseconds it was written at."""
+    for path in sorted(measure_dir.glob("*/*.jsonl"), key=lambda p: p.name, reverse=True):
+        try:
+            measured = memory_line(path.read_text(encoding="utf-8", errors="replace"), path.parent.name)
+        except OSError:
+            continue
+        if measured is not None and wanted & measured.tokens.keys():
+            return measured
+    return None
+
+
+def report(name: str, files: list[Path], budget: int, root: Path, measured: Measured | None = None) -> tuple[list[str], bool]:
     counted = [(words(p), p) for p in files]
     total = sum(n for n, _ in counted)
-    lines = [f"{n:>7}  {shown(p, root)}" for n, p in counted]
+    lines = []
+    for n, p in counted:
+        tokens = measured.tokens.get(p.resolve()) if measured else None
+        lines.append(f"{n:>7}  {shown(p, root)}" + (f"  ({tokens:,} tokens)" if tokens is not None else ""))
     over = total > budget
     verdict = f"over its budget of {budget:,}" if over else f"of {budget:,} words"
     lines.append(f"{name}: {total:,} words {verdict}" if over else f"{name}: {total:,} {verdict}")
     return lines, over
 
 
+def engine_report(measured: Measured, counted: list[Path], root: Path) -> list[str]:
+    """What the engine loads that the rulebook does not count, and the engine's total."""
+    known = {p.resolve() for p in counted}
+    lines = [
+        f"{n:>7}  {shown(p, root)}  ({n:,} tokens, {measured.kinds[p]}, loaded by the engine and not counted)"
+        for p, n in measured.tokens.items() if p not in known
+    ]
+    lines.append(f"engine: {sum(measured.tokens.values()):,} tokens of memory files, as session {measured.session[:8]} measured them")
+    return lines
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="The rulebook's word count against its budget.")
     parser.add_argument("--root", default=".", help="the project root; its .claude/claude-kit.json applies")
     parser.add_argument("--claude-dir", default=str(Path.home() / ".claude"), help="the user's Claude directory, whose CLAUDE.md every session loads")
+    parser.add_argument("--measure-dir", default=str(MEASURE_DIR), help="the timeline session-kit's module writes, read for the engine's token counts")
     args = parser.parse_args()
     root = Path(args.root).resolve()
     settings = read_settings(root)
-    rules_lines, rules_over = report("rules", rule_files(root, Path(args.claude_dir).expanduser()), settings.rules, root)
+    rules = rule_files(root, Path(args.claude_dir).expanduser())
+    ours = {p.resolve() for p in rules if p.resolve().is_relative_to(root)}
+    measured = latest_measured(Path(args.measure_dir).expanduser(), ours)
+    rules_lines, rules_over = report("rules", rules, settings.rules, root, measured)
     skills_lines, skills_over = report("skills", skill_files(root, settings), settings.skills, root)
-    for line in rules_lines + skills_lines:
+    engine_lines = engine_report(measured, rules, root) if measured else []
+    for line in rules_lines + skills_lines + engine_lines:
         print(line)
     return 1 if rules_over or skills_over else 0
 
