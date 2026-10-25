@@ -75,7 +75,7 @@ An author who sets `"version": "1.0.0"` and never bumps it ships nothing to exis
 | Marketplace | Source | Auto-update |
 | --- | --- | --- |
 | `claude-plugins-official` | `anthropics/claude-plugins-official` | On (default). Catalog last refreshed 2026-10-24 14:10. |
-| `galileo-kit` | `https://github.com/GalileoCap/session-kit.git` | Off (third-party default, no `autoUpdate` key set). |
+| `galileo-kit` | `https://github.com/GalileoCap/galileo-kit.git` | Off (third-party default, no `autoUpdate` key set). |
 
 - The Desktop app launches its bundled Claude Code with `DISABLE_AUTOUPDATER=1`. The variable is in this session's environment and in none of your shell profiles. In Desktop Code-tab sessions the background plugin pass never runs. A terminal `claude` session runs it for `claude-plugins-official`.
 - Installed: `session-kit@galileo-kit` 0.5.1 (user scope plus project installs), and `pyright-lsp` and `typescript-lsp` 1.0.0 from the official marketplace (project scope, 26 installs each). The cache still holds `session-kit` 0.1.0 to 0.5.0.

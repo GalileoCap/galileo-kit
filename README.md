@@ -1,6 +1,6 @@
-# claude-kit
+# galileo-kit
 
-Everything its owner works with agents through: the rules every session follows (`global/`), the tools and plugins sessions use, and the vetting of each third-party piece before it is installed. It is a plugin marketplace (`galileo-kit`) holding one plugin (`session-kit`). Claude Code reserves plugin names starting with `claude-`, so the repository and the plugin are named differently.
+Everything its owner works with agents through: the rules every session follows (`global/`), the tools and plugins sessions use, and the vetting of each third-party piece before it is installed. It is a plugin marketplace of the same name holding one plugin, `session-kit`, which keeps its name: the plugin is one piece of the kit.
 
 `CLAUDE.md` at the root holds the repository's intent and rules of engagement, and `docs/` the record behind them: `docs/intent/` (goals, objectives, constraints and actions, one file each), `docs/PLAN.md`, the research on plugins and mods, the reviews of candidates and the analysis behind the port of the hooks to a mod.
 
@@ -63,7 +63,7 @@ The hook runs it with `uv` (silent without it), its environment kept in `CLAUDE_
 ## Install
 
 ```bash
-claude plugin marketplace add https://github.com/GalileoCap/session-kit.git
+claude plugin marketplace add https://github.com/GalileoCap/galileo-kit.git
 claude plugin install session-kit@galileo-kit
 ```
 
@@ -74,7 +74,7 @@ A project that depends on the kit declares it in `.claude/settings.json`, so any
 ```json
 {
   "extraKnownMarketplaces": {
-    "galileo-kit": { "source": { "source": "git", "url": "https://github.com/GalileoCap/session-kit.git" } }
+    "galileo-kit": { "source": { "source": "git", "url": "https://github.com/GalileoCap/galileo-kit.git" } }
   },
   "enabledPlugins": { "session-kit@galileo-kit": true }
 }

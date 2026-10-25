@@ -76,7 +76,7 @@ runs it from git at a pinned commit, through a wrapper of its own,
 rev=<commit>
 date=<that commit's date, e.g. 2026-10-11T18:00:00Z>
 exec uvx --quiet --exclude-newer "$date" \
-    --from "session-codeintel @ git+https://github.com/GalileoCap/session-kit.git@$rev#subdirectory=plugins/session-kit/codeintel" \
+    --from "session-codeintel @ git+https://github.com/GalileoCap/galileo-kit.git@$rev#subdirectory=plugins/session-kit/codeintel" \
     "$@"
 ```
 
