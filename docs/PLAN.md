@@ -26,6 +26,8 @@
 
 - 2026-10-25: the owner added an objective, `O17`: the system is observed, analysed and improved over time, with tooling over the sessions' transcripts and the hooks' effect as `A22`. The owner paused the port before reviewing its plan.
 
+- 2026-10-25: the owner reviewed the plan and said to proceed as proposed. Step 2 of the port, `A17` with `A18`: the chain is in `context.tsx` behind the `chain` option (off), the `clear_point` tool taking who owns the next step, the stages driven off `turn.complete`, the engine's own compaction given the handoff's fields. session-kit 0.7.0, 12 engine tests green, validated against 2.1.308.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
@@ -34,9 +36,10 @@
 
 ## Next
 
-1. Paused by the owner until they have reviewed the port plan. The owner reads the port's entries: approves or cuts `O14` to `O16`, states or strikes `C1`, and validates `A4` to `A21`, the chain `A17` and one task per context `A19` among them. The open questions of the process document are answered on the way, the names among them.
-2. The port, in the order `A20` gives: `A16` is done and waits on the owner's validation in real sessions. Next the chain `A17` behind its toggle, with `A18`'s backstop. The index and check tool `A21` is built beside it.
-3. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
+1. Install 0.7.0 on this machine and watch a real session: `A16`'s warning past half the window and its band on the terminal and in the desktop app, then `A17` with `chain` on, one run end to end, and the summary read back. The marketplace clone pulls from GitHub, so the install needs the owner's push, or a marketplace added from the local path.
+2. The port, in the order `A20` gives. `A21`, the index and check tool for `docs/intent/`, beside the steps. Then step 3, `A11`, `A8` and `A7` in-process, the guard's mod form once mod ordering is answered, and `A19`'s rule and tool.
+3. `A22`'s shape, designed and put to the owner before it is built.
+4. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
 
 ## Open questions
 

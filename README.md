@@ -8,7 +8,7 @@ Everything its owner works with agents through: the rules every session follows 
 
 | Piece | Event | What it does |
 | --- | --- | --- |
-| `context.tsx` | `tool.call`, `session.measure`, `ui.render` | A hooks module. After every tool call it reads the engine's own context figure and, once the context passes half the window, adds a warning to the tool result every 25k tokens, firmer past 65% and 80%. Past the threshold a band above the prompt shows the figure to the person. It never holds a tool call or the end of a turn, and a failure in it leaves the call as it ran. |
+| `context.tsx` | `tool.call`, `session.measure`, `session.compact`, `turn.complete`, `ui.render` | A hooks module. After every tool call it reads the engine's own context figure and, once the context passes half the window, adds a warning to the tool result every 25k tokens, firmer past 65% and 80%. Past the threshold a band above the prompt shows the figure to the person. It never holds a tool call or the end of a turn, and a failure in it leaves the call as it ran. The engine's own compaction, the one at its threshold, gets instructions to keep what a handoff keeps. With the `chain` option on, the model gets a `clear_point` tool: at a clear point it calls it with who takes the next step, and when that turn ends the module runs the handoff skill, compacts the context and submits a continue prompt, or stops after the compaction when the next step is the owner's, which the band says. |
 | `guard.py` | PreToolUse (Bash, Artifact) | Refuses `git commit --no-verify`, `git push --force` (not `--force-with-lease`), `git rebase -i`, `git reset --hard`, a bare `git stash` or `stash pop`, `-x` on a test run, shell `timeout` around a Bash call, test output piped inline to `grep`/`head`/`tail`, amending a commit already on a remote, and publishing an Artifact. |
 | `nudge_single_edit.py` | PreToolUse (Bash) | A Python heredoc doing one read, one replace and one write is told to use the Edit tool. |
 | `doc_length.py` | PostToolUse (Edit, Write) | Warns when a `docs/*.md` file passes 1500 lines. |
@@ -22,7 +22,8 @@ Everything its owner works with agents through: the rules every session follows 
 
 ## Configuration
 
-- The context warnings are the plugin's two options, `threshold` (percent of the window, 50) and `step` (tokens between warnings, 25000), set in `/config` under the plugin or in `settings.json` under `pluginConfigs`. The window is the engine's own figure for the session's model.
+- The context warnings are the plugin's options `threshold` (percent of the window, 50) and `step` (tokens between warnings, 25000), set in `/config` under the plugin or in `settings.json` under `pluginConfigs`. The window is the engine's own figure for the session's model.
+- `chain` (off) turns on the handoff chain: the `clear_point` tool, and the handoff, compaction and continue that run when the turn it was called in ends. The continue prompt reaches the model as the plugin's, telling it to read again the documents `CLAUDE.local.md` lists and take its next step. An interrupted turn cancels the chain.
 - `CLAUDE_KIT_DOC_LINES` (1500) sets the doc-length warning.
 - A project names its own test runners in `.claude/claude-kit.json`, so the `-x` and piped-output rules and the test log cover them:
 
