@@ -58,6 +58,8 @@
 
 **Publishing is the owner's.** A push or a published page reaches people, and may be cached or indexed even after it is removed. When work is seen is the owner's decision.
 
+**What a change leaves to do outside the code is written in `OWED.md`.** The first project needed a key in an instance file, a one-off command after the deploy and four keys in every worktree's `.env`, and all three lived in a landing-log entry and in one lane's uncommitted notes, where neither the deploy nor a lane would meet them. A file at the root, appended in the commit that makes the step owed, is met by whoever reads a range of history: the deploy reads what the release owes since the release the instance runs, the sync what the lane owes since its last head. An entry is never removed, so a range reads whole, and the command fails on a removal, the half of the rule a program can see.
+
 ## Gates and tests
 
 **Quality gates are zero warnings.** A gate that tolerates warnings stops being read: a new warning arrives among fifty old ones and nobody sees it. At zero, every new one is visible the moment it appears.
@@ -67,6 +69,8 @@
 **Suppressions and type escapes need the owner's approval.** Each one decides that the check is wrong at this site, and they accumulate without anybody deciding that in aggregate. Refactor, suppress or re-scope is a trade-off with costs on each side, and the owner is the one who carries them. The approval lived in a transcript until generic-app put it in a numbered row beside the code's citation, where a check can hold the two together and a reader finds the reason. Deleting a suppression only gives a check back.
 
 **Test output goes to a file.** Piped into `head`, `tail` or `grep`, a run keeps only what the filter guessed, and a second look means running the suite again. `-x` hides every failure after the first, so a change is proved one failure at a time. A shell `timeout` around a call duplicates the tool's own cap in another unit (seconds against milliseconds), and its kill truncates a summary into something that reads as a failing gate.
+
+**No run goes on without a decision.** The first project's proof stalled at 98% for forty-five minutes with its controller and all eight workers idle, holding the test slot with two lanes queued behind it, and nothing in the tooling was deciding anything. The owner's rule was that no script is capable of lasting over five minutes without an active decision: still going and moving, give it five more, five more with nothing moving, something is wrong. The wrapper watches the three signs of progress because a hung local run lacks the first two and a run waiting on a remote host shows only the third, and it writes the process tree and a stack sample before ending the run, since a person would otherwise have to catch those by hand before the tree is gone. The Bash tool's own timeout ends a run without them.
 
 **A slow test is a smell, and a danger until it is acknowledged.** A test that takes seconds is usually waiting on something real: the clock, the network, a lock, a race that happens to pass. Each slow test is fine alone, and a suite slows by their accumulation until every run pays for all of them. A per-test timeout makes the cost visible when the test is written, and an acknowledged slow test says why it is allowed. Raising a cap so a run fits removes the signal that said something changed.
 

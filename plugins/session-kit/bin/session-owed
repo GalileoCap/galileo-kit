@@ -1,0 +1,5 @@
+#!/bin/sh
+# What a range of history leaves to do outside the code, from OWED.md.
+# Claude Code puts bin/ on the Bash tool's PATH while the plugin is enabled.
+# Standard library only.
+exec python3 "$(dirname "$0")/../owed/session_owed.py" "$@"

@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+# Run a command, and decide every few minutes whether to go on.
+#
+#   session-watched [options] -- <command...>
+#
+#   --label <text>   what the lines call it (default: the command, cut)
+#   --stall <s>      the window with no progress after which it is ended (default 300)
+#   --check <s>      how often it says it has decided to go on (default 300)
+#   --sample <s>     how often it looks (default 5)
+#   --beat <file>    write the time of every sign of progress to this file
+#   --warn           say so when it stalls, and do not end it, for a command
+#                    that changes a remote host, where ending it half way is
+#                    worse than a person deciding
+#
+# The rule: no run goes on without a decision. Still going and moving, give
+# it five more minutes. Five minutes with nothing moving, something is wrong,
+# and nobody in the tooling was deciding anything.
+#
+# Progress is any of three things: CPU spent anywhere in the command's
+# process tree, a process in it starting or ending, or its own output
+# growing. The first two are what a hung local run lacks and a working one
+# always has. Output is the third because a command that waits on a remote
+# host spends no CPU here while it streams that host's log. It is only
+# measurable when stdout or stderr is a regular file, which is how an agent's
+# run is made (`&> log`). On a terminal or a pipe it is not counted and the
+# first two stand alone. This script's own lines are not counted as the
+# command's.
+#
+# Every --check seconds it says it has decided to go on, and on what
+# evidence. After --stall seconds with none it writes diagnostics (the tree
+# as it stood and a `sample` of each process in it, macOS's, absent
+# elsewhere), then ends the tree and exits 125: not 0, and not a verdict on
+# the code. With --warn it writes the diagnostics and goes on, saying so
+# again each window.
+#
+# The command is told it is watched (SESSION_WATCHED=1), so a script that
+# wraps itself in a watch does not wrap a second one inside the first.
+#
+# The command is started in the background and polled, not waited on,
+# because bash does not act on a signal until a foreground child returns: a
+# TERM to a wrapper whose child had hung is not acted on at all.
+set -euo pipefail
+
+STALL="${SESSION_WATCH_STALL:-300}"
+CHECK="${SESSION_WATCH_CHECK:-300}"
+SAMPLE="${SESSION_WATCH_SAMPLE:-5}"
+LABEL=""
+BEAT=""
+WARN=no
+CHILD=""
+
+say() {
+  printf 'session-watched: %s\n' "$*" >&2
+  # What was just written is ours, not the command's.
+  BASE_OUT=$(output_size)
+}
+
+usage() {
+  echo "usage: session-watched [--label <text>] [--stall <s>] [--check <s>] [--sample <s>] [--beat <file>] [--warn] -- <command...>" >&2
+  exit 2
+}
+
+# Every process in the tree under $1 (the root, its children, theirs), one
+# "pid centiseconds-of-CPU" line each. `ps` is read once, so the tree is one
+# instant's, and the whole of it is the command's: workers, the browsers a
+# leg starts, a nested script. A database the command started detaches from
+# it and is not counted, which is right: it is what the command waits on,
+# not what it does.
+tree() {
+  ps -axo pid=,ppid=,time= 2>/dev/null | awk -v root="$1" '
+    {
+      ppid[$1] = $2; n = split($3, part, ":"); s = 0
+      for (i = 1; i <= n; i++) s = s * 60 + part[i]
+      cpu[$1] = s; seen[++count] = $1
+    }
+    END {
+      if (!(root in cpu)) exit
+      keep[root] = 1; grew = 1
+      while (grew) {
+        grew = 0
+        for (i = 1; i <= count; i++) {
+          q = seen[i]
+          if (!(q in keep) && (ppid[q] in keep)) { keep[q] = 1; grew = 1 }
+        }
+      }
+      for (q in keep) printf "%d %d\n", q, cpu[q] * 100
+    }'
+}
+
+# The tree in three numbers: CPU spent, how many processes, their pids
+# summed. A change in any is the command doing something.
+tree_state() { tree "$1" | awk '{ s += $2; n++; ids += $1 } END { printf "%d %d %d\n", s, n, ids }'; }
+
+tree_pids() { tree "$1" | awk '{ print $1 }'; }
+
+# How much stdout and stderr hold between them, or -1 when neither is a
+# regular file and so there is nothing to read. They are read through fds 3
+# and 4, copies of the originals taken at the start: inside a `$( )` fd 1 is
+# the capture pipe, and `/dev/fd/N` on macOS is a device that `stat` reports
+# as itself and not as the file behind it, so only an `fstat` on the
+# descriptor itself tells.
+output_size() {
+  python3 -c 'import os, stat
+total = -1
+for fd in (3, 4):
+    try:
+        info = os.fstat(fd)
+    except OSError:
+        continue
+    if stat.S_ISREG(info.st_mode):
+        total = max(total, 0) + info.st_size
+print(total)' 2>/dev/null || echo -1
+}
+
+# End the tree under $1: ask, give it three seconds, then insist. The pids
+# are read once up front because ending the root orphans the rest, which
+# then no longer hang off it.
+kill_tree() {
+  local pids p left tries=0
+  pids=$(tree_pids "$1")
+  [[ -n $pids ]] || return 0
+  # One pid per word is the point.
+  # shellcheck disable=SC2086
+  kill -TERM $pids 2>/dev/null || true
+  while (( tries < 30 )); do
+    left=""
+    for p in $pids; do
+      if kill -0 "$p" 2>/dev/null; then left="$left $p"; fi
+    done
+    [[ -z $left ]] && return 0
+    sleep 0.1
+    tries=$(( tries + 1 ))
+  done
+  # shellcheck disable=SC2086
+  kill -KILL $left 2>/dev/null || true
+}
+
+# What a person would otherwise have to catch by hand before the tree is
+# gone: the tree as it stood, and a stack sample of each process in it. Said
+# on stderr so it lands in whatever log the command was writing.
+diagnose() {
+  local root="$1" dir p listed="" samplers=()
+  dir=$(mktemp -d "${TMPDIR:-/tmp}/session-watched-stall-$(basename "$PWD").XXXXXX")
+  listed=$(tree_pids "$root" | head -16 | paste -sd, -)
+  if [[ -n $listed ]]; then
+    ps -o pid=,ppid=,state=,time=,command= -p "$listed" 2>/dev/null | cut -c1-150 > "$dir/tree.txt" || true
+    sed 's/^/session-watched:   /' "$dir/tree.txt" >&2
+    if command -v sample >/dev/null 2>&1; then
+      for p in ${listed//,/ }; do
+        sample "$p" 1 -file "$dir/sample-$p.txt" >/dev/null 2>&1 &
+        samplers+=("$!")
+      done
+      wait "${samplers[@]}" 2>/dev/null || true
+    fi
+  fi
+  say "diagnostics in $dir"
+}
+
+# A signal to this script is a signal to everything it started.
+on_signal() {
+  if [[ -n $CHILD ]]; then kill_tree "$CHILD" || true; wait "$CHILD" 2>/dev/null || true; fi
+  exit "$1"
+}
+
+while (( $# )); do
+  case "$1" in
+    --label) LABEL="${2:?--label wants a text}"; shift 2 ;;
+    --stall) STALL="${2:?--stall wants seconds}"; shift 2 ;;
+    --check) CHECK="${2:?--check wants seconds}"; shift 2 ;;
+    --sample) SAMPLE="${2:?--sample wants seconds}"; shift 2 ;;
+    --beat) BEAT="${2:?--beat wants a file}"; shift 2 ;;
+    --warn) WARN=yes; shift ;;
+    --) shift; break ;;
+    *) usage ;;
+  esac
+done
+(( $# )) || usage
+[[ -n $LABEL ]] || LABEL=$(printf '%.60s' "$*")
+
+trap 'on_signal 143' TERM
+trap 'on_signal 130' INT
+
+exec 3>&1 4>&2
+BASE_OUT=$(output_size)
+# The copies stay ours: the command is not handed fds 3 and 4.
+SESSION_WATCHED=1 "$@" <&0 3>&- 4>&- &
+CHILD=$!
+
+now() { date +%s; }
+beat() { if [[ -n $BEAT ]]; then printf '%s' "$1" > "$BEAT" 2>/dev/null || true; fi; }
+
+status=0
+ticks=0
+# The command's end is noticed within a tenth of a second, and the tree is
+# read every --sample seconds.
+every=$(awk -v s="$SAMPLE" 'BEGIN { n = int(s * 10); print (n < 1 ? 1 : n) }')
+started=$(now)
+last_progress=$started
+last_check=$started
+beat "$started"
+read -r base_cpu base_procs base_ids <<<"$(tree_state "$CHILD")"
+window_cpu=$base_cpu
+window_out=$BASE_OUT
+while kill -0 "$CHILD" 2>/dev/null; do
+  sleep 0.1
+  ticks=$(( ticks + 1 ))
+  (( ticks >= every )) || continue
+  ticks=0
+  read -r cpu procs ids <<<"$(tree_state "$CHILD")"
+  out=$(output_size)
+  now_t=$(now)
+  delta=$(( cpu - base_cpu ))
+  if (( delta < 0 )); then delta=$(( -delta )); fi
+  # Thirty centiseconds, so the hum of an idle process is not progress.
+  if (( delta >= 30 || procs != base_procs || ids != base_ids || out != BASE_OUT )); then
+    last_progress=$now_t
+    base_cpu=$cpu
+    base_procs=$procs
+    base_ids=$ids
+    BASE_OUT=$out
+    beat "$now_t"
+  fi
+  if (( now_t - last_progress >= STALL )); then
+    if [[ $WARN == yes ]]; then
+      say "$LABEL: no progress in the last ${STALL}s, and it is not ended (--warn): decide whether it is working, and end it yourself if not"
+      diagnose "$CHILD"
+      last_progress=$now_t
+    else
+      say "no progress in the last ${STALL}s ($LABEL): nothing reported red, and the run was ended"
+      diagnose "$CHILD"
+      kill_tree "$CHILD"
+      wait "$CHILD" 2>/dev/null || true
+      CHILD=""
+      exit 125
+    fi
+  fi
+  if (( now_t - last_check >= CHECK )); then
+    elapsed=$(( now_t - started ))
+    if (( last_progress >= last_check )); then
+      evidence="cpu +$(( (cpu - window_cpu) / 100 ))s, $procs processes"
+      if (( out >= 0 )); then evidence="$evidence, output +$(( out - window_out ))B"; fi
+      say "$LABEL: $(( elapsed / 60 ))m$(( elapsed % 60 ))s in, making progress, continuing ($evidence)"
+    else
+      ends="it is ended at ${STALL}s"
+      if [[ $WARN == yes ]]; then ends="you are warned at ${STALL}s"; fi
+      say "$LABEL: $(( elapsed / 60 ))m$(( elapsed % 60 ))s in, no progress for $(( now_t - last_progress ))s so far, and $ends"
+    fi
+    window_cpu=$cpu
+    window_out=$out
+    last_check=$now_t
+  fi
+done
+wait "$CHILD" || status=$?
+CHILD=""
+exit "$status"

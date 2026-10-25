@@ -7,6 +7,7 @@
 members = [
     "plugins/session-kit/docs_check/test_session_docs.py:case",
     "plugins/session-kit/intent/test_session_intent.py:case",
+    "plugins/session-kit/owed/test_session_owed.py:case",
     "plugins/session-kit/rulebook/test_session_rulebook.py:case",
     "plugins/session-kit/suppressions/test_session_suppressions.py:case",
     "plugins/session-kit/transcripts/test_session_transcripts.py:case",
@@ -1323,3 +1324,48 @@ code = "except ValueError: return None"
 class = "spoken"
 disposition = "keep"
 why = "the absence is in the return type and the docstring, and the caller decides"
+
+[[fallbacks]]
+site = "plugins/session-kit/owed/session_owed.py"
+where = "read_file_name"
+form = "except-returns"
+code = "except (OSError, ValueError): return DEFAULT_FILE"
+class = "declared"
+disposition = "keep"
+why = "no settings file means the documented default name, a named constant"
+
+[[fallbacks]]
+site = "plugins/session-kit/owed/session_owed.py"
+where = "read_file_name"
+form = "if-none"
+code = "name if isinstance(name, str) and name else DEFAULT_FILE"
+class = "declared"
+disposition = "keep"
+why = "a settings file naming no file means the documented default name, a named constant"
+
+[[fallbacks]]
+site = "plugins/session-kit/owed/session_owed.py"
+where = "render"
+form = "if-none"
+code = "'\\n\\n'.join(blocks) + '\\n' if blocks else ''"
+class = "declared"
+disposition = "keep"
+why = "nothing gained prints nothing, as the api line says"
+
+[[fallbacks]]
+site = "plugins/session-kit/owed/session_owed.py"
+where = "main"
+form = "if-none"
+code = "text_at(root, args.since, name) if args.since else ''"
+class = "declared"
+disposition = "keep"
+why = "without --since nothing was held before, so everything is owed, as the option's help says"
+
+[[fallbacks]]
+site = "plugins/session-kit/owed/session_owed.py"
+where = "main"
+form = "except-returns"
+code = "except ValueError: return 2"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
