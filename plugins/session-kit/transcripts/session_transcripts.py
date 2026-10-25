@@ -1,275 +1,40 @@
 """The reader over the sessions' transcripts.
 
-Each session leaves one JSONL file under ``~/.claude/projects/<project>/``.
-This command reads them locally and prints tables: ``list`` (one row per
+Each session leaves one JSONL file under ``~/.claude/projects/<project>/``,
+read by ``records.py``. This command prints tables: ``list`` (one row per
 session), ``session <id>`` (the context at each request, the warnings, the
-compactions), ``warnings`` (each context warning and what followed it),
-``cache`` (the share of input read from the prompt cache and the cold
-sends), ``compactions`` (by trigger, with the context each ran over), ``hooks`` (each settings hook's fires by name), and ``report``
-(those tables written to a markdown file under ``docs/measurements/``).
+compactions, where it came from), ``warnings`` (each context warning and
+what followed it), ``cache`` (the share of input read from the prompt cache
+and the cold sends), ``compactions`` (by trigger, with the context each ran
+over), ``hooks`` (each settings hook's fires by name), ``chains`` (the
+sessions a clear, a resume, a fork or one running cost joined), ``waste`` (what
+a session read or ran again, a compaction's price in reads among it),
+``asks`` (the person's asks that recur), and ``report`` (those tables but
+the asks written to a markdown file under ``docs/measurements/``).
 
 It prints counts, sizes, names of hooks and tools, and the hooks' own text.
-It prints no prompt and no answer, and writes nothing outside the file
-``report`` is given.
+It prints no prompt and no answer unless ``asks --quote`` is asked for, and
+writes nothing outside the file ``report`` is given.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
-import tarfile
+import math
 import os
 import re
 import sys
-from dataclasses import dataclass, field
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
+from fractions import Fraction
 from pathlib import Path
 
-WARNING = re.compile(r"Context at ([\d,]+) tokens \((\d+)% of")
-HANDOFF_PATH = re.compile(r"CLAUDE\.local\.md$")
-COMMIT = re.compile(r"(^|[;&|]\s*)git\s+commit\b")
-COLD_GAP_MINUTES = 5
-COLD_SHARE = 0.5
-HOOK_ATTACHMENTS = ("hook_success", "hook_additional_context", "hook_system_message")
+from records import COLD_GAP_MINUTES, COLD_SHARE, Ask, Compaction, Session, Waste, read_all
 
-
-@dataclass
-class Request:
-    at: datetime
-    fresh: int
-    read: int
-    created: int
-    out: int
-    model: str
-    turn: int
-
-    @property
-    def context(self) -> int:
-        return self.fresh + self.read + self.created
-
-
-@dataclass
-class Warning:
-    at: datetime
-    tokens: int
-    percent: int
-    turn: int
-    handoff_turns: int | None = None
-    commit_turns: int | None = None
-    compaction_turns: int | None = None
-
-
-@dataclass
-class Compaction:
-    at: datetime
-    trigger: str
-    pre_tokens: int
-    duration_ms: int
-    turn: int
-
-
-@dataclass
-class Session:
-    id: str
-    project: str
-    path: Path
-    started: datetime | None = None
-    prompts: int = 0
-    requests: list[Request] = field(default_factory=list)
-    warnings: list[Warning] = field(default_factory=list)
-    compactions: list[Compaction] = field(default_factory=list)
-    hooks: dict[str, int] = field(default_factory=dict)
-    hook_chars: dict[str, int] = field(default_factory=dict)
-    tools: dict[str, int] = field(default_factory=dict)
-    cost_usd: float | None = None
-    lines_added: int = 0
-    lines_removed: int = 0
-
-    @property
-    def cache_share(self) -> float | None:
-        total = sum(r.context for r in self.requests)
-        return sum(r.read for r in self.requests) / total if total else None
-
-    def cold_sends(self) -> list[Request]:
-        cold: list[Request] = []
-        previous: Request | None = None
-        for r in sorted(self.requests, key=lambda r: r.at):
-            if previous is not None and r.context:
-                gap = (r.at - previous.at).total_seconds() / 60
-                if gap > COLD_GAP_MINUTES and r.created / r.context >= COLD_SHARE:
-                    cold.append(r)
-            previous = r
-        return cold
-
-
-def when(value: object) -> datetime | None:
-    if not isinstance(value, str):
-        return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-
-
-def texts_of(value: object) -> list[str]:
-    """Every string under a record's content, whatever its nesting."""
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, list):
-        return [t for item in value for t in texts_of(item)]
-    if isinstance(value, dict):
-        return [t for item in value.values() for t in texts_of(item)]
-    return []
-
-
-def session_id_of(path: Path) -> str:
-    """The id a transcript's file name carries: `<id>.jsonl`, or an archive's `<id>.tar.xz`."""
-    return path.name.split(".", 1)[0]
-
-
-def lines_of(path: Path) -> Iterator[str]:
-    """The transcript's lines. An archive (`.tar.xz`, as the owner's backup keeps a session with its
-    subagents and file history) is read in a stream, its main `.jsonl` member alone."""
-    if path.name.endswith(".tar.xz"):
-        wanted = session_id_of(path) + ".jsonl"
-        with tarfile.open(path, "r:xz") as archive:
-            for member in archive:
-                if member.isfile() and member.name.endswith("/" + wanted) and "/subagents/" not in member.name:
-                    fh = archive.extractfile(member)
-                    if fh is not None:
-                        for raw in fh:
-                            yield raw.decode("utf-8", errors="replace")
-                    return
-        return
-    with path.open(encoding="utf-8") as fh:
-        yield from fh
-
-
-def read_session(path: Path) -> Session:
-    session = Session(id=session_id_of(path), project=path.parent.name, path=path)
-    seen_requests: set[str] = set()
-    turn = 0
-    for line in lines_of(path):
-        try:
-            r = json.loads(line)
-        except ValueError:
-            continue
-        if not isinstance(r, dict):
-            continue
-        kind = r.get("type")
-        at = when(r.get("timestamp"))
-        if at is not None and session.started is None:
-            session.started = at
-        sidechain = r.get("isSidechain") is True
-        message = r.get("message") if isinstance(r.get("message"), dict) else {}
-        content = message.get("content")
-        if kind == "user" and not sidechain:
-            is_prompt = isinstance(content, str) or (
-                isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "text" for b in content)
-            ) and not r.get("isMeta") and not r.get("isCompactSummary")
-            if is_prompt and not r.get("toolUseResult"):
-                turn += 1
-                session.prompts += 1
-            if isinstance(content, list):
-                for b in content:
-                    if isinstance(b, dict) and b.get("type") == "tool_result":
-                        note_warnings(session, texts_of(b.get("content")), at, turn)
-        elif kind == "assistant":
-            usage = message.get("usage") if isinstance(message.get("usage"), dict) else None
-            rid = str(r.get("requestId") or message.get("id") or r.get("uuid") or "")
-            if usage and rid not in seen_requests and at is not None:
-                seen_requests.add(rid)
-                session.requests.append(Request(
-                    at=at,
-                    fresh=int(usage.get("input_tokens") or 0),
-                    read=int(usage.get("cache_read_input_tokens") or 0),
-                    created=int(usage.get("cache_creation_input_tokens") or 0),
-                    out=int(usage.get("output_tokens") or 0),
-                    model=str(message.get("model") or r.get("requestedModel") or ""),
-                    turn=turn,
-                ))
-            if isinstance(content, list) and not sidechain:
-                for b in content:
-                    if isinstance(b, dict) and b.get("type") == "tool_use":
-                        note_tool(session, str(b.get("name") or ""), b.get("input"), turn)
-        elif kind == "attachment":
-            a = r.get("attachment") if isinstance(r.get("attachment"), dict) else {}
-            if a.get("type") in HOOK_ATTACHMENTS:
-                name = str(a.get("hookName") or a.get("type"))
-                session.hooks[name] = session.hooks.get(name, 0) + 1
-                text = "".join(texts_of([a.get("stdout"), a.get("content")]))
-                session.hook_chars[name] = session.hook_chars.get(name, 0) + len(text)
-                note_warnings(session, [text], at, turn)
-        elif kind == "system" and r.get("subtype") == "compact_boundary":
-            meta = r.get("compactMetadata") if isinstance(r.get("compactMetadata"), dict) else {}
-            compaction = Compaction(
-                at=at or session.started or datetime.now(timezone.utc),
-                trigger=str(meta.get("trigger") or "?"),
-                pre_tokens=int(meta.get("preTokens") or 0),
-                duration_ms=int(meta.get("durationMs") or 0),
-                turn=turn,
-            )
-            session.compactions.append(compaction)
-            for w in session.warnings:
-                if w.compaction_turns is None:
-                    w.compaction_turns = turn - w.turn
-        elif kind == "cost-state":
-            session.cost_usd = float(r.get("totalCostUSD") or 0)
-            session.lines_added = int(r.get("totalLinesAdded") or 0)
-            session.lines_removed = int(r.get("totalLinesRemoved") or 0)
-    return session
-
-
-def note_warnings(session: Session, texts: list[str], at: datetime | None, turn: int) -> None:
-    for text in texts:
-        for m in WARNING.finditer(text):
-            session.warnings.append(Warning(
-                at=at or session.started or datetime.now(timezone.utc),
-                tokens=int(m.group(1).replace(",", "")),
-                percent=int(m.group(2)),
-                turn=turn,
-            ))
-
-
-def note_tool(session: Session, name: str, inp: object, turn: int) -> None:
-    session.tools[name] = session.tools.get(name, 0) + 1
-    args = inp if isinstance(inp, dict) else {}
-    is_handoff = (
-        name in ("Write", "Edit") and HANDOFF_PATH.search(str(args.get("file_path") or "")) is not None
-    ) or (name == "Skill" and "handoff" in str(args.get("skill") or ""))
-    is_commit = name == "Bash" and COMMIT.search(str(args.get("command") or "")) is not None
-    for w in session.warnings:
-        if is_handoff and w.handoff_turns is None:
-            w.handoff_turns = turn - w.turn
-        if is_commit and w.commit_turns is None:
-            w.commit_turns = turn - w.turn
-
-
-def transcript_paths(roots: list[Path]) -> list[Path]:
-    """One path per session id over the roots, live transcripts first, then archives; a snapshot
-    archive (`<id>.snapshot-<stamp>.tar.xz`) stands in only when no other file carries its id."""
-    chosen: dict[str, Path] = {}
-    for root in roots:
-        for pattern in ("*/*.jsonl", "*/*.tar.xz"):
-            for path in sorted(root.glob(pattern)):
-                id_ = session_id_of(path)
-                snapshot = ".snapshot-" in path.name
-                if id_ not in chosen or (".snapshot-" in chosen[id_].name and not snapshot):
-                    chosen[id_] = path
-    return sorted(chosen.values())
-
-
-def read_all(roots: list[Path], project: str | None, since: datetime | None) -> list[Session]:
-    sessions: list[Session] = []
-    for path in transcript_paths(roots):
-        if project and project not in path.parent.name:
-            continue
-        s = read_session(path)
-        if since and (s.started is None or s.started < since):
-            continue
-        sessions.append(s)
-    sessions.sort(key=lambda s: s.started or datetime.min.replace(tzinfo=timezone.utc))
-    return sessions
+MEASURE_DIR = Path.home() / ".claude" / "session-kit" / "measure"
+# Two prompts are one ask when this share of their words, against all the words of both, is the same.
+ASK_LIKENESS = Fraction(7, 10)
+ASK_QUOTE_CHARS = 80
 
 
 def short(session_id: str) -> str:
@@ -298,7 +63,7 @@ def list_table(sessions: list[Session]) -> str:
     rows = [[
         short(s.id), project_name(s.project), day(s.started), str(s.prompts), str(len(s.requests)),
         f"{max((r.context for r in s.requests), default=0):,}", pct(s.cache_share), str(len(s.compactions)),
-        f"{s.cost_usd:.2f}" if s.cost_usd is not None else "?",
+        own_cost(s),
     ] for s in sessions]
     return table(["Session", "Project", "Started", "Prompts", "Requests", "Largest context", "Cache share", "Compactions", "USD"], rows)
 
@@ -410,9 +175,190 @@ def hooks_table(sessions: list[Session]) -> str:
     return table(["Hook", "Fires", "Sessions", "Chars per fire"], rows)
 
 
-def session_report(s: Session) -> str:
+
+
+def own_cost(s: Session) -> str:
+    return f"{s.own_usd:.2f}" if s.own_usd is not None else "?"
+
+
+def chains(sessions: list[Session]) -> list[list[Session]]:
+    """The sessions ``link`` joined, each chain its first session read, then the rest in the order they
+    started. A session nothing came from or went on from is in none."""
+    by_id = {s.id: s for s in sessions}
+    order = {s.id: i for i, s in enumerate(sessions)}
+    after: defaultdict[str, list[Session]] = defaultdict(list)
+    for s in sessions:
+        if s.came_from in by_id:
+            after[str(s.came_from)].append(s)
+    found: list[list[Session]] = []
+    for s in sessions:
+        if s.came_from in by_id or s.id not in after:
+            continue
+        members: list[Session] = []
+        stack = [s]
+        while stack:
+            m = stack.pop()
+            members.append(m)
+            stack.extend(after[m.id])
+        found.append([s] + sorted(members[1:], key=lambda m: order[m.id]))
+    return found
+
+
+def chains_table(sessions: list[Session]) -> str:
+    rows: list[list[str]] = []
+    for chain in chains(sessions):
+        costs = [m.own_usd for m in chain]
+        ends = [m.ended for m in chain if m.ended is not None]
+        joined = Counter(str(m.how) for m in chain[1:])
+        rows.append([
+            short(chain[0].id), str(len(chain)), ", ".join(sorted({project_name(m.project) for m in chain})),
+            day(chain[0].started), day(max(ends)) if ends else "?",
+            str(sum(m.prompts for m in chain)), str(sum(len(m.requests) for m in chain)), str(sum(len(m.compactions) for m in chain)),
+            f"{sum(c for c in costs if c is not None):.2f}" if None not in costs else "?",
+            ", ".join(f"{how} {n}" for how, n in sorted(joined.items())),
+        ])
+    body = table(["Chain", "Sessions", "Project", "First day", "Last day", "Prompts", "Requests", "Compactions", "USD", "Joined by"], rows)
+    return (
+        f"{body}\n\nA chain is the sessions joined by a clear or a resume (session-kit's timeline names the session before), "
+        "a fork (its file begins with a copy of its parent's records) or one running cost (their cost states share a start, each running on from the total of the one before). "
+        "Its cost is the sum of each session's own."
+    )
+
+
+WASTE_HEADERS = ["Read again after a compaction", "Chars", "Of them edited before it", "Unchanged in context", "Chars", "Repeated output", "Chars"]
+
+
+def waste_cells(w: Waste) -> list[str]:
+    return [str(w.again), f"{w.again_chars:,}", str(w.again_edited), str(w.unchanged), f"{w.unchanged_chars:,}", str(w.repeated), f"{w.repeated_chars:,}"]
+
+
+def summed(sessions: list[Session]) -> Waste:
+    total = Waste()
+    for s in sessions:
+        w = s.waste
+        total.reads += w.reads
+        total.read_chars += w.read_chars
+        total.again += w.again
+        total.again_chars += w.again_chars
+        total.again_edited += w.again_edited
+        total.unchanged += w.unchanged
+        total.unchanged_chars += w.unchanged_chars
+        total.repeated += w.repeated
+        total.repeated_chars += w.repeated_chars
+        total.again_by_compaction += w.again_by_compaction
+    return total
+
+
+def waste_summary(sessions: list[Session]) -> str:
+    total = summed(sessions)
+    share = total.again_chars / total.read_chars if total.read_chars else None
+    lines = [
+        f"Of {total.read_chars:,} characters read by {total.reads:,} Read calls, {total.again_chars:,} ({pct(share)}) came from "
+        f"{total.again:,} reads after a compaction of a file an earlier context of the session had read, {total.again_edited:,} of them "
+        f"a file edited before it. Reads of a file unchanged since the read before it in the same context: {total.unchanged:,}, "
+        f"{total.unchanged_chars:,} characters. Other calls that returned again, in one context, the output they had returned: "
+        f"{total.repeated:,}, {total.repeated_chars:,} characters."
+    ]
+    after = sorted(total.again_by_compaction)
+    if after:
+        lines.append(f"After each of {len(after):,} compactions, the characters read again: median {after[len(after) // 2]:,}, largest {after[-1]:,}.")
+    lines.append(
+        "The global rules ask for the documents the work rests on to be read again after a compaction, so the reads again after one "
+        "are its price in reads, and an edited file among them is one whose state the summary did not carry."
+    )
+    return "\n\n".join(lines)
+
+
+def waste_table(sessions: list[Session]) -> str:
+    rows = [
+        [short(s.id), project_name(s.project), str(len(s.compactions)), str(s.waste.reads)] + waste_cells(s.waste)
+        for s in sessions if s.waste.any
+    ]
+    return table(["Session", "Project", "Compactions", "Reads"] + WASTE_HEADERS, rows) + "\n\n" + waste_summary(sessions)
+
+
+def waste_by_project(sessions: list[Session]) -> str:
+    by_project: dict[str, list[Session]] = {}
+    for s in sessions:
+        by_project.setdefault(s.project, []).append(s)
+    rows: list[list[str]] = []
+    for project, group in by_project.items():
+        total = summed(group)
+        if total.reads or total.any:
+            rows.append([project_name(project), str(len(group)), str(sum(len(s.compactions) for s in group)), str(total.reads)] + waste_cells(total))
+    return table(["Project", "Sessions", "Compactions", "Reads"] + WASTE_HEADERS, rows) + "\n\n" + waste_summary(sessions)
+
+
+def ask_words(text: str) -> frozenset[str]:
+    """An ask's words, lower-cased, each run of digits the same word."""
+    return frozenset(re.findall(r"\w+", re.sub(r"\d+", "0", text.lower())))
+
+
+def group_asks(words: list[frozenset[str]]) -> list[int]:
+    """Each ask's group: two asks whose shared words are ``ASK_LIKENESS`` or more of the words of both are one, and so is
+    a run of such pairs. The pairs are found through a prefix of each ask's rarest words, which any two that alike share."""
+    rarity = Counter(w for ws in words for w in ws)
+    parent = list(range(len(words)))
+
+    def root(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    index: defaultdict[str, list[int]] = defaultdict(list)
+    for i in sorted(range(len(words)), key=lambda i: len(words[i])):
+        ws = words[i]
+        if not ws:
+            continue
+        prefix = sorted(ws, key=lambda w: (rarity[w], w))[: len(ws) - math.ceil(ASK_LIKENESS * len(ws)) + 1]
+        for j in {j for w in prefix for j in index[w]}:
+            if Fraction(len(ws & words[j]), len(ws | words[j])) >= ASK_LIKENESS:
+                parent[root(i)] = root(j)
+        for w in prefix:
+            index[w].append(i)
+    return [root(i) for i in range(len(words))]
+
+
+def quoted(text: str) -> str:
+    flat = " ".join(text.split())
+    cut = flat[:ASK_QUOTE_CHARS] + ("..." if len(flat) > ASK_QUOTE_CHARS else "")
+    return cut.replace("|", "\\|")
+
+
+def asks_table(sessions: list[Session], top: int, quote: bool) -> str:
+    asks = [(s, a) for s in sessions for a in s.asks]
+    groups: defaultdict[int, list[tuple[Session, Ask]]] = defaultdict(list)
+    for (s, a), g in zip(asks, group_asks([ask_words(a.text) for _, a in asks])):
+        groups[g].append((s, a))
+    ranked = sorted((m for m in groups.values() if len(m) > 1), key=lambda m: (-len(m), -len({s.id for s, _ in m})))
+    rows: list[list[str]] = []
+    for rank, members in enumerate(ranked[:top], 1):
+        times = sorted(a.at for _, a in members if a.at is not None)
+        lengths = sorted(len(a.text.split()) for _, a in members)
+        row = [
+            str(rank), str(len(members)), str(len({s.id for s, _ in members})), str(len({s.project for s, _ in members})),
+            str(lengths[len(lengths) // 2]), day(times[0]) if times else "?", day(times[-1]) if times else "?",
+        ]
+        if quote:
+            row.append(quoted(Counter(" ".join(a.text.split()) for _, a in members).most_common(1)[0][0]))
+        rows.append(row)
+    headers = ["Rank", "Prompts", "Sessions", "Projects", "Words", "First", "Last"] + (["Ask"] if quote else [])
+    return (
+        f"{table(headers, rows)}\n\n{len(asks):,} prompts of the person's over {len(sessions)} sessions, {len(ranked):,} asks made more than once. "
+        f"Two prompts are one ask when {int(ASK_LIKENESS * 100)}% or more of the words of both are shared. "
+        "A plugin's prompt, a notification and a command are not the person's ask. `--quote` prints each ask's words."
+    )
+
+
+def session_report(s: Session, sessions: list[Session]) -> str:
     out = [f"Session {s.id} in {project_name(s.project)}, started {day(s.started)}: {s.prompts} prompts, {len(s.requests)} requests, "
-           f"{len(s.compactions)} compactions, cache share {pct(s.cache_share)}" + (f", {s.cost_usd:.2f} USD" if s.cost_usd is not None else "") + ".", ""]
+           f"{len(s.compactions)} compactions, cache share {pct(s.cache_share)}" + (f", {s.own_usd:.2f} USD of its own" if s.own_usd is not None else "") + ".", ""]
+    if s.came_from is not None:
+        out += [f"Came from {short(s.came_from)} ({s.how}).", ""]
+    went_on = [f"{short(o.id)} ({o.how})" for o in sessions if o.came_from == s.id]
+    if went_on:
+        out += ["Went on in " + ", ".join(went_on) + ".", ""]
     rows = [[str(r.turn), r.at.strftime("%H:%M"), f"{r.context:,}", f"{r.read:,}", f"{r.created:,}", f"{r.out:,}", r.model] for r in s.requests]
     out.append(table(["Turn", "Time", "Context", "Read from cache", "Written to cache", "Output", "Model"], rows))
     if s.compactions:
@@ -421,6 +367,10 @@ def session_report(s: Session) -> str:
     if s.warnings:
         out += ["", "Warnings:", "", table(["Turn", "Tokens", "Window", "Handoff", "Commit", "Compaction"],
                 [[str(w.turn), f"{w.tokens:,}", f"{w.percent}%", followed(w.handoff_turns, "after"), followed(w.commit_turns, "after"), followed(w.compaction_turns, "after")] for w in s.warnings])]
+    if s.waste.any:
+        w = s.waste
+        out += ["", f"Read again after its compactions: {w.again} reads, {w.again_chars:,} characters ({w.again_edited} of them edited files). "
+                f"Read again unchanged in one context: {w.unchanged}, {w.unchanged_chars:,} characters. Repeated output: {w.repeated}, {w.repeated_chars:,} characters."]
     if s.tools:
         out += ["", "Tool calls: " + ", ".join(f"{name} {n}" for name, n in sorted(s.tools.items(), key=lambda kv: -kv[1]))]
     if s.hooks:
@@ -440,6 +390,8 @@ def full_report(sessions: list[Session], roots: list[Path], since: datetime | No
         "",
         "## Sessions",
         "",
+        "A session's cost is its own: the engine's running total, less what it carried from the session whose total it ran on from or the parent it was forked from.",
+        "",
         list_table(sessions),
         "",
         "## Warnings",
@@ -458,6 +410,16 @@ def full_report(sessions: list[Session], roots: list[Path], since: datetime | No
         "",
         compactions_table(sessions),
         "",
+        "## Chains",
+        "",
+        chains_table(sessions),
+        "",
+        "## Waste",
+        "",
+        "What the sessions read or ran again, by project. `session-transcripts waste` lists each session.",
+        "",
+        waste_by_project(sessions),
+        "",
         "## Hooks",
         "",
         hooks_table(sessions),
@@ -467,12 +429,15 @@ def full_report(sessions: list[Session], roots: list[Path], since: datetime | No
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="The reader over the sessions' transcripts.")
-    parser.add_argument("command", choices=("list", "session", "warnings", "cache", "compactions", "hooks", "report"))
+    parser.add_argument("command", choices=("list", "session", "warnings", "cache", "compactions", "hooks", "chains", "waste", "asks", "report"))
     parser.add_argument("id", nargs="?", help="the session id, for `session`")
     parser.add_argument("--root", default=os.path.expanduser("~/.claude/projects"))
     parser.add_argument("--archive", action="append", default=[], help="a directory of archived sessions, `<project>/<id>.tar.xz`, read beside the root; repeatable")
+    parser.add_argument("--measure-dir", default=str(MEASURE_DIR), help="session-kit's timeline, whose first line after a clear or a resume names the session before")
     parser.add_argument("--project", help="keep the project folders whose name holds this text")
     parser.add_argument("--since", help="keep the sessions started on or after this date (YYYY-MM-DD)")
+    parser.add_argument("--top", type=int, default=20, help="for `asks`: how many asks to rank")
+    parser.add_argument("--quote", action="store_true", help="for `asks`: print each ask's words, which are the person's own")
     parser.add_argument("--out", help="for `report`: the file to write; default docs/measurements/sessions-<date>.md")
     args = parser.parse_args()
     roots = [Path(args.root)] + [Path(a) for a in args.archive]
@@ -480,18 +445,20 @@ def main() -> int:
         if not root.is_dir():
             print(f"{root}: no such directory")
             return 2
+    measure = Path(args.measure_dir).expanduser()
     since = datetime.fromisoformat(args.since).replace(tzinfo=timezone.utc) if args.since else None
     if args.command == "session":
         if not args.id:
             print("session takes the session id")
             return 2
-        matches = [s for s in read_all(roots, args.project, None) if s.id.startswith(args.id)]
+        everyone = read_all(roots, args.project, None, measure)
+        matches = [s for s in everyone if s.id.startswith(args.id)]
         if len(matches) != 1:
             print(f"{len(matches)} sessions match {args.id}")
             return 1
-        print(session_report(matches[0]))
+        print(session_report(matches[0], everyone))
         return 0
-    sessions = read_all(roots, args.project, since)
+    sessions = read_all(roots, args.project, since, measure)
     if args.command == "list":
         print(list_table(sessions))
     elif args.command == "warnings":
@@ -502,6 +469,12 @@ def main() -> int:
         print(compactions_table(sessions))
     elif args.command == "hooks":
         print(hooks_table(sessions))
+    elif args.command == "chains":
+        print(chains_table(sessions))
+    elif args.command == "waste":
+        print(waste_table(sessions))
+    elif args.command == "asks":
+        print(asks_table(sessions, args.top, args.quote))
     else:
         out = Path(args.out) if args.out else Path("docs/measurements") / f"sessions-{datetime.now(timezone.utc).date().isoformat()}.md"
         out.parent.mkdir(parents=True, exist_ok=True)

@@ -4,8 +4,8 @@ from: [O17]
 source: owner
 status: decided 2026-10-25
 kind: check
-implemented_by: [plugins/session-kit/transcripts/session_transcripts.py, plugins/session-kit/bin/session-transcripts, plugins/session-kit/hooks/time_hooks.py, docs/measurements]
-proven_by: [plugins/session-kit/transcripts/test_session_transcripts.py, docs/measurements/sessions-2026-10-25.md, docs/measurements/sessions-2026-10-25-with-archive.md]
+implemented_by: [plugins/session-kit/transcripts/session_transcripts.py, plugins/session-kit/transcripts/records.py, plugins/session-kit/bin/session-transcripts, plugins/session-kit/hooks/time_hooks.py, docs/measurements]
+proven_by: [plugins/session-kit/transcripts/test_session_transcripts.py, docs/measurements/sessions-2026-10-25.md, docs/measurements/sessions-2026-10-25-with-archive.md, docs/measurements/sessions-2026-10-25-deduplicated-with-archive.md]
 supersedes: []
 ---
 
@@ -27,7 +27,9 @@ Designed 2026-10-25 in `docs/session-tooling-design.md`, put to the owner before
 
 ## Shape as built (2026-10-25, the reader)
 
-The owner answered: all projects, reports committed under `docs/measurements/`, the warning's effect and the cache share first. `session-transcripts` has `list`, `session`, `warnings`, `cache`, `compactions`, `hooks` and `report`, standard-library Python behind `bin/session-transcripts`, reading 39 transcripts in about a second. Not built yet: `rules` (the patterns of a rule not held). The `measure` module is built as `A55` (a timeline of turns and tool calls with the kit's time per concern), with the engine's count of the memory files as `A56`.
+The owner answered: all projects, reports committed under `docs/measurements/`, the warning's effect and the cache share first. `session-transcripts` has `list`, `session`, `warnings`, `cache`, `compactions`, `hooks` and `report`, standard-library Python behind `bin/session-transcripts`, reading 39 transcripts in about a second. Not built yet: `rules` (the patterns of a rule not held). The `measure` module is built as `A55` (a timeline of turns and tool calls with the kit's time per concern), with the engine's count of the memory files as `A56`. Three queries followed: `chains` with each session's own cost (`A57`, chains of sessions and each session's own cost), `waste` (`A58`, what a session read or ran again, a compaction's price in reads among it) and `asks` (`A59`, the person's repeated asks, ranked, their words printed only when asked). The reading moved into `records.py` beside the command.
+
+Building them found four defects in the reader, fixed with a regression case each. The engine writes some records again under the same uuid, the messages a compaction keeps among them, and each was counted again. A compaction's summary and the engine's meta records, written as user records with string content, were counted as prompts. A fork's file begins with a copy of its parent's records, which were counted in both. And a session's cost was the engine's running total, which a fork and some clears carry on. Over the 59 transcripts on disk the prompts fall from 2,917 to 1,231, the compactions from 225 to 118 (their median from 227,016 tokens before to 190,947) and the cost from 1,149 USD to 737. The two reports below counted with those defects. `docs/measurements/sessions-2026-10-25-deduplicated-with-archive.md` reads the same sessions without them: 1,357 compactions at a median of 278,402 tokens before where the earlier count was 9,729 at 256,086, and 879 warnings where it was 5,985.
 
 Its first report, `docs/measurements/sessions-2026-10-25.md`, found that the kit's context warning has never fired: no request in 39 sessions carried more than 515,000 tokens, and the 145 compactions were all manual, at a median of 152,000 tokens before, with none by the engine's own trigger. The warning's effect is therefore nil so far, and `A16`'s threshold of half the window sits above where the owner compacts by hand. The cache share runs 91% to 99% of input per session, with cold sends after gaps concentrated in the long sessions.
 

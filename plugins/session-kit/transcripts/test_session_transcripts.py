@@ -24,9 +24,16 @@ def stamp(minutes: float) -> str:
     return (T0 + timedelta(minutes=minutes)).isoformat().replace("+00:00", "Z")
 
 
-def prompt(text: str, minutes: float, session: str) -> dict:
-    return {"type": "user", "isSidechain": False, "message": {"role": "user", "content": [{"type": "text", "text": text}]},
-            "timestamp": stamp(minutes), "sessionId": session, "uuid": f"u{minutes}"}
+def prompt(text: str, minutes: float, session: str, uuid: str | None = None, origin: dict | None = None) -> dict:
+    record = {"type": "user", "isSidechain": False, "message": {"role": "user", "content": [{"type": "text", "text": text}]},
+              "timestamp": stamp(minutes), "sessionId": session, "uuid": uuid or f"u{minutes}"}
+    return record | ({"origin": origin} if origin else {})
+
+
+def summary(minutes: float, session: str) -> dict:
+    """The summary a compaction leaves, which the engine writes as a user record with string content."""
+    return {"type": "user", "isSidechain": False, "isCompactSummary": True, "timestamp": stamp(minutes), "sessionId": session,
+            "uuid": f"s{minutes}", "message": {"role": "user", "content": "This session is being continued from a previous conversation."}}
 
 
 def request(minutes: float, session: str, *, read: int, created: int, fresh: int = 100, out: int = 500, block: dict | None = None, rid: str | None = None) -> dict:
@@ -52,12 +59,14 @@ def hook(minutes: float, session: str, name: str, stdout: str) -> dict:
 
 def compaction(minutes: float, session: str, pre: int, trigger: str = "manual") -> dict:
     return {"type": "system", "subtype": "compact_boundary", "isSidechain": False, "timestamp": stamp(minutes), "sessionId": session,
-            "compactMetadata": {"trigger": trigger, "preTokens": pre, "durationMs": 40000}}
+            "uuid": f"c{minutes}", "compactMetadata": {"trigger": trigger, "preTokens": pre, "durationMs": 40000}}
 
 
-def cost(session: str, usd: float) -> dict:
+def cost(session: str, usd: float, start: int | None = None) -> dict:
+    """The engine's cost state: a running total, which a clear may carry on and a fork does."""
     return {"type": "cost-state", "sessionId": session, "totalCostUSD": usd, "totalLinesAdded": 10, "totalLinesRemoved": 2,
-            "modelUsage": {"claude-fable-5-1": {"inputTokens": 1, "outputTokens": 2, "cacheReadInputTokens": 3, "cacheCreationInputTokens": 4, "costUSD": usd}}}
+            "modelUsage": {"claude-fable-5-1": {"inputTokens": 1, "outputTokens": 2, "cacheReadInputTokens": 3, "cacheCreationInputTokens": 4, "costUSD": usd}}} | (
+            {"startTime": start} if start else {})
 
 
 # Session A: the context grows, a warning fires, the handoff and a commit follow a turn later, then a compaction.
@@ -95,15 +104,104 @@ SESSION_B = [
 ]
 
 
+# Sessions D, F and E share one running cost, as their cost states' start says. F is a fork of D: its file
+# begins with a copy of D's first records, under D's id. E came after D ended. D's first prompt is
+# written twice, as the engine does, and is one prompt.
+D = "dddddddd-0000-0000-0000-000000000004"
+E = "eeeeeeee-0000-0000-0000-000000000005"
+F = "ffffffff-0000-0000-0000-000000000006"
+S1 = 1790000000000
+D_HEAD = [
+    prompt("Draft the plan for the parser", 0, D, uuid="d1"),
+    prompt("Draft the plan for the parser", 0, D, uuid="d1"),
+    request(1, D, read=0, created=40_000, rid="rd1"),
+    cost(D, 1.0, start=S1),
+]
+SESSION_D = D_HEAD + [
+    prompt("Now the lexer", 10, D, uuid="d2"),
+    request(11, D, read=40_000, created=5_000, rid="rd2"),
+    request(20, D, read=45_000, created=1_000, rid="rd3"),
+    cost(D, 2.0, start=S1),
+]
+SESSION_F = D_HEAD + [
+    prompt("Try the other grammar", 5, F, uuid="f1"),
+    request(6, F, read=40_000, created=2_000, rid="rf1"),
+    cost(F, 1.25, start=S1),
+]
+SESSION_E = [
+    prompt("Then the evaluator", 21, E, uuid="e1"),
+    request(22, E, read=0, created=30_000, rid="re1"),
+    cost(E, 3.5, start=S1),
+]
+
+# Session K: a fork of A that has no record of its own yet but its cost state, so it started at no known time.
+K = "66666666-0000-0000-0000-00000000000c"
+SESSION_K = [SESSION_A[0], cost(K, 3.5)]
+
+# Sessions G and H: a clear that started a new cost, which only the kit's timeline records.
+G = "11111111-0000-0000-0000-000000000007"
+H = "22222222-0000-0000-0000-000000000008"
+SESSION_G = [prompt("Sketch the cache layer", 30, G, uuid="g1"), request(31, G, read=0, created=20_000, rid="rg1")]
+SESSION_H = [prompt("Write the cache tests", 40, H, uuid="h1"), request(41, H, read=0, created=20_000, rid="rh1")]
+
+# Session W: its compaction's record is written twice, as the engine writes again what a compaction
+# keeps, and the summary the compaction left is a user record with string content.
+W = "33333333-0000-0000-0000-000000000009"
+SESSION_W = [
+    prompt("Look at the notes", 50, W, uuid="w1"),
+    request(51, W, read=0, created=10_000, rid="rw1"),
+    compaction(57, W, 200_000, trigger="auto"),
+    summary(57.5, W),
+    compaction(57, W, 200_000, trigger="auto"),
+    request(58, W, read=0, created=8_000, rid="rw2"),
+]
+
+# Sessions X1 and X2: the person asks to commit and push three times over two sessions (a record written
+# twice and a plugin's or a notification's prompt of the same words are not the person's asks), and to
+# take the handoff's next step twice in near words.
+X1 = "44444444-0000-0000-0000-00000000000a"
+X2 = "55555555-0000-0000-0000-00000000000b"
+SESSION_X1 = [
+    prompt("commit and push", 70, X1, uuid="x1a"),
+    prompt("commit and push", 70, X1, uuid="x1a"),
+    request(71, X1, read=0, created=9_000, rid="rx1"),
+    prompt("Commit and push!", 72, X1, uuid="x1b"),
+    prompt("commit and push", 73, X1, uuid="x1c", origin={"kind": "plugin", "name": "session-kit"}),
+    prompt("commit and push", 74, X1, uuid="x1d", origin={"kind": "task-notification"}),
+    prompt("read the handoff and take its next step without asking", 75, X1, uuid="x1e"),
+]
+SESSION_X2 = [
+    prompt("commit and push", 80, X2, uuid="x2a"),
+    prompt("read the handoff and take the next step without asking", 81, X2, uuid="x2b"),
+    prompt("tidy the readme", 82, X2, uuid="x2c"),
+]
+
+
 def projects(root: Path) -> None:
-    for folder, session, rows in [("-Users-me-proj-a", A, SESSION_A), ("-Users-me-proj-b", B, SESSION_B)]:
+    for folder, session, rows in [
+        ("-Users-me-proj-a", A, SESSION_A), ("-Users-me-proj-b", B, SESSION_B),
+        ("-Users-me-proj-d", D, SESSION_D), ("-Users-me-proj-d", E, SESSION_E), ("-Users-me-proj-d", F, SESSION_F),
+        ("-Users-me-proj-g", G, SESSION_G), ("-Users-me-proj-g", H, SESSION_H),
+        ("-Users-me-proj-k", K, SESSION_K), ("-Users-me-proj-w", W, SESSION_W), ("-Users-me-proj-x", X1, SESSION_X1), ("-Users-me-proj-x", X2, SESSION_X2),
+    ]:
         d = root / folder
-        d.mkdir(parents=True)
+        d.mkdir(parents=True, exist_ok=True)
         (d / f"{session}.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
 
 
-def run(root: Path, *args: str) -> tuple[int, str]:
-    out = subprocess.run([sys.executable, TOOL, *args, "--root", str(root)], capture_output=True, text=True, timeout=30)
+def timeline(measure: Path) -> None:
+    """H's first timeline file opens with the line the kit writes after a clear, naming G."""
+    d = measure / H
+    d.mkdir(parents=True)
+    lines = [{"at": 1792000000000, "ev": "session", "from": G, "reason": "clear"}, {"at": 1792000000001, "ev": "turn.start", "turn": "t1"}]
+    (d / "1792000000500.jsonl").write_text("\n".join(json.dumps(x) for x in lines) + "\n", encoding="utf-8")
+
+
+NO_TIMELINE = Path(tempfile.mkdtemp(prefix="session-transcripts-measure-"))
+
+
+def run(root: Path, *args: str, measure: Path = NO_TIMELINE) -> tuple[int, str]:
+    out = subprocess.run([sys.executable, TOOL, *args, "--root", str(root), "--measure-dir", str(measure)], capture_output=True, text=True, timeout=30)
     return out.returncode, out.stdout + out.stderr
 
 
@@ -156,12 +254,51 @@ case("--since drops the sessions that started before it", code == 0 and "aaaaaaa
 code, out = run(root, "list", "--project", "proj-b")
 case("--project keeps one project's sessions", code == 0 and "aaaaaaaa" not in out and "bbbbbbbb" in out, out)
 
+
+def cells(out: str, first: str) -> list[str]:
+    """The cells of the table row whose first cell is `first`, or none."""
+    for line in out.splitlines():
+        parts = [p.strip() for p in line.strip().strip("|").split("|")]
+        if parts and parts[0] == first:
+            return parts
+    return []
+
+
+# Regressions: the engine writes a record more than once, its compaction summaries as user records
+# with string content, a fork's file with a copy of its parent's records, and a cost state that runs on
+# from the session before it.
+code, out = run(root, "list")
+case("a record the engine wrote twice is counted once, a prompt or a compaction",
+     cells(out, "dddddddd")[3:5] == ["2", "3"] and cells(out, "33333333")[7:8] == ["1"], out)
+case("a compaction's summary is not a prompt", cells(out, "33333333")[3:4] == ["1"], out)
+case("a fork's copy of its parent's records is counted in the parent alone", cells(out, "ffffffff")[3:5] == ["1", "1"], out)
+case("a session's cost is its own, the total carried from the session before it taken out",
+     [cells(out, s)[8:9] for s in ("dddddddd", "ffffffff", "eeeeeeee")] == [["2.00"], ["0.25"], ["1.50"]], out)
+
+code, out = run(root, "chains")
+case("a fork with no record of its own comes after its parent", cells(out, "aaaaaaaa")[1:2] == ["2"] and cells(out, "aaaaaaaa")[9:] == ["fork 1"], out)
+
+# The contract with session-kit's timeline (A55): after a clear, the new session's first file opens with
+# a line naming the session before it, which joins the two.
+measure = Path(tempfile.mkdtemp(prefix="session-transcripts-measure-"))
+timeline(measure)
+code, out = run(root, "chains", measure=measure)
+row = cells(out, "11111111")
+case("the timeline's session line joins the session a clear started to the one before it", row[1:2] == ["2"] and "clear 1" in row[9], out)
+
+# The asks are the person's own words: ranked, and none of them printed without --quote.
+code, out = run(root, "asks")
+case("asks ranks the person's repeated asks and prints none of their words without --quote",
+     code == 0 and cells(out, "1")[1:3] == ["3", "2"] and cells(out, "2")[1:3] == ["2", "2"]
+     and "commit" not in out.lower() and "handoff" not in out and "readme" not in out, out)
+
 report = root / "report.md"
 code, out = run(root, "report", "--out", str(report))
 text = report.read_text(encoding="utf-8") if report.exists() else ""
-case("report writes the sessions, warnings, cache and compactions tables to the file", code == 0 and all(h in text for h in ["## Sessions", "## Warnings", "## Cache", "## Compactions"]), out + text[:400])
+case("report writes the sessions, warnings, cache, compactions, chains and waste tables to the file",
+     code == 0 and all(h in text for h in ["## Sessions", "## Warnings", "## Cache", "## Compactions", "## Chains", "## Waste"]), out + text[:400])
 case("the report sums the warnings per session", "2 warnings over 2 sessions" in text and "| 1 | 550,000 | 1 | 1 | 1 | 1 |" in text and "| 1 | 520,000 | 0 | 0 | 0 | none |" in text, text)
-case("the report holds no prompt text", "widget" not in text and "After lunch" not in text, text)
+case("the report holds no prompt text", all(t not in text for t in ["widget", "After lunch", "commit and push", "parser"]), text)
 
 # An archive of sessions is read beside the live ones: each `<project>/<id>.tar.xz` holds the session's
 # jsonl under projects/, and an id present in both is read once, from the live file.

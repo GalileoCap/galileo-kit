@@ -1,6 +1,6 @@
 # Tooling over the transcripts and the hooks' effect: the shape, for the owner
 
-The design behind `A22`, from `O17`: the system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. Written 2026-10-25 against Claude Code 2.1.308 and session-kit 0.9.0, before anything is built. The questions at the end are the owner's to answer. Answered 2026-10-25: all projects, reports committed, the warning's effect and the cache share first. The reader is built as `session-transcripts`, and the module as `A55`, with `rules` still to come.
+The design behind `A22`, from `O17`: the system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. Written 2026-10-25 against Claude Code 2.1.308 and session-kit 0.9.0, before anything is built. The questions at the end are the owner's to answer. Answered 2026-10-25: all projects, reports committed, the warning's effect and the cache share first. The reader is built as `session-transcripts`, and the module as `A55`, with `rules` still to come. The reader's `chains`, `waste` and `asks` are `A57` to `A59`.
 
 ## What there is to read
 
@@ -58,6 +58,8 @@ Standard-library Python under `plugins/session-kit/transcripts/`, behind `bin/se
 - `session-transcripts report [--since]`: the tables above as `docs/measurements/sessions-<date>.md`, so the record of the kit's effect is versioned beside the hook times.
 
 A transcript holds the owner's words and the model's. The reader prints counts, sizes, names of hooks and tools, and the hooks' own text. It prints no prompt and no answer unless `--quote` is passed, and never writes a transcript's text into a report.
+
+Built beside these on 2026-10-25: `chains` (`A57`, chains of sessions and each session's own cost) joins the sessions a clear, a resume, a fork or a shared running cost split. `waste` (`A58`, what a session read or ran again) answers question 9 in reads. `asks` (`A59`, the person's repeated asks) ranks them, and only `--quote` prints their words. The reading moved into `records.py`, and it counts each record once, since the engine writes some of them again.
 
 ### `measure`, a module
 

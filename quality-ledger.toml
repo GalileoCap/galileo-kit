@@ -34,15 +34,6 @@ home = "plugins/session-kit/hooks/test_format.py:stub"
 disposition = "keep"
 why = "each standard-library command and hook test is a file of its own, run with python3 and importing nothing beside it, so the small harness is written in each"
 
-[[duplicates]]
-members = [
-    "plugins/session-kit/suppressions/test_session_suppressions.py:run",
-    "plugins/session-kit/transcripts/test_session_transcripts.py:run",
-]
-home = "plugins/session-kit/suppressions/test_session_suppressions.py:run"
-disposition = "keep"
-why = "each standard-library command and hook test is a file of its own, run with python3 and importing nothing beside it, so the small harness is written in each"
-
 [[fallbacks]]
 site = "plugins/session-kit/codeintel/src/session_codeintel/cli.py"
 where = "_looks"
@@ -1065,7 +1056,7 @@ disposition = "keep"
 why = "zero is the count for a name seen no times"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "note_tool"
 form = "get"
 code = "session.tools.get(name, 0)"
@@ -1074,7 +1065,7 @@ disposition = "keep"
 why = "zero is the count for a name seen no times"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "note_tool"
 form = "if-none"
 code = "inp if isinstance(inp, dict) else {}"
@@ -1083,7 +1074,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "note_tool"
 form = "or"
 code = "args.get('command') or ''"
@@ -1092,7 +1083,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "note_tool"
 form = "or"
 code = "args.get('file_path') or ''"
@@ -1101,7 +1092,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "note_tool"
 form = "or"
 code = "args.get('skill') or ''"
@@ -1110,7 +1101,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "except-returns"
 code = "except ValueError: continue"
@@ -1119,7 +1110,7 @@ disposition = "raised"
 why = "a line of the transcript that is not JSON is skipped and nothing counts the skips"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "get"
 code = "session.hook_chars.get(name, 0)"
@@ -1128,7 +1119,7 @@ disposition = "keep"
 why = "zero is the count for a name seen no times"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "get"
 code = "session.hooks.get(name, 0)"
@@ -1137,7 +1128,7 @@ disposition = "keep"
 why = "zero is the count for a name seen no times"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "if-none"
 code = "r.get('attachment') if isinstance(r.get('attachment'), dict) else {}"
@@ -1146,7 +1137,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "if-none"
 code = "r.get('compactMetadata') if isinstance(r.get('compactMetadata'), dict) else {}"
@@ -1155,7 +1146,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "if-none"
 code = "r.get('message') if isinstance(r.get('message'), dict) else {}"
@@ -1164,7 +1155,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "b.get('name') or ''"
@@ -1173,7 +1164,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "message.get('model') or r.get('requestedModel') or ''"
@@ -1182,7 +1173,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "meta.get('durationMs') or 0"
@@ -1191,7 +1182,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "meta.get('preTokens') or 0"
@@ -1200,7 +1191,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "meta.get('trigger') or '?'"
@@ -1209,7 +1200,7 @@ disposition = "keep"
 why = "the substituted word is what the reader sees printed"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "r.get('requestId') or message.get('id') or r.get('uuid') or ''"
@@ -1218,16 +1209,17 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "r.get('totalCostUSD') or 0"
+count = 2
 class = "silent"
 disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "r.get('totalLinesAdded') or 0"
@@ -1236,7 +1228,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "r.get('totalLinesRemoved') or 0"
@@ -1245,7 +1237,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "usage.get('cache_creation_input_tokens') or 0"
@@ -1254,7 +1246,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "usage.get('cache_read_input_tokens') or 0"
@@ -1263,7 +1255,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "usage.get('input_tokens') or 0"
@@ -1272,7 +1264,7 @@ disposition = "keep"
 why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "read_session"
 form = "or"
 code = "usage.get('output_tokens') or 0"
@@ -1290,7 +1282,7 @@ disposition = "keep"
 why = "the substituted word is what the reader sees printed"
 
 [[fallbacks]]
-site = "plugins/session-kit/transcripts/session_transcripts.py"
+site = "plugins/session-kit/transcripts/records.py"
 where = "when"
 form = "except-returns"
 code = "except ValueError: return None"
@@ -1486,3 +1478,57 @@ code = "s.reason or 'unjustified'"
 class = "spoken"
 disposition = "keep"
 why = "a marker with no reason is listed as unjustified, in words"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/records.py"
+where = "link"
+form = "or"
+code = "s.carried_usd or 0.0"
+class = "declared"
+disposition = "keep"
+why = "a fork whose copied records hold no cost state carried no cost in"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/records.py"
+where = "timeline_links"
+form = "except-returns"
+code = "except OSError: continue"
+class = "silent"
+disposition = "keep"
+why = "a timeline file that cannot be read names no session before, and the session is joined by what its transcript shows or not at all"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/records.py"
+where = "timeline_links"
+form = "except-returns"
+code = "except ValueError: continue"
+class = "silent"
+disposition = "keep"
+why = "a line of the timeline that is not JSON is skipped and nothing counts the skips"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "asks_table"
+form = "if-none"
+code = "day(times[-1]) if times else '?'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "asks_table"
+form = "if-none"
+code = "day(times[0]) if times else '?'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "chains_table"
+form = "if-none"
+code = "day(max(ends)) if ends else '?'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
