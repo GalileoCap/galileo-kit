@@ -7,8 +7,10 @@ is read.
 
 from __future__ import annotations
 
+import io
 import json
 import subprocess
+import tarfile
 import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -159,6 +161,29 @@ code, out = run(root, "report", "--out", str(report))
 text = report.read_text(encoding="utf-8") if report.exists() else ""
 case("report writes the sessions, warnings, cache and compactions tables to the file", code == 0 and all(h in text for h in ["## Sessions", "## Warnings", "## Cache", "## Compactions"]), out + text[:400])
 case("the report holds no prompt text", "widget" not in text and "After lunch" not in text, text)
+
+# An archive of sessions is read beside the live ones: each `<project>/<id>.tar.xz` holds the session's
+# jsonl under projects/, and an id present in both is read once, from the live file.
+archive = Path(tempfile.mkdtemp(prefix="session-transcripts-archive-"))
+C = "cccccccc-0000-0000-0000-000000000003"
+lines = [prompt("Archived prompt", 0, C), request(1, C, read=0, created=50_000), request(2, C, read=50_000, created=100, rid="r-c")]
+body = "\n".join(json.dumps(x) for x in lines).encode("utf-8") + b"\n"
+(archive / "proj-c").mkdir()
+with tarfile.open(archive / "proj-c" / f"{C}.tar.xz", "w:xz") as tar:
+    info = tarfile.TarInfo(f"projects/proj-c/{C}.jsonl"); info.size = len(body)
+    tar.addfile(info, io.BytesIO(body))
+    sub = b'{"type":"user"}\n'
+    info = tarfile.TarInfo(f"projects/proj-c/{C}/subagents/agent-1.jsonl"); info.size = len(sub)
+    tar.addfile(info, io.BytesIO(sub))
+(archive / "proj-a").mkdir()
+with tarfile.open(archive / "proj-a" / f"{A}.tar.xz", "w:xz") as tar:
+    info = tarfile.TarInfo(f"projects/proj-a/{A}.jsonl"); info.size = len(body)
+    tar.addfile(info, io.BytesIO(body))
+code, out = run(root, "list", "--archive", str(archive))
+case("an archived session is listed beside the live ones", code == 0 and "cccccccc" in out and "proj-c" in out, out)
+case("the archived session's requests are counted from its main jsonl alone", "| 2 |" in [l for l in out.splitlines() if "cccccccc" in l][0], out)
+case("a session both live and archived is read once, from the live file", out.count("aaaaaaaa") == 1 and "| 7 |" in [l for l in out.splitlines() if "aaaaaaaa" in l][0], out)
+case("an archived session prints no prompt text", "Archived prompt" not in out, out)
 
 if failures:
     print(f"\n{len(failures)} failed")

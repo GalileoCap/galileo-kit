@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import tarfile
 import os
 import re
 import sys
@@ -121,79 +122,101 @@ def texts_of(value: object) -> list[str]:
     return []
 
 
+def session_id_of(path: Path) -> str:
+    """The id a transcript's file name carries: `<id>.jsonl`, or an archive's `<id>.tar.xz`."""
+    return path.name.split(".", 1)[0]
+
+
+def lines_of(path: Path) -> Iterator[str]:
+    """The transcript's lines. An archive (`.tar.xz`, as the owner's backup keeps a session with its
+    subagents and file history) is read in a stream, its main `.jsonl` member alone."""
+    if path.name.endswith(".tar.xz"):
+        wanted = session_id_of(path) + ".jsonl"
+        with tarfile.open(path, "r:xz") as archive:
+            for member in archive:
+                if member.isfile() and member.name.endswith("/" + wanted) and "/subagents/" not in member.name:
+                    fh = archive.extractfile(member)
+                    if fh is not None:
+                        for raw in fh:
+                            yield raw.decode("utf-8", errors="replace")
+                    return
+        return
+    with path.open(encoding="utf-8") as fh:
+        yield from fh
+
+
 def read_session(path: Path) -> Session:
-    session = Session(id=path.stem, project=path.parent.name, path=path)
+    session = Session(id=session_id_of(path), project=path.parent.name, path=path)
     seen_requests: set[str] = set()
     turn = 0
-    with path.open(encoding="utf-8") as fh:
-        for line in fh:
-            try:
-                r = json.loads(line)
-            except ValueError:
-                continue
-            if not isinstance(r, dict):
-                continue
-            kind = r.get("type")
-            at = when(r.get("timestamp"))
-            if at is not None and session.started is None:
-                session.started = at
-            sidechain = r.get("isSidechain") is True
-            message = r.get("message") if isinstance(r.get("message"), dict) else {}
-            content = message.get("content")
-            if kind == "user" and not sidechain:
-                is_prompt = isinstance(content, str) or (
-                    isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "text" for b in content)
-                ) and not r.get("isMeta") and not r.get("isCompactSummary")
-                if is_prompt and not r.get("toolUseResult"):
-                    turn += 1
-                    session.prompts += 1
-                if isinstance(content, list):
-                    for b in content:
-                        if isinstance(b, dict) and b.get("type") == "tool_result":
-                            note_warnings(session, texts_of(b.get("content")), at, turn)
-            elif kind == "assistant":
-                usage = message.get("usage") if isinstance(message.get("usage"), dict) else None
-                rid = str(r.get("requestId") or message.get("id") or r.get("uuid") or "")
-                if usage and rid not in seen_requests and at is not None:
-                    seen_requests.add(rid)
-                    session.requests.append(Request(
-                        at=at,
-                        fresh=int(usage.get("input_tokens") or 0),
-                        read=int(usage.get("cache_read_input_tokens") or 0),
-                        created=int(usage.get("cache_creation_input_tokens") or 0),
-                        out=int(usage.get("output_tokens") or 0),
-                        model=str(message.get("model") or r.get("requestedModel") or ""),
-                        turn=turn,
-                    ))
-                if isinstance(content, list) and not sidechain:
-                    for b in content:
-                        if isinstance(b, dict) and b.get("type") == "tool_use":
-                            note_tool(session, str(b.get("name") or ""), b.get("input"), turn)
-            elif kind == "attachment":
-                a = r.get("attachment") if isinstance(r.get("attachment"), dict) else {}
-                if a.get("type") in HOOK_ATTACHMENTS:
-                    name = str(a.get("hookName") or a.get("type"))
-                    session.hooks[name] = session.hooks.get(name, 0) + 1
-                    text = "".join(texts_of([a.get("stdout"), a.get("content")]))
-                    session.hook_chars[name] = session.hook_chars.get(name, 0) + len(text)
-                    note_warnings(session, [text], at, turn)
-            elif kind == "system" and r.get("subtype") == "compact_boundary":
-                meta = r.get("compactMetadata") if isinstance(r.get("compactMetadata"), dict) else {}
-                compaction = Compaction(
-                    at=at or session.started or datetime.now(timezone.utc),
-                    trigger=str(meta.get("trigger") or "?"),
-                    pre_tokens=int(meta.get("preTokens") or 0),
-                    duration_ms=int(meta.get("durationMs") or 0),
+    for line in lines_of(path):
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(r, dict):
+            continue
+        kind = r.get("type")
+        at = when(r.get("timestamp"))
+        if at is not None and session.started is None:
+            session.started = at
+        sidechain = r.get("isSidechain") is True
+        message = r.get("message") if isinstance(r.get("message"), dict) else {}
+        content = message.get("content")
+        if kind == "user" and not sidechain:
+            is_prompt = isinstance(content, str) or (
+                isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "text" for b in content)
+            ) and not r.get("isMeta") and not r.get("isCompactSummary")
+            if is_prompt and not r.get("toolUseResult"):
+                turn += 1
+                session.prompts += 1
+            if isinstance(content, list):
+                for b in content:
+                    if isinstance(b, dict) and b.get("type") == "tool_result":
+                        note_warnings(session, texts_of(b.get("content")), at, turn)
+        elif kind == "assistant":
+            usage = message.get("usage") if isinstance(message.get("usage"), dict) else None
+            rid = str(r.get("requestId") or message.get("id") or r.get("uuid") or "")
+            if usage and rid not in seen_requests and at is not None:
+                seen_requests.add(rid)
+                session.requests.append(Request(
+                    at=at,
+                    fresh=int(usage.get("input_tokens") or 0),
+                    read=int(usage.get("cache_read_input_tokens") or 0),
+                    created=int(usage.get("cache_creation_input_tokens") or 0),
+                    out=int(usage.get("output_tokens") or 0),
+                    model=str(message.get("model") or r.get("requestedModel") or ""),
                     turn=turn,
-                )
-                session.compactions.append(compaction)
-                for w in session.warnings:
-                    if w.compaction_turns is None:
-                        w.compaction_turns = turn - w.turn
-            elif kind == "cost-state":
-                session.cost_usd = float(r.get("totalCostUSD") or 0)
-                session.lines_added = int(r.get("totalLinesAdded") or 0)
-                session.lines_removed = int(r.get("totalLinesRemoved") or 0)
+                ))
+            if isinstance(content, list) and not sidechain:
+                for b in content:
+                    if isinstance(b, dict) and b.get("type") == "tool_use":
+                        note_tool(session, str(b.get("name") or ""), b.get("input"), turn)
+        elif kind == "attachment":
+            a = r.get("attachment") if isinstance(r.get("attachment"), dict) else {}
+            if a.get("type") in HOOK_ATTACHMENTS:
+                name = str(a.get("hookName") or a.get("type"))
+                session.hooks[name] = session.hooks.get(name, 0) + 1
+                text = "".join(texts_of([a.get("stdout"), a.get("content")]))
+                session.hook_chars[name] = session.hook_chars.get(name, 0) + len(text)
+                note_warnings(session, [text], at, turn)
+        elif kind == "system" and r.get("subtype") == "compact_boundary":
+            meta = r.get("compactMetadata") if isinstance(r.get("compactMetadata"), dict) else {}
+            compaction = Compaction(
+                at=at or session.started or datetime.now(timezone.utc),
+                trigger=str(meta.get("trigger") or "?"),
+                pre_tokens=int(meta.get("preTokens") or 0),
+                duration_ms=int(meta.get("durationMs") or 0),
+                turn=turn,
+            )
+            session.compactions.append(compaction)
+            for w in session.warnings:
+                if w.compaction_turns is None:
+                    w.compaction_turns = turn - w.turn
+        elif kind == "cost-state":
+            session.cost_usd = float(r.get("totalCostUSD") or 0)
+            session.lines_added = int(r.get("totalLinesAdded") or 0)
+            session.lines_removed = int(r.get("totalLinesRemoved") or 0)
     return session
 
 
@@ -222,9 +245,23 @@ def note_tool(session: Session, name: str, inp: object, turn: int) -> None:
             w.commit_turns = turn - w.turn
 
 
-def read_all(root: Path, project: str | None, since: datetime | None) -> list[Session]:
+def transcript_paths(roots: list[Path]) -> list[Path]:
+    """One path per session id over the roots, live transcripts first, then archives; a snapshot
+    archive (`<id>.snapshot-<stamp>.tar.xz`) stands in only when no other file carries its id."""
+    chosen: dict[str, Path] = {}
+    for root in roots:
+        for pattern in ("*/*.jsonl", "*/*.tar.xz"):
+            for path in sorted(root.glob(pattern)):
+                id_ = session_id_of(path)
+                snapshot = ".snapshot-" in path.name
+                if id_ not in chosen or (".snapshot-" in chosen[id_].name and not snapshot):
+                    chosen[id_] = path
+    return sorted(chosen.values())
+
+
+def read_all(roots: list[Path], project: str | None, since: datetime | None) -> list[Session]:
     sessions: list[Session] = []
-    for path in sorted(root.glob("*/*.jsonl")):
+    for path in transcript_paths(roots):
         if project and project not in path.parent.name:
             continue
         s = read_session(path)
@@ -360,13 +397,15 @@ def session_report(s: Session) -> str:
     return "\n".join(out)
 
 
-def full_report(sessions: list[Session], root: Path, since: datetime | None) -> str:
+def full_report(sessions: list[Session], roots: list[Path], since: datetime | None) -> str:
     today = datetime.now(timezone.utc).date().isoformat()
     scope = f"since {since.date().isoformat()}" if since else "all"
+    where = " and ".join(f"`{r}`" for r in roots)
+    archived = sum(1 for s in sessions if s.path.name.endswith(".tar.xz"))
     return "\n".join([
         f"# Sessions read on {today}",
         "",
-        f"Written by `session-transcripts report` over `{root}` ({scope}): {len(sessions)} sessions. Counts and sizes only, no prompt and no answer.",
+        f"Written by `session-transcripts report` over {where} ({scope}): {len(sessions)} sessions, {archived} of them from an archive. Counts and sizes only, no prompt and no answer.",
         "",
         "## Sessions",
         "",
@@ -400,26 +439,28 @@ def main() -> int:
     parser.add_argument("command", choices=("list", "session", "warnings", "cache", "compactions", "hooks", "report"))
     parser.add_argument("id", nargs="?", help="the session id, for `session`")
     parser.add_argument("--root", default=os.path.expanduser("~/.claude/projects"))
+    parser.add_argument("--archive", action="append", default=[], help="a directory of archived sessions, `<project>/<id>.tar.xz`, read beside the root; repeatable")
     parser.add_argument("--project", help="keep the project folders whose name holds this text")
     parser.add_argument("--since", help="keep the sessions started on or after this date (YYYY-MM-DD)")
     parser.add_argument("--out", help="for `report`: the file to write; default docs/measurements/sessions-<date>.md")
     args = parser.parse_args()
-    root = Path(args.root)
-    if not root.is_dir():
-        print(f"{root}: no such directory")
-        return 2
+    roots = [Path(args.root)] + [Path(a) for a in args.archive]
+    for root in roots:
+        if not root.is_dir():
+            print(f"{root}: no such directory")
+            return 2
     since = datetime.fromisoformat(args.since).replace(tzinfo=timezone.utc) if args.since else None
     if args.command == "session":
         if not args.id:
             print("session takes the session id")
             return 2
-        matches = [s for s in read_all(root, args.project, None) if s.id.startswith(args.id)]
+        matches = [s for s in read_all(roots, args.project, None) if s.id.startswith(args.id)]
         if len(matches) != 1:
             print(f"{len(matches)} sessions match {args.id}")
             return 1
         print(session_report(matches[0]))
         return 0
-    sessions = read_all(root, args.project, since)
+    sessions = read_all(roots, args.project, since)
     if args.command == "list":
         print(list_table(sessions))
     elif args.command == "warnings":
@@ -433,7 +474,7 @@ def main() -> int:
     else:
         out = Path(args.out) if args.out else Path("docs/measurements") / f"sessions-{datetime.now(timezone.utc).date().isoformat()}.md"
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(full_report(sessions, root, since), encoding="utf-8")
+        out.write_text(full_report(sessions, roots, since), encoding="utf-8")
         print(f"{out}: {len(sessions)} sessions")
     return 0
 
