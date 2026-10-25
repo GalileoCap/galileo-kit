@@ -29,5 +29,15 @@
         "path": "plugins/session-kit/tells/src"
       }
     ]
+  },
+  "iterate": {
+    "static": [
+      "plugins/session-kit/bin/session-intent check",
+      "plugins/session-kit/bin/session-suppressions check",
+      "plugins/session-kit/bin/session-docs check",
+      "plugins/session-kit/bin/session-rulebook",
+      "plugins/session-kit/codeintel/scripts/check",
+      "plugins/session-kit/tells/scripts/check"
+    ]
   }
 }

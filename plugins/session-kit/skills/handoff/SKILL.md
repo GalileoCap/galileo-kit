@@ -26,6 +26,7 @@ compaction or a restart. This skill writes it.
 The template carries them. If the project's `CLAUDE.md` names more fields
 for this file, keep them too.
 
+- **Mode**, under the header, only while `/session-kit:iterate` is on: *iterating since <date>: static checks only, tests owed*. A compaction keeps the mode through this line.
 - **Task**: the user's ask in their words, one paragraph. Not the plan.
 - **Documents in hand**: every document the work rests on, by path. After a
   compaction the session reads each again in full before its next step, so

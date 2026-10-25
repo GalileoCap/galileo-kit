@@ -4,6 +4,7 @@
 after a compaction.*
 
 Project: `{{NAME}}` · branch `{{BRANCH}}` · updated {{DATE}}
+{{Mode: iterating since <date>: static checks only, tests owed. The line exists only while `/session-kit:iterate` is on}}
 
 ## Task
 

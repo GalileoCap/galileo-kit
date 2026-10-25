@@ -27,6 +27,7 @@ Everything its owner works with agents through: the rules every session follows 
 | `bin/session-suppressions` | Bash tool's PATH | `session-suppressions list` prints every suppression in the tree's source files with the ledger row it cites, and `check` fails on a marker that cites no row (on its line or the line above) or a row the ledger lacks. The ledger is `docs/decisions.md`, the citation `decisions.md, <n>`, both settable under `suppressions` in `.claude/claude-kit.json`. Standard library Python. |
 | `bin/session-transcripts` | Bash tool's PATH | Reads the sessions' transcripts under `~/.claude/projects/` and prints tables: `list`, `session <id>`, `warnings` (each context warning and what followed), `cache` (the share read from the prompt cache, the cold sends), `compactions`, `hooks`, and `report`, which writes them under `docs/measurements/`. `--archive <dir>` reads a backup beside them, one `<project>/<id>.tar.xz` per session, in a stream. Counts and sizes, with no prompt and no answer in its output. Standard library Python. |
 | `handoff` skill | `/session-kit:handoff` | Writes `CLAUDE.local.md`, the working state a session reads first after a compaction. |
+| `iterate` skill | `/session-kit:iterate` | Fast-working mode while the owner iterates: the project's static legs (`iterate.static` in `.claude/claude-kit.json`) after each change and no test run, every report ending with what did not run, the mode kept in `CLAUDE.local.md` through a compaction, and the tests run once when the owner ends it or work is handed back. |
 
 ## Configuration
 
@@ -36,6 +37,7 @@ Everything its owner works with agents through: the rules every session follows 
 - A project names its suppression ledger in `.claude/claude-kit.json` under `suppressions`: `ledger` (`docs/decisions.md`), `cite` (a pattern whose first group is the row's number, `decisions\.md,?\s*(\d+)`) and `skip` (directories beyond the usual build and dependency ones).
 - A project sets its documents check in `.claude/claude-kit.json` under `docs`: `root` (`docs`) and `indexes`, the files that must each name every document (`CLAUDE.md`). Its looks check goes under `looks`: `src` (`src`), `skip` (`src/components/ui`) and `allowed`, the looks that repeat by coincidence, each with `look`, `files` and `reason`. Its layers go under `layers`: `python` (`core`, `shell`, `source`, `unwinds`) and `typescript` (`core`, `effects`, `outside`), with `rules` and `tests` for the ast-grep directories. Its measured areas go under `measure.areas`, each with `name`, `path`, `skip` and `extensions`.
 - A project sets its rulebook budgets in `.claude/claude-kit.json` under `rulebook`: `rules` and `skills` in words, and `skills_from`, globs from the root of further skill files (the kit names `plugins/*/skills/*/SKILL.md`).
+- A project names its static legs in `.claude/claude-kit.json` under `iterate.static`, the commands the iterate skill runs after each change, each a gate that runs no test.
 - A project names its own test runners in `.claude/claude-kit.json`, so the `-x` and piped-output rules and the test log cover them:
 
   ```json

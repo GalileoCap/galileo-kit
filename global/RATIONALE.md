@@ -76,7 +76,7 @@
 
 **Each test proves a sentence nothing else proves.** Every test costs time in every run and friction in every change near it. The first project's suites grew past 1 400 backend tests and 160 console test files, and a review found the same shapes throughout: a whole page mounted to read one string, one rule tested over every member of a table, and one behaviour proved by a unit file and an end-to-end file side by side.
 
-**Done means it was run.** A test proves the code does what the test's author expected of it, and a mock proves the code agrees with the mock. Neither shows that the feature behaves when a person drives it, which is the claim "done" makes.
+**Done means it was run.** A test proves the code does what the test's author expected of it, and a mock proves the code agrees with the mock. Neither shows that the feature behaves when a person drives it, which is the claim "done" makes. The iterate skill exists because an owner changing a screen ten times in an hour does not want a test suite after each change, and a session that skips the tests on its own judgement skips them at the wrong moment: the mode is the owner's to turn on, every report says the tests did not run, and the end of the iteration runs them once, so the rule holds at the moment work is handed back.
 
 ## The shape of code (`CODE.md`)
 
