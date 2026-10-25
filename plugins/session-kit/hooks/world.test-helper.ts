@@ -12,7 +12,7 @@ export type World = {
 export function world(on: On, options: { tmpdir?: string; cwd?: string; files?: Record<string, string> } = {}): World {
   const files = options.files ?? {}
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('session.usage', () => ({ value: { startedAt: 0, context: { tokens: 400_000, window: 1_000_000, percent: 40 }, rateLimits: [] } }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: { tokens: 100_000, window: 1_000_000, percent: 10 }, rateLimits: [] } }))
   on('session.cwd', () => ({ value: options.cwd ?? '/proj' }))
   on('session.id', () => ({ value: 'sess-1' }))
   mock.clock(on, { now: 1_700_000_000_000 })

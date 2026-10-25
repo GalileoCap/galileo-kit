@@ -1,6 +1,6 @@
 // Context, in-process: the engine's own figure after every tool call, a
-// warning to the model every `step` tokens past `threshold` percent of the
-// window, a band above the prompt with the figure for the person, and, with
+// warning to the model every `step` tokens past `thresholdTokens` (or past
+// `threshold` percent of the window, whichever comes first), a band above the prompt with the figure for the person, and, with
 // the `chain` option on, two tools: `clear_point`, after which the kit writes
 // the handoff, compacts and continues when the turn ends, and `new_task`,
 // after which the band offers the handoff and a clear, or to keep going here,
@@ -25,8 +25,10 @@ const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
 
-const THRESHOLD_PERCENT = 50
+const THRESHOLD_TOKENS = 150000
 const STEP_TOKENS = 25000
+const FIRMER_AT = 1.5
+const STOP_AT = 2
 
 const TOOL_NAME = 'clear_point'
 const TOOL = 'mcp__session-kit__clear_point'
@@ -80,11 +82,11 @@ export function continuePrompt(note: string): string {
   )
 }
 
-export function advice(percent: number, chainOn = false): string {
+export function advice(tokens: number, trigger: number, chainOn = false): string {
   const close = chainOn
     ? `then call the ${TOOL_NAME} tool.`
     : 'then tell the user it is safe to compact.'
-  if (percent >= 80) {
+  if (tokens >= trigger * STOP_AT) {
     return (
       'Stop starting anything new. Commit or discard what is in the tree, ' +
       (chainOn
@@ -92,7 +94,7 @@ export function advice(percent: number, chainOn = false): string {
         : 'write CLAUDE.local.md now, and end this turn saying you are ready to compact.')
     )
   }
-  if (percent >= 65) {
+  if (tokens >= trigger * FIRMER_AT) {
     return (
       'End this turn at the next green commit, even with the task unfinished: ' +
       (chainOn
@@ -108,12 +110,25 @@ export function advice(percent: number, chainOn = false): string {
   )
 }
 
-export function warning(f: ContextFigure, chainOn = false): string {
-  return `Context at ${f.tokens.toLocaleString('en-US')} tokens (${f.percent}% of ${f.window.toLocaleString('en-US')}). ${advice(f.percent, chainOn)}`
+export function warning(f: ContextFigure, trigger: number, chainOn = false): string {
+  return `Context at ${f.tokens.toLocaleString('en-US')} tokens (${f.percent}% of ${f.window.toLocaleString('en-US')}). ${advice(f.tokens, trigger, chainOn)}`
+}
+
+/** Where the warning starts: the token count, or the percent of the window, whichever is reached first; 0 turns one off. */
+export function triggerTokens(thresholdTokens: number, thresholdPercent: number, window: number): number {
+  const byCount = thresholdTokens > 0 ? thresholdTokens : Infinity
+  const byPercent = thresholdPercent > 0 ? (window * thresholdPercent) / 100 : Infinity
+  const trigger = Math.min(byCount, byPercent)
+
+  return Number.isFinite(trigger) ? trigger : THRESHOLD_TOKENS
 }
 
 function asNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
+}
+
+function asCount(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback
 }
 
 function reason(error: unknown): string {
@@ -233,13 +248,14 @@ async function clearThenResend($: EngineInterface): Promise<void> {
 }
 
 export const register: Register = (on, options) => {
-  const threshold = asNumber(options.threshold, THRESHOLD_PERCENT)
+  const thresholdTokens = asCount(options.thresholdTokens, THRESHOLD_TOKENS)
+  const thresholdPercent = asCount(options.threshold, 0)
   const step = asNumber(options.step, STEP_TOKENS)
   const chainOn = options.chain === true
 
   on('tool.call', async ($, e, next) => {
     const ran = await next(e)
-    if (ran.deny !== undefined || e.tool === TOOL) {
+    if (ran.deny !== undefined || e.tool === TOOL || e.tool === NEW_TASK_TOOL) {
       return ran
     }
     const { context } = await $.session.usage()
@@ -253,7 +269,7 @@ export const register: Register = (on, options) => {
     }
     await update($, figure, () => now)
 
-    const trigger = (context.window * threshold) / 100
+    const trigger = triggerTokens(thresholdTokens, thresholdPercent, context.window)
     if (now.tokens < trigger) {
       return ran
     }
@@ -264,7 +280,7 @@ export const register: Register = (on, options) => {
     }
     await update($, warnedAt, () => now.tokens)
 
-    return { ...ran, context: [...(ran.context ?? []), warning(now, chainOn)] }
+    return { ...ran, context: [...(ran.context ?? []), warning(now, trigger, chainOn)] }
   }).catch(($, e, next) => next(e))
 
   on('session.measure', async ($, e, next) => {
@@ -288,7 +304,8 @@ export const register: Register = (on, options) => {
     const offered = await read($, newTask)
     const running = await read($, chain)
     const now = await read($, figure)
-    if (e.props.hasSurvey || (offered === null && running === null && (now === null || now.percent < threshold))) {
+    const past = now !== null && now.tokens >= triggerTokens(thresholdTokens, thresholdPercent, now.window)
+    if (e.props.hasSurvey || (offered === null && running === null && !past)) {
       return next(e)
     }
     const { Box, Button, Text } = $.ui.resolve(e)
@@ -316,7 +333,7 @@ export const register: Register = (on, options) => {
     return (
       <Box>
         <Text dimColor>
-          Context {now?.percent}% of {now?.window.toLocaleString('en-US')}: find a clear point, commit, write the handoff, {chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'}
+          Context {now?.tokens.toLocaleString('en-US')} tokens ({now?.percent}% of {now?.window.toLocaleString('en-US')}): find a clear point, commit, write the handoff, {chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'}
         </Text>
       </Box>
     )

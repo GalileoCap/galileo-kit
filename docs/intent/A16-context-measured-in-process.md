@@ -25,7 +25,7 @@ The kit's first mod measures the context from `$.session.usage()`, with the engi
 
 ## What the transcripts say (2026-10-25)
 
-`session-transcripts` over 39 sessions: no request has carried more than 515,000 tokens, and every compaction, 145 of them, was manual, at a median of 152,000 tokens. The warning at half the window has never fired, so nothing here is validated by a real session yet, and the threshold is the first thing the report puts in question: a threshold near where the owner compacts by hand, around 150,000 tokens, would have fired in most long sessions. The owner decides.
+`session-transcripts` over 39 sessions: no request has carried more than 515,000 tokens, and every compaction, 145 of them, was manual, at a median of 152,000 tokens. The warning at half the window has never fired, so nothing here is validated by a real session yet, and the threshold is the first thing the report puts in question: a threshold near where the owner compacts by hand, around 150,000 tokens, would have fired in most long sessions. The owner decided the same day: the threshold is a token count, `thresholdTokens`, default 150,000, with the percent of the window kept as the alternative (`threshold`, 0 by default, the first reached warns). The firmer tiers moved with it, to one and a half times and twice the threshold, and the global rule's "skip the ask" line moved from 30% of the window to 100,000 tokens to stay below it. session-kit 0.10.0.
 
 ## Consequences
 

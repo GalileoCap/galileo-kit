@@ -80,7 +80,7 @@ test('off by default: no tool is registered and the warning names none', async (
   expect(asked).toEqual([])
 
   const ran = await $.tool.call({ tool: 'Bash', command: 'ls' })
-  expect(ran.context?.[0]).toMatch(/tell the user it is safe to compact/)
+  expect(ran.context?.[0]).toMatch(/ready to compact/)
   expect(ran.context?.[0]).not.toMatch(/clear_point/)
 })
 
