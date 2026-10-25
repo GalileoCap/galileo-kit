@@ -46,6 +46,8 @@
 
 - 2026-10-25: the owner's archive of 381 sessions read with the reader's new `--archive` option. Over 421 sessions the manual compactions sit at a median of 256,000 tokens, the retired warning fired 5,985 times from 500,000 and was followed by a compaction within a turn almost every time. The 250,000 and 500,000 tiers hold against it. The report's warnings are now summed per session, which keeps it under the documents cap.
 
+- 2026-10-25: the owner's two projects read for the kit, in `docs/analyses/tagents-and-generic-app.md`: nine tools and thirteen rules from `tagents/dev`, six tools and nine code-shape rules from `generic-app`, the removals each project owes the kit, and five questions for the owner, the first being the order to build in.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
@@ -64,6 +66,7 @@
 
 - Mod ordering: does a mod's `tool.call` or `tool.check` deny run before or after another user-installed mod's approval? This decides whether a mod port of the `session-kit` guard can hold against a third-party mod. Source: the "React to events" page, https://code.claude.com/docs/en/plugins/mods/events.md, and the mods admin page on seats (`prepend`, `append`).
 - What a compaction or a clear is worth, and how much the reader's sample is biased by the sessions cleared or deleted (questions 9 and 10 of `docs/session-tooling-design.md`). The warning's tiers at 250,000, 500,000 and 750,000 tokens are set on the owner's experience, and the measure module records live so the next report sees every session.
+- The analysis of the two projects: the order of the tool candidates, whether code-shape rules go in `global/CLAUDE.md` or an opt-in `global/CODE.md`, the rule-ownership conflict with tagents, whether the projects' records converge on the ladder (`docs/analyses/tagents-and-generic-app.md`, last section).
 - Login type: is this machine's session credential a personal or a Team/Enterprise login? On a personal login without managed settings, an installed mod can approve a tool call that the `session-kit` `PreToolUse` guard blocks.
 
 ## Deferred
