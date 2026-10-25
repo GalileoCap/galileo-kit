@@ -34,7 +34,7 @@
 
 - 2026-10-25: the owner held the push and said to go on with `A19`. The rule is in `global/CLAUDE.md` with its reason in `RATIONALE.md`, and the `new_task` tool beside `clear_point`: the band offers the handoff and a clear, or to keep going here, and sends the person's prompt again either way. session-kit 0.9.0, 27 engine tests green.
 
-- 2026-10-25: `A22` designed, not built: `docs/session-tooling-design.md`, a reader over the transcripts first and a measuring module after the first real session, with five questions for the owner.
+- 2026-10-25: `A22` designed and waiting on the owner, in `docs/session-tooling-design.md`: a reader over the transcripts first and a measuring module after the first real session, with five questions for the owner.
 
 ## Candidates
 
