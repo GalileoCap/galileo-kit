@@ -5,7 +5,7 @@ source: session
 status: decided 2026-10-11
 kind: behaviour
 implemented_by: [plugins/session-kit/skills/handoff/SKILL.md, plugins/session-kit/skills/handoff/template.md]
-proven_by: [CLAUDE.local.md, written by it in this project]
+proven_by: unproven
 supersedes: []
 ---
 
@@ -19,4 +19,4 @@ Only the model can summarise decisions and state, so the handoff is a skill and 
 
 ## Consequences
 
-One model turn per handoff. Stays a skill under the port. A mod can run it with `$.command.run`.
+One model turn per handoff. Stays a skill under the port. A mod runs it with `$.command.run`, as `A17`'s chain does. Proven by use alone: every `CLAUDE.local.md` of this project was written by it, and no test holds it.

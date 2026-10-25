@@ -18,6 +18,7 @@ Everything its owner works with agents through: the rules every session follows 
 | `direnv_env.sh` | SessionStart, CwdChanged, FileChanged | Puts the project's direnv environment in front of every Bash command, with the plugin's `bin/` kept at the end of PATH. A project with no `.envrc` is left alone. |
 | `pyright_env.py` | SessionStart | For a project whose `.claude/claude-kit.json` sets `"pyright_env": true`, writes the root `pyrightconfig.json` with `session-codeintel pyright-env`, one execution environment per uv package, and names any package it left out. Off by default, because it would replace a root config kept by hand. |
 | `bin/session-tells`, `bin/session-codeintel` | Bash tool's PATH | The two packages below as commands, while the plugin is enabled. Each runs in the environment its hook uses, in `CLAUDE_PLUGIN_DATA`. |
+| `bin/session-intent` | Bash tool's PATH | `session-intent index` writes `docs/intent/INDEX.md`, the entries waiting on the owner first, and `session-intent check` reads the record and the `CLAUDE.md` Intent block, one line per problem. Standard library Python. |
 | `handoff` skill | `/session-kit:handoff` | Writes `CLAUDE.local.md`, the working state a session reads first after a compaction. |
 
 ## Configuration
@@ -94,6 +95,8 @@ plugins/session-kit/tells/scripts/check     # ruff ALL, basedpyright strict, zer
 plugins/session-kit/tells/scripts/test
 claude plugin validate . && claude plugin validate plugins/session-kit --strict
 claude plugin test plugins/session-kit            # the hooks module's tests, against the engine itself
+python3 plugins/session-kit/intent/test_session_intent.py
+plugins/session-kit/bin/session-intent check      # the record under docs/intent, and INDEX.md current
 python3 plugins/session-kit/hooks/time_hooks.py   # what the settings hooks add to a tool call, see docs/measurements/hook-times.md
 ```
 

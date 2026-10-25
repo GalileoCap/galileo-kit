@@ -18,3 +18,5 @@ When and how often requests are sent during a session.
 The share of a session's input read from cache, measured, which nothing measures yet. The `cache-tax` decision is the first test of this objective.
 
 Inferred from G4, "we are considering keeping the cache warm". Marked considering by the owner, so held lighter than the others.
+
+No action yet: the first is the `cache-tax` decision, which waits on the port.

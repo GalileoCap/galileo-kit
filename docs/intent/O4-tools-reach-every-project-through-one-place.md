@@ -18,3 +18,5 @@ How a tool is installed on this machine and how a second project gets it.
 A tool wanted in a second project is installed from `galileo-kit`, with nothing set up again by hand.
 
 Inferred from G1, "building, installing, and downloading tools useful for all projects".
+
+No action yet: the marketplace and the plugin predate the ladder, and the first tool installed through it for a second project will be the first action.

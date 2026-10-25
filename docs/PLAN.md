@@ -28,6 +28,8 @@
 
 - 2026-10-25: the owner reviewed the plan and said to proceed as proposed. Step 2 of the port, `A17` with `A18`: the chain is in `context.tsx` behind the `chain` option (off), the `clear_point` tool taking who owns the next step, the stages driven off `turn.complete`, the engine's own compaction given the handoff's fields. session-kit 0.7.0, 12 engine tests green, validated against 2.1.308.
 
+- 2026-10-25: `A21`, the index and check: `session-intent index` and `check`, standard library Python under `plugins/session-kit/intent/`. Its first run found six stale entries, fixed in place. `INDEX.md` is generated and held current by the check.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |

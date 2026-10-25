@@ -18,3 +18,5 @@ What a session does before a one-off task: nothing beyond the task.
 A question, a read, a single edit or a quick fix writes no entry and runs no step of the process. The two signs in `global/goals-objectives-actions.md` decide which a task is.
 
 The owner's words, 2026-10-24. Folded from `session-kit`'s ladder.
+
+No action yet: the two signs in the process document hold it, and nothing checks them.

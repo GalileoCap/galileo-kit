@@ -65,7 +65,7 @@ An id is never reused. A goal, an objective or a constraint may be rewritten in 
 - When an objective is approved, it has at least one action or says "no action yet". When an action is decided it names what implements it, and when it is validated, what proved it.
 - When an action misfires (it costs more than expected, fires at the wrong moment, or is worked around), the error is fixed at the level that holds it. An action wrong for a right objective is superseded by the session. An objective that produces wrong actions is put to the owner. The consequences field names the result that undoes the action, so the undoing is argued once, when it is decided.
 - When a piece of the work is changed or released, the actions it carries are re-read against their objectives. A piece whose objective was retired goes with it. The actions that name a part of a tool's interface are re-read when that interface changes.
-- The tool that generates `INDEX.md` is also the check on the record (proposed, an action of `session-kit`'s ladder): ids resolve, every path in *implemented by* exists, every approved objective has an action, every action an objective, no status lacks a date, and every retired entry names its successor. A dangling path is how a stale entry announces itself.
+- The tool that generates `INDEX.md` is also the check on the record (`session-intent`, the kit's `A21`): ids resolve, every path in *implemented by* exists, every approved objective has an action, every action an objective, no status lacks a date, and every retired entry names its successor. A dangling path is how a stale entry announces itself.
 
 ## Over time
 
@@ -82,7 +82,7 @@ The session decides which a task is, by two signs: the result outlives the sessi
 ## Where the entries live
 
 - The project's `docs/intent/`: every entry, one file each, and the generated `INDEX.md`. Read on demand, when an action is proposed, validated or re-read.
-- The project's `CLAUDE.md`: the active goals, objectives and constraints, one line each with their ids, since a session decides against them and needs them in front of it. Every rule stated there names the action it is. Retired entries never appear. The tool regenerates this block. (Proposed.)
+- The project's `CLAUDE.md`: the active goals, objectives and constraints, one line each with their ids, since a session decides against them and needs them in front of it. Every rule stated there names the action it is. Retired entries never appear. The block is written by hand, and the tool checks it against the record.
 - `session-kit`'s own ladder: `RATIONALE.md` splits into one file per rule, each rule in `global/CLAUDE.md` names its id, and the paragraph that is there today becomes that action's context and consequences. (Proposed.)
 - A session's own actions, as it takes them: the `Decisions since` section of `CLAUDE.local.md`, which the handoff already keeps. Each entry there names the objective it serves, and becomes a file under `docs/intent/` when the result is kept.
 
