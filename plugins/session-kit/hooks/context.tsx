@@ -36,8 +36,8 @@ const NEW_TASK_NAME = 'new_task'
 const NEW_TASK_TOOL = 'mcp__session-kit__new_task'
 const HANDOFF_COMMAND = 'session-kit:handoff'
 const CLEAR_COMMAND = 'clear'
-const COMPACT_TRIES = 6
-const COMPACT_RETRY_MS = 500
+const COMPACT_TRIES = 20
+const COMPACT_RETRY_MS = 1000
 
 const TOOL_DESCRIPTION =
   'Call this at a clear point: the tree is committed and green, nothing is in ' +
@@ -157,11 +157,18 @@ function stageLine(state: ChainState): string {
   }
 }
 
+/** One dim transcript line per stage of a chain, so a run that stops can be read back. */
+function stage($: EngineInterface, text: string): void {
+  $.ui.log(`session-kit chain: ${text}`)
+}
+
 async function runHandoff($: EngineInterface): Promise<void> {
+  stage($, 'running the handoff command')
   try {
     await $.command.run({ command: HANDOFF_COMMAND })
   } catch (error) {
     await update($, chain, () => null)
+    stage($, `the handoff did not run (${reason(error)}), so the chain stops here`)
     $.ui.toast(`session-kit: the handoff did not run (${reason(error)}), so the chain stops here.`)
   }
 }
@@ -172,6 +179,7 @@ async function compactThenContinue($: EngineInterface, state: ChainState, tries 
     compacted = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS })
   } catch (error) {
     // The turn that just ended may not have let go yet: try again shortly.
+    stage($, `the compaction was refused (${reason(error)}), ${tries - 1} tries left`)
     if (tries > 1) {
       $.clock.after(COMPACT_RETRY_MS, () => {
         void compactThenContinue($, state, tries - 1)
@@ -186,16 +194,19 @@ async function compactThenContinue($: EngineInterface, state: ChainState, tries 
   }
   if (compacted.skip !== undefined) {
     await update($, chain, () => null)
+    stage($, `the compaction was skipped (${compacted.skip}), so the chain stops here`)
     $.ui.toast(`session-kit: the compaction was skipped (${compacted.skip}), so the chain stops here.`)
 
     return
   }
   if (state.waitsOnOwner) {
     await update($, chain, () => ({ ...state, stage: 'waiting' }))
+    stage($, 'compacted, and waiting on the owner')
 
     return
   }
   await update($, chain, () => null)
+  stage($, 'compacted, sending the continue prompt')
   await $.prompt.submit({ text: continuePrompt(state.note) })
 }
 
@@ -439,12 +450,14 @@ export const register: Register = (on, options) => {
     }
     if (e.reason !== 'answer') {
       await update($, chain, () => null)
+      stage($, `the turn ended by ${e.reason} at the ${state.stage} stage, so the chain stops here`)
 
       return next(e)
     }
     switch (state.stage) {
       case 'requested': {
         await update($, chain, () => ({ ...state, stage: 'handoff' }))
+        stage($, 'the turn ended: writing the handoff')
         // Outside this dispatch: a command run inside a hook the turn waits on is refused.
         $.clock.after(0, () => {
           void runHandoff($)
@@ -453,6 +466,7 @@ export const register: Register = (on, options) => {
       }
       case 'handoff': {
         await update($, chain, () => ({ ...state, stage: 'compacting' }))
+        stage($, 'the handoff turn ended: compacting')
         $.clock.after(0, () => {
           void compactThenContinue($, state)
         })
@@ -461,6 +475,7 @@ export const register: Register = (on, options) => {
       default:
         // A turn ended with the chain compacting or waiting: the person moved on.
         await update($, chain, () => null)
+        stage($, `a turn ended at the ${state.stage} stage, so the chain stops here`)
     }
 
     return next(e)
