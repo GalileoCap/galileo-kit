@@ -7,6 +7,7 @@ Vetting third-party Claude Code plugins and mods before installing them, and dec
 - `claude-code-mods-research.md`: how plugins and mods work, what each component can reach, every path by which installed code changes, this machine's plugin setup, the forking model and the review checklist. Read it before reviewing a mod.
 - `PLAN.md`: candidates, decisions, open questions and deferred work.
 - `goals-objectives-actions.md`: the process every kept decision follows, in this project and every other: goals the owner states, objectives the owner approves, actions a session decides and the owner validates. It moves into `session-kit`'s `global/` once confirmed. Its worked example is this project's own ladder.
+- `goals-objectives-actions-prior-art.md`: the process set against OKRs, ADRs, traceability, impact mapping, GQM, information hiding and fitness functions, with what it borrows from each. Read on demand, and it moves with the process.
 - `session-kit-port.md`: `session-kit`'s goals, objectives and actions, why each piece took its shape, and the plan to port it to a mod. It moves into the `session-kit` repository once the owner confirms it.
 
 ## Rules of engagement

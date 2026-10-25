@@ -10,6 +10,8 @@
 
 - 2026-10-24: the owner set the process every entry follows: goals (stated by the owner), objectives (approved by the owner), actions (decided by a session, validated by the owner). Drafted in `goals-objectives-actions.md`, and `session-kit-port.md` rewritten into it. The order is now: the process, then the session-kit analysis, then the port.
 
+- 2026-10-24: the owner asked for the process to be rethought against prior art (OKRs, ADRs and traceability, impact mapping, GQM, information hiding and ports-and-adapters, fitness functions). The comparison is `goals-objectives-actions-prior-art.md`, and `goals-objectives-actions.md` was revised from it: an objective names whose behaviour it changes and how it would be known met, an action carries its context, options, consequences and what implements and proves it, a validated action is superseded instead of rewritten, constraints are a fourth kind of entry, and the shared file splits into a loaded list and an on-demand record.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
@@ -18,8 +20,8 @@
 
 ## Next
 
-1. The process. Owner confirms `goals-objectives-actions.md` (its three open questions), then it moves into `session-kit`'s `global/`.
-2. The session-kit analysis. Owner reads `session-kit-port.md` under the process: approves or corrects objectives O3 and O6 to O10, settles A4 and A5, and answers the port's questions (the context chain, one task per context, where the documentation lives).
+1. The process. Owner confirms `goals-objectives-actions.md` (its six open questions, the names and the borrowed fields among them), then it and the prior-art document move into `session-kit`'s `global/`.
+2. The session-kit analysis. First `session-kit-port.md` is refitted to the confirmed process: the new fields on each objective and action, `O10` as a constraint, and the chain options as the options field of one action. Then the owner reads it: approves or corrects objectives O3 and O6 to O9, settles A4 and A5, and answers the port's questions (the context chain, one task per context, where the documentation lives).
 3. The port. Move the approved document into the `session-kit` repository and start there, at step 1 of its order (the context mod with the engine's window), measuring hook times before and after. That work follows the `session-kit` repository's rules.
 4. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
 
