@@ -45,6 +45,8 @@ declare module 'claude-code' {
       newTask: NewTaskState | null
       /** The person's last prompt, sent again after a clear or when they keep going. */
       lastPrompt: string
+      /** True while the prompt under way opened a context that held no task (new or just cleared). */
+      freshContext: boolean
     }
   }
 }

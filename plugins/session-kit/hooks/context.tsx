@@ -4,7 +4,8 @@
 // the `chain` option on, two tools: `clear_point`, after which the kit writes
 // the handoff, compacts and continues when the turn ends, and `new_task`,
 // after which the band offers the handoff and a clear, or to keep going here,
-// and sends the person's prompt again.
+// and sends the person's prompt again. In a context that holds no task yet
+// (new, or just cleared) `new_task` offers nothing: there is nothing to clear.
 //
 // The model is the one that knows where a clear point is, so the warning
 // goes to it, on the tool result, while it can still choose where to stop,
@@ -24,6 +25,7 @@ const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, nu
 const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
+const freshContext = atom({ plugin: 'session-kit', key: 'freshContext' } as const, false)
 
 const THRESHOLD_TOKENS = 250000
 const STEP_TOKENS = 25000
@@ -48,11 +50,18 @@ const TOOL_DESCRIPTION =
   'with nothing more started.'
 
 const NEW_TASK_DESCRIPTION =
-  'Call this when the prompt just given is a task unrelated to the one in ' +
-  'CLAUDE.local.md, before starting on it: one task per context. session-kit ' +
+  'Call this when the prompt just given is a task unrelated to the task this ' +
+  'context holds, before starting on it: one task per context. session-kit ' +
   'then offers the person the handoff and a clear, or to keep going here, and ' +
   'sends their prompt again after. Then end the turn, saying in one line that ' +
-  'it is a new task, with nothing started.'
+  'it is a new task, with nothing started. A context that holds no task yet ' +
+  '(new, or just cleared) takes the prompt as its task, whatever ' +
+  'CLAUDE.local.md describes.'
+
+const NOTHING_TO_CLEAR =
+  'This context holds no other task (it is new, or just cleared), so there is ' +
+  'nothing to clear: start on the prompt. CLAUDE.local.md still describes the ' +
+  'last task, and the next handoff rewrites it for this one.'
 
 const HANDOFF_FIELDS =
   'Keep the task in the user\'s own words, every decision with who took it and ' +
@@ -134,6 +143,24 @@ function asCount(value: unknown, fallback: number): number {
 
 function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+/**
+ * Whether a prompt about to enter opens a context that holds no task: the
+ * person has sent none in it and the model has answered none. A compacted
+ * context holds its summary's task, and an engine that cannot say counts as
+ * holding one, so the offer stays as it was.
+ */
+async function opensFreshContext($: EngineInterface): Promise<boolean> {
+  try {
+    if ((await $.session.turns()) !== 0) {
+      return false
+    }
+
+    return !(await $.session.messages()).some((m) => m.role === 'assistant')
+  } catch {
+    return false
+  }
 }
 
 /** A registered tool answers with its text: the engine's output schema for one takes a string. */
@@ -412,6 +439,10 @@ export const register: Register = (on, options) => {
     if (e.origin?.kind !== 'plugin' && e.text.trim() !== '') {
       await update($, lastPrompt, () => e.text)
     }
+    if (chainOn && e.command === undefined) {
+      const isFresh = await opensFreshContext($)
+      await update($, freshContext, () => isFresh)
+    }
 
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -458,6 +489,9 @@ export const register: Register = (on, options) => {
     const task = typeof e.task === 'string' && e.task.trim() !== '' ? e.task.trim() : ''
     if (task === '') {
       return refuse('task must name the new task in one line.')
+    }
+    if (await read($, freshContext)) {
+      return answer(NOTHING_TO_CLEAR)
     }
     await update($, newTask, () => ({ stage: 'offered', task }))
 

@@ -11,7 +11,7 @@ supersedes: []
 
 # A19 One task per context: the rule now, the signal with the port
 
-A rule in `global/CLAUDE.md` that a prompt unrelated to the task in `CLAUDE.local.md` is named as such before anything starts on it, and, with the `chain` option on, a registered `new_task` tool: the model calls it with the task in one line and ends the turn, and the band offers the handoff and a clear, or to keep going here. Either press sends the person's own prompt again, kept by a `prompt.submit` hook, so naming the new task costs them no resend.
+A rule in `global/CLAUDE.md` that a prompt unrelated to the task this context holds is named as such before anything starts on it, and, with the `chain` option on, a registered `new_task` tool: the model calls it with the task in one line and ends the turn, and the band offers the handoff and a clear, or to keep going here. Either press sends the person's own prompt again, kept by a `prompt.submit` hook, so naming the new task costs them no resend.
 
 ## Context
 
@@ -26,6 +26,10 @@ Nothing served `O11`. The only path was the owner running the handoff and `/clea
 ## Shape as built (2026-10-25, session-kit 0.9.0)
 
 The rule and the tool shipped together, with the rule's reason under the same heading in `global/RATIONALE.md`. The tool rides beside `clear_point` in `context.tsx`, with its own state (`newTask`, `lastPrompt`). "Handoff and clear" runs the handoff skill, and when that turn ends runs `clear` and submits the kept prompt as the person's own words (`asUser`), from a closure, since a clear ends the session's state. "Keep going here" submits it at once. An interrupted turn drops the offer. Unverified in a real session: whether the module's timers and `$` survive a `/clear` long enough to resend, which the engine tests cannot show.
+
+## Revised (2026-10-25, session-kit 0.21.1)
+
+The rule measured a prompt against the task in `CLAUDE.local.md`. In gastainas the owner cleared by hand and gave a new task, the file still described the one before, and the session called `new_task` in a context that held nothing. The rule now measures against the task the context holds, and a new or just-cleared context takes the prompt as its own. The module holds it too: at each prompt it records whether the context is fresh (the engine counts no prompt of the person's and no answer of the model's), and `new_task` called there answers that there is nothing to clear and offers no band. A compacted context holds its summary's task and is not fresh. Unverified in a real session: that `$.session.turns()` starts over at a `/clear` in the desktop app.
 
 ## Consequences
 

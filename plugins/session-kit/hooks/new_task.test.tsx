@@ -21,10 +21,13 @@ const BAND = {
   props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
-// The engine beneath the plugin, recording what it asked.
-function engine(on: On) {
+// The engine beneath the plugin, recording what it asked. `holdsTask`: the
+// context already holds a prompt of the person's and an answer of the model's.
+function engine(on: On, { holdsTask = true } = {}) {
   const asked: string[] = []
   on('session.usage', () => ({ value: usage(40) }))
+  on('session.turns', () => ({ value: holdsTask ? 2 : 0 }))
+  on('session.messages', () => ({ value: holdsTask ? [{ role: 'assistant' as const, text: 'the last task', toolUses: [] }] : [] }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
   on('tool.register', (_, e) => {
@@ -142,6 +145,20 @@ test('the prompt is sent again after a clear that starts the session\'s state ov
   await $.turn.complete(turn('t-handoff'))
   await clock.settle()
   expect(asked).toEqual(['command session-kit:handoff', 'command clear', `prompt as user: ${PROMPT}`])
+})
+
+test('in a context that holds no task yet, new or just cleared, the signal is answered with nothing to clear and offers nothing', { options: { chain: true } }, async ($, on) => {
+  engine(on, { holdsTask: false })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.prompt.submit({ text: PROMPT, wait: false, origin: { kind: 'composer' } })
+
+  const answered = await $.tool.call({ tool: TOOL, task: 'rewrite the README install section' })
+  expect(answered.deny).toBeUndefined()
+  expect(answered.result).toMatch(/nothing to clear/)
+  expect(answered.result).toMatch(/start on the prompt/i)
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await ui.find({ type: 'Text', text: /New task/ })).toBeUndefined()
+  await ui.unmount()
 })
 
 test('a signal without a task is refused and offers nothing', { options: { chain: true } }, async ($, on) => {
