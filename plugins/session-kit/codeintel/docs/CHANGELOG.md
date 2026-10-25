@@ -6,6 +6,14 @@ the command line, which is the public surface in [`api.md`](api.md), is
 a major bump, and its entry says what a consumer has to change. Before
 1.0, a minor bump may break.
 
+## 0.3.0, 2026-10-25
+
+- **`looks [ROOT]`**: the class strings of two or more classes written in
+  more than one place under a frontend's source, found by three
+  ast-grep rules through the pinned binary, with an allowlist in
+  `.claude/claude-kit.json` that names each coincidence's files
+  ([`api.md`](api.md)). Ported from generic-app's TypeScript checker.
+
 ## 0.2.0, 2026-10-11
 
 - **Moved into `session-kit`** (`plugins/session-kit/codeintel/`) and

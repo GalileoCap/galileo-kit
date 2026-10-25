@@ -1,0 +1,5 @@
+#!/bin/sh
+# Every document under docs/ named by the index, and every one named exists.
+# Claude Code puts bin/ on the Bash tool's PATH while the plugin is enabled.
+# Standard library only.
+exec python3 "$(dirname "$0")/../docs_check/session_docs.py" "$@"

@@ -1,4 +1,4 @@
-"""The ``session-codeintel`` command: ``recipes list``, ``recipes path``, ``pyright-env``."""
+"""The ``session-codeintel`` command: ``recipes``, ``pyright-env`` and ``looks``."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from session_codeintel import pyright_env, recipes
+from session_codeintel import looks, pyright_env, recipes
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -29,6 +29,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "pyright-env":
         return _pyright_env(Path(args.root))
+    if args.command == "looks":
+        return _looks(Path(args.root).resolve())
     if args.action == "list":
         for recipe in recipes.bundled():
             _out(f"{recipe.name}\t{recipe.purpose}")
@@ -59,8 +61,22 @@ def _pyright_env(root: Path) -> int:
     return PARTIAL if discovery.without_venv or discovery.overridden else 0
 
 
+def _looks(root: Path) -> int:
+    """Print the looks written twice and the allowances that drifted; 1 on any."""
+    settings = looks.read_settings(root)
+    try:
+        sites = looks.scan(root, settings)
+    except RuntimeError as failed:
+        _err(str(failed))
+        return REFUSED
+    report = looks.check(sites, settings)
+    for line in looks.lines(report):
+        _out(line)
+    return 0 if report.clean else PARTIAL
+
+
 def _parser() -> argparse.ArgumentParser:
-    """Build the command's parser: two subcommands, one of them with two actions."""
+    """Build the command's parser: three subcommands, one of them with two actions."""
     parser = argparse.ArgumentParser(prog="session-codeintel")
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -72,6 +88,11 @@ def _parser() -> argparse.ArgumentParser:
 
     env = commands.add_parser("pyright-env", help="write ROOT/pyrightconfig.json")
     env.add_argument("root", nargs="?", default=".", metavar="ROOT")
+
+    repeated = commands.add_parser(
+        "looks", help="the class strings written in more than one place under ROOT's source"
+    )
+    repeated.add_argument("root", nargs="?", default=".", metavar="ROOT")
     return parser
 
 

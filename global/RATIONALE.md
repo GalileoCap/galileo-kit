@@ -26,6 +26,8 @@
 
 **A deliverable is a file.** A published page is not versioned with the code it describes: it cannot be read at a commit, it does not travel with a branch, and nobody reviews it with the change. A document that outlives the tree it describes is a document nobody can check.
 
+**A new document gets its line in the index in the commit that adds it.** A document nobody is sent to is read by nobody, and a project's list of documents rots in both directions: the file added without its line, and the line kept after its file was renamed. generic-app held the first with a loop in its gate. The kit's check holds both, since a dangling path is how a stale line announces itself.
+
 **A file you touch leaves with fewer prose tells.** Machine-written prose carries habits (the em dash, `X, not Y`, intensifiers, signposting, history in comments) that make a reader skim it and trust it less. The first project measured some 27 000 em dashes in its docs alone: too many for a sweep that reads and judges each one, and a mechanical swap of the mark leaves the sentence as it was. A file being edited is a file being read, so the removal costs a minute there and the counts fall with the work. A history comment goes stale the day it is written, and the commit already holds that history.
 
 **A temporary file is scoped to whoever wrote it.** In the first project a hook wrote every worktree's last test run to one fixed path under `/tmp`, so each session read whichever run had finished last, from any worktree.

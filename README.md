@@ -22,6 +22,7 @@ Everything its owner works with agents through: the rules every session follows 
 | `pyright_env.py` | SessionStart | For a project whose `.claude/claude-kit.json` sets `"pyright_env": true`, writes the root `pyrightconfig.json` with `session-codeintel pyright-env`, one execution environment per uv package, and names any package it left out. Off by default, because it would replace a root config kept by hand. |
 | `bin/session-tells`, `bin/session-codeintel` | Bash tool's PATH | The two packages below as commands, while the plugin is enabled. Each runs in the environment its hook uses, in `CLAUDE_PLUGIN_DATA`. |
 | `bin/session-intent` | Bash tool's PATH | `session-intent index` writes `docs/intent/INDEX.md`, the entries waiting on the owner first, `session-intent check` reads the record and the `CLAUDE.md` Intent block, one line per problem, `session-intent names` prints each entry's id and name, and `session-intent next <level>` claims the next id of a level under a lock, from a counter kept outside every checkout under `~/.claude/session-kit/intent/`, one per clone, so an id is never given twice. Standard library Python. |
+| `bin/session-docs` | Bash tool's PATH | `session-docs check` fails on a markdown file under `docs/` that `CLAUDE.md` does not name, by its path or by a directory's above it (`docs/intent/`), and on a path it names that does not exist, fenced code aside. The directory and the indexes are settable under `docs` in `.claude/claude-kit.json`. Standard library Python. |
 | `bin/session-rulebook` | Bash tool's PATH | Counts the words of what every turn loads (the user's `~/.claude/CLAUDE.md` and the project's `CLAUDE.md` with their `@path` imports, `.claude/rules/`, `CLAUDE.local.md`) and, apart, of the skills, each file listed, and fails when a group is over its budget: 5,000 and 16,000 words, or the project's own under `rulebook` in `.claude/claude-kit.json`. Standard library Python. |
 | `bin/session-suppressions` | Bash tool's PATH | `session-suppressions list` prints every suppression in the tree's source files with the ledger row it cites, and `check` fails on a marker that cites no row (on its line or the line above) or a row the ledger lacks. The ledger is `docs/decisions.md`, the citation `decisions.md, <n>`, both settable under `suppressions` in `.claude/claude-kit.json`. Standard library Python. |
 | `bin/session-transcripts` | Bash tool's PATH | Reads the sessions' transcripts under `~/.claude/projects/` and prints tables: `list`, `session <id>`, `warnings` (each context warning and what followed), `cache` (the share read from the prompt cache, the cold sends), `compactions`, `hooks`, and `report`, which writes them under `docs/measurements/`. `--archive <dir>` reads a backup beside them, one `<project>/<id>.tar.xz` per session, in a stream. Counts and sizes, with no prompt and no answer in its output. Standard library Python. |
@@ -33,6 +34,7 @@ Everything its owner works with agents through: the rules every session follows 
 - `chain` (off) turns on the two tools: `clear_point`, with the handoff, compaction and continue that run when the turn it was called in ends, and `new_task`, with the band's offer of the handoff and a clear. The continue prompt reaches the model as the plugin's, telling it to read again the documents `CLAUDE.local.md` lists and take its next step. An interrupted turn cancels the chain.
 - `docLines` (1500) is the cap past which a `docs/*.md` file an edit touched is named to the model.
 - A project names its suppression ledger in `.claude/claude-kit.json` under `suppressions`: `ledger` (`docs/decisions.md`), `cite` (a pattern whose first group is the row's number, `decisions\.md,?\s*(\d+)`) and `skip` (directories beyond the usual build and dependency ones).
+- A project sets its documents check in `.claude/claude-kit.json` under `docs`: `root` (`docs`) and `indexes`, the files that must each name every document (`CLAUDE.md`). Its looks check goes under `looks`: `src` (`src`), `skip` (`src/components/ui`) and `allowed`, the looks that repeat by coincidence, each with `look`, `files` and `reason`.
 - A project sets its rulebook budgets in `.claude/claude-kit.json` under `rulebook`: `rules` and `skills` in words, and `skills_from`, globs from the root of further skill files (the kit names `plugins/*/skills/*/SKILL.md`).
 - A project names its own test runners in `.claude/claude-kit.json`, so the `-x` and piped-output rules and the test log cover them:
 
@@ -105,11 +107,15 @@ claude plugin test plugins/session-kit            # the hooks module's tests, ag
 python3 plugins/session-kit/intent/test_session_intent.py
 python3 plugins/session-kit/transcripts/test_session_transcripts.py
 python3 plugins/session-kit/rulebook/test_session_rulebook.py
+python3 plugins/session-kit/docs_check/test_session_docs.py
 plugins/session-kit/bin/session-intent check      # the record under docs/intent, and INDEX.md current
 plugins/session-kit/bin/session-suppressions check   # every suppression in the kit's code cites a row of docs/decisions.md
 plugins/session-kit/bin/session-rulebook             # the rules and the skills under their word budgets
+plugins/session-kit/bin/session-docs check           # every document under docs/ named by CLAUDE.md
 python3 plugins/session-kit/hooks/time_hooks.py   # what the settings hooks add to a tool call, see docs/measurements/hook-times.md
 ```
+
+After the checkout is moved or renamed, `uv sync --reinstall` in each package rewrites its venv's scripts, whose first line carries the old path.
 
 The hooks module is type-checked against the declarations the engine writes when it loads a mod (`.claude-plugin/types/`, ignored by git), or against the `claude-code.d.ts` the `plugin-authoring` skill lays out, with the `tsconfig.json` from that file's header kept outside the plugin:
 
@@ -121,7 +127,7 @@ The guard's cases live in a file because the guard matches the text of a command
 
 ## Code intelligence
 
-`plugins/session-kit/codeintel/` is a Python package, `session-codeintel`: pinned `ast-grep` and `import-linter`, tested rewrite recipes, `pyright-env` (a root `pyrightconfig.json` that lets a language server see every package of a multi-package repository), and a shim that starts a project's own language server through direnv. A project runs it from git at a pinned commit through a small wrapper. [Its README](plugins/session-kit/codeintel/docs/README.md) has the wrapper and the rest.
+`plugins/session-kit/codeintel/` is a Python package, `session-codeintel`: pinned `ast-grep` and `import-linter`, tested rewrite recipes, `looks` (a class string written in two places under a frontend's source, with an allowlist that names each coincidence's files), `pyright-env` (a root `pyrightconfig.json` that lets a language server see every package of a multi-package repository), and a shim that starts a project's own language server through direnv. A project runs it from git at a pinned commit through a small wrapper. [Its README](plugins/session-kit/codeintel/docs/README.md) has the wrapper and the rest.
 
 ```bash
 plugins/session-kit/codeintel/shims/install.sh    # the shim, linked into ~/.local/bin under both servers' names; run it from a checkout, such as ~/.claude/plugins/marketplaces/galileo-kit

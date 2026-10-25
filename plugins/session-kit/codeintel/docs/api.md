@@ -1,8 +1,8 @@
 # The surface
 
-**The command line is the public surface**: the three commands below,
-their output lines and their exit statuses. That is what a repository
-wires, and what this package's version number protects. The Python
+**The command line is the public surface**: the four commands below,
+their output lines and their exit statuses. A repository wires them, and
+this package's version number protects them. The Python
 modules behind it are described after it, for a contributor or a reader
 of the tests, and are **not** public: they may change in any release
 without a major bump.
@@ -18,6 +18,7 @@ fixes only their versions: `ast-grep-cli >=0.45.3,<0.46` and
 session-codeintel recipes list
 session-codeintel recipes path <name>
 session-codeintel pyright-env [ROOT]
+session-codeintel looks [ROOT]
 ```
 
 ### `recipes list`
@@ -28,8 +29,8 @@ one-line purpose. Exit 0.
 ### `recipes path <name>`
 
 The recipe's rule file, as one absolute path. Once the package is
-installed, this is inside `site-packages`, so copy it rather than edit
-it. Exit 0.
+installed, this is inside `site-packages`, so copy it and edit the
+copy. Exit 0.
 
 An unknown name prints nothing on stdout, prints
 `unknown recipe '<name>'; known: <a>, <b>` on stderr, and exits 2.
@@ -51,16 +52,44 @@ directory. [`integrating.md`](integrating.md) has what it reads, and
 | --- | --- |
 | 0 | every package was written, and each is checked under its own settings |
 | 1 | the file was written, and some package was left out or overridden, as named on stderr |
-| 2 | nothing was written, because no package has a venv; also argparse's own usage errors |
+| 2 | nothing was written, because no package has a venv, and argparse's own usage errors |
 
 An unchanged file is not rewritten, so a language server watching it
 does not reload.
 
+### `looks [ROOT]`
+
+Reads the `looks` block of `ROOT/.claude/claude-kit.json`, runs the
+pinned `ast-grep` over the source with three rules, and prints the
+class strings of two or more classes written in more than one place: in
+a `className` or `*ClassName` prop, an argument of `cn`, or a value of
+a `*-looks.ts` file. The block holds `src`, the source directory (`src`
+by default), `skip`, directories under it left out (`src/components/ui`
+by default), and `allowed`, the looks that may repeat, each with `look`,
+`files` and `reason`. The classes of a look are sorted, so their order
+does not matter. An allowed look is not reported while it is written
+in the files its entry lists and no other.
+
+| stream | line | when |
+| --- | --- | --- |
+| stdout | `"<look>" is written in <n> places:` then `  <path>:<line>` per place | once per repeated look |
+| stdout | `The allowed look "<look>" lists <files> but is written in <files or none>.` | once per allowance whose files drifted |
+| stdout | `Each look belongs to one component or one *-looks.ts entry.` | after the repeats, when there are any |
+| stdout | `Update the entry under looks.allowed in .claude/claude-kit.json: ...` | after the drifts, when there are any |
+| stdout | `<n> class strings, none written twice` | nothing to report |
+| stderr | `ast-grep failed: <stderr>` | the binary refused the source |
+
+| exit | meaning |
+| --- | --- |
+| 0 | no look repeats and no allowance drifted |
+| 1 | a look repeats, or an allowance drifted, as printed |
+| 2 | ast-grep failed, and argparse's own usage errors |
+
 ## The modules behind it, which are private
 
 Import them only if you accept that they can change under you. A tool
-that wants the discovery without the file should say so, and they would
-then be made public on purpose, with their own versioning.
+that wants the discovery without the file should ask for it, and they
+would then be made public, with their own versioning.
 
 ### `session_codeintel.recipes`
 
@@ -180,8 +209,8 @@ PARTIAL: int = 1
 - **The file's exact text**, beyond the shape `render` gives: key order
   and indentation are stable in practice, and not promised.
 - **The recipes' own text.** A recipe's pattern and comments can
-  improve in any release. Copy the one you use; do not reference the
-  installed file from a script.
+  improve in any release. Copy the one you use, since a script that
+  references the installed file follows those changes.
 - **`index.toml`**, the purposes file. `bundled()` reads it for you.
 - **The shim**, `shims/language-server`. It is in the source tree and
   not in the wheel. [`operating.md`](operating.md) says how to install

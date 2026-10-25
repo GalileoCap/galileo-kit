@@ -50,6 +50,7 @@
 
 - 2026-10-25: the owner chose the order: the checkout checks first (`A25`), then the suppression warning with its ledger check (`A26`). Both built: `hooks/checkout.ts` (a context block for a missing or stale handoff, a dim line at the end of a turn for uncommitted work), `hooks/suppressions.ts` and `session-suppressions list|check`. session-kit 0.12.0. The engine refuses two `turn.complete` hooks in one module without a matcher, so the checkout's carries `{ reason: 'answer' }`.
 - 2026-10-25: the id allocator (`A27`): `session-intent next <level>` claims the next id under a mkdir lock, from a counter under `~/.claude/session-kit/intent/<clone>/` floored by the record, logged with the checkout, the commit and the title. It gave `A27` and `A28` on its first run. The rulebook budget (`A28`): `session-rulebook` counts the rules a turn loads and the skills apart, against `rulebook` in `.claude/claude-kit.json`, and the kit stands at 4,290 of 5,000 words, 1,535 of them the handoff. session-kit 0.13.0.
+- 2026-10-25: the docs check (`A29`): `session-docs check`, every document under `docs/` named by `CLAUDE.md` by its path or its directory's, and every path named existing, the kit's 65 passing. The looks check (`A30`): `session-codeintel looks`, three ast-grep rules through the package's pinned binary, the allowlist under `looks.allowed` in `.claude/claude-kit.json`. Both packages' venvs had scripts pointing at the checkout's old name, `claude-kit`, which was why their gates could not spawn their tools, and `uv sync --reinstall` rewrote them. session-kit 0.14.0, session-codeintel 0.3.0.
 
 ## Candidates
 
@@ -61,7 +62,7 @@
 
 1. Install 0.10.0 on this machine and watch a real session: the context warning (`A16`, context measured in-process) from 150,000 tokens and its band on the terminal and in the desktop app, then the clear-point chain (`A17`) with `chain` on, one run end to end, and the summary read back, and one press of each `new_task` button (`A19`, one task per context). The marketplace clone pulls from GitHub, so the install needs the owner's push, or a marketplace added from the local path.
 2. The port (`A20`, one module per concern): steps 1, 2, 3 and 5 are built, with the index and check (`A21`) beside them. Left: step 4, the guard's mod form, once mod ordering is answered.
-3. The rest of the analysis's order (`docs/analyses/tagents-and-generic-app.md`): the docs check (G3), the looks check (G2), the pure-core rule pack (G1), the code measure (G4), the iterate skill (T8), the quality gates and template (T5).
+3. The rest of the analysis's order (`docs/analyses/tagents-and-generic-app.md`): the looks check (G2), the pure-core rule pack (G1), the code measure (G4), the iterate skill (T8), the quality gates and template (T5).
 4. The transcript tooling (`A22`): its `rules` command and, after the first real session with the modules, the `measure` module.
 5. The reference mod (`A24`), after the first real-session run: the name drawn beside each id in a reply.
 6. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.

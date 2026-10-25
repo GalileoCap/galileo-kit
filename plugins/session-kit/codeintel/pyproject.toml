@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "session-codeintel"
-version = "0.2.0"
-description = "Structural search and rewrite recipes, pinned code-intelligence tools, and a pyright environment for multi-package repositories"
+version = "0.3.0"
+description = "Structural search and rewrite recipes, pinned code-intelligence tools, a looks check for a frontend, and a pyright environment for multi-package repositories"
 readme = "docs/README.md"
 requires-python = ">=3.12"
 # The two tools are the point of the package: run through it, they are the

@@ -20,6 +20,13 @@ structural search and rewrite, import boundaries as a gate, and complete
   half-converted tree, and documents the two ways a regex sweep of the
   same change breaks code. A recipe is a template: you copy it, retarget
   it and run it. It is never a check.
+- **Finds a look written twice.** In a frontend built on utility
+  classes, the same information shown the same way everywhere means one
+  component or one looks entry per look, and `session-codeintel looks`
+  fails when a class string of two or more classes is written in two
+  places under the source. A look that repeats by coincidence is allowed
+  in the project's settings with the files it lives in, and the check
+  fails again when it spreads or leaves one, so the entry is reviewed.
 - **Writes the `pyrightconfig.json` that makes a language server
   complete.** A server started at the root of a repository of several
   `uv` projects sees one interpreter, and answers "no references" for
