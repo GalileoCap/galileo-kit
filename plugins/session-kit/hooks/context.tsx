@@ -36,6 +36,7 @@ const NEW_TASK_NAME = 'new_task'
 const NEW_TASK_TOOL = 'mcp__session-kit__new_task'
 const HANDOFF_COMMAND = 'session-kit:handoff'
 const CLEAR_COMMAND = 'clear'
+const COMPACT_COMMAND = 'compact'
 const COMPACT_TRIES = 20
 const COMPACT_RETRY_MS = 1000
 
@@ -157,15 +158,39 @@ function stageLine(state: ChainState): string {
   }
 }
 
-/** One dim transcript line per stage of a chain, so a run that stops can be read back. */
+/** Where a session's chain writes its stages: a host that draws no log line still leaves this file. */
+export function journalPath(tempdir: string, sessionId: string): string {
+  const safe = sessionId.replace(/[^\w-]/g, '_') || 'session'
+
+  return `${tempdir.replace(/\/+$/, '')}/session-kit-chain-${safe}.log`
+}
+
+let journal: Promise<void> = Promise.resolve()
+
+async function journalLine($: EngineInterface, line: string): Promise<void> {
+  const path = journalPath((await $.env.get('TMPDIR')) ?? '/tmp', await $.session.id())
+  let before = ''
+  try {
+    before = await $.fs.read(path)
+  } catch {
+    before = ''
+  }
+  await $.fs.write(path, `${before}${line}\n`)
+}
+
+/** One line per stage of a chain, in the transcript and in the session's chain file, so a run that stops can be read back. */
 function stage($: EngineInterface, text: string): void {
   $.ui.log(`session-kit chain: ${text}`)
+  journal = journal
+    .then(async () => journalLine($, `${new Date(await $.clock.now()).toISOString()} ${text}`))
+    .catch(() => undefined)
 }
 
 async function runHandoff($: EngineInterface): Promise<void> {
   stage($, 'running the handoff command')
   try {
     await $.command.run({ command: HANDOFF_COMMAND })
+    stage($, 'the handoff command returned')
   } catch (error) {
     await update($, chain, () => null)
     stage($, `the handoff did not run (${reason(error)}), so the chain stops here`)
@@ -199,6 +224,10 @@ async function compactThenContinue($: EngineInterface, state: ChainState, tries 
 
     return
   }
+  await afterCompaction($, state)
+}
+
+async function afterCompaction($: EngineInterface, state: ChainState): Promise<void> {
   if (state.waitsOnOwner) {
     await update($, chain, () => ({ ...state, stage: 'waiting' }))
     stage($, 'compacted, and waiting on the owner')
@@ -208,6 +237,24 @@ async function compactThenContinue($: EngineInterface, state: ChainState, tries 
   await update($, chain, () => null)
   stage($, 'compacted, sending the continue prompt')
   await $.prompt.submit({ text: continuePrompt(state.note) })
+}
+
+/**
+ * Where no person is at the prompt (the SDK, the desktop app), `$.session.compact`
+ * is refused and a compaction runs inside a turn, so the chain runs `/compact`.
+ */
+async function compactByCommand($: EngineInterface, state: ChainState): Promise<void> {
+  stage($, 'compacting through the /compact command, since no person is at the prompt')
+  try {
+    await $.command.run({ command: COMPACT_COMMAND, args: COMPACT_INSTRUCTIONS })
+  } catch (error) {
+    await update($, chain, () => null)
+    stage($, `the /compact command did not run (${reason(error)}), so the chain stops here`)
+    $.ui.toast(`session-kit: the compaction did not run (${reason(error)}), so the chain stops here.`)
+
+    return
+  }
+  await afterCompaction($, state)
 }
 
 function newTaskLine(state: NewTaskState): string {
@@ -367,7 +414,9 @@ export const register: Register = (on, options) => {
     return
   }
 
+  let isInteractive = true
   on('session.start', async ($, e, next) => {
+    isInteractive = e.isInteractive
     await $.tool.register({
       name: TOOL_NAME,
       description: TOOL_DESCRIPTION,
@@ -468,12 +517,16 @@ export const register: Register = (on, options) => {
         await update($, chain, () => ({ ...state, stage: 'compacting' }))
         stage($, 'the handoff turn ended: compacting')
         $.clock.after(0, () => {
-          void compactThenContinue($, state)
+          void (isInteractive ? compactThenContinue($, state) : compactByCommand($, state))
         })
         break
       }
+      case 'compacting':
+        // Where the compaction is a /compact turn, its own end lands here.
+        stage($, 'a turn ended while compacting')
+        break
       default:
-        // A turn ended with the chain compacting or waiting: the person moved on.
+        // A turn ended with the chain waiting on the owner: the person moved on.
         await update($, chain, () => null)
         stage($, `a turn ended at the ${state.stage} stage, so the chain stops here`)
     }

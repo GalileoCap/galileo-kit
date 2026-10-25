@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 
 import type { On, SessionUsage, TurnCompleteInput } from 'claude-code'
 
-import { backstop } from './context'
+import { backstop, journalPath } from './context'
 
 const WINDOW = 1_000_000
 const TOOL = 'mcp__session-kit__clear_point'
@@ -214,6 +214,61 @@ test('the band shows each stage of the chain', { options: { chain: true } }, asy
   await $.turn.complete(turn('t1'))
   await clock.settle()
   expect(await bandSays(/handoff/i)).toMatch(/writing the handoff/)
+})
+
+test('where no person is at the prompt, the chain compacts through /compact and then continues', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const asked = engine(on)
+  await $.session.start({ cwd: '/', surface: null, isInteractive: false })
+
+  await $.tool.call({ tool: TOOL, next_step: 'session', note: 'run the checks' })
+  await $.turn.complete(turn('t1'))
+  await clock.settle()
+  await $.turn.complete(turn('t2'))
+  await clock.settle()
+
+  // The engine's own compaction is refused in an SDK session, so it is never asked.
+  expect(asked.filter((a) => a.startsWith('compact '))).toEqual([])
+  expect(asked.slice(1, 3)).toEqual(['command session-kit:handoff', 'command compact'])
+  expect(asked[3]).toMatch(/^prompt .*run the checks/)
+})
+
+test('every stage of a chain leaves a line in the session\'s chain file, which a host that draws no log line still has', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  engine(on)
+  const files: Record<string, string> = {}
+  mock.env(on, { TMPDIR: '/var/tmp/t' })
+  on('session.id', () => ({ value: 'sess-1' }))
+  on('fs.read', (_, e) => {
+    const text = files[e.path]
+    if (text === undefined) {
+      throw new Error(`ENOENT: ${e.path}`)
+    }
+
+    return { value: text }
+  })
+  on('fs.write', (_, e) => {
+    files[e.path] = e.text
+
+    return { value: undefined }
+  })
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+
+  await $.tool.call({ tool: TOOL, next_step: 'session', note: 'next' })
+  await $.turn.complete(turn('t1'))
+  await clock.settle()
+  await $.turn.complete(turn('t2'))
+  await clock.settle()
+  await clock.advance(1000)
+
+  const journal = files[journalPath('/var/tmp/t', 'sess-1')] ?? ''
+  const stages = [/writing the handoff/, /handoff command returned/, /compacting/, /sending the continue prompt/]
+  let from = 0
+  for (const stage of stages) {
+    const at = journal.slice(from).search(stage)
+    expect(at).toBeGreaterThanOrEqual(0)
+    from += at + 1
+  }
 })
 
 test('the backstop tells the engine\'s own compaction what a handoff keeps', async () => {
