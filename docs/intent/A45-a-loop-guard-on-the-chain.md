@@ -2,7 +2,7 @@
 id: A45
 from: [O5, O12]
 source: session
-status: decided 2026-10-25
+status: retired 2026-10-25
 kind: behaviour
 implemented_by: [plugins/session-kit/hooks/context.tsx, plugins/session-kit/types/index.d.ts]
 proven_by: [plugins/session-kit/hooks/chain.test.tsx]

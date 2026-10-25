@@ -223,39 +223,163 @@ test('the band shows each stage of the chain', { options: { chain: true } }, asy
   expect(await bandSays(/handoff/i)).toMatch(/writing the handoff/)
 })
 
-test('a third chain since the person\'s last prompt is refused, a prompt that is not theirs changes nothing, and their next prompt lets one run again', { options: { chain: true } }, async ($, on) => {
+const NO_COST = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
+
+type Reply = { isAnswered: true; text: string; usage: typeof NO_COST } | { isAnswered: false; reason: 'empty-reply'; usage: typeof NO_COST }
+
+// The judge beneath: what it was asked, how many continues had gone before, and the reply each time.
+function judge(on: On, asked: string[], reply: () => Reply) {
+  const judged: { before: number; model: string; prompt: string }[] = []
+  on('model.complete', (_, e) => {
+    judged.push({ before: asked.filter((a) => a.startsWith('prompt Continue')).length, model: e.model, prompt: e.prompt })
+
+    return { value: reply() }
+  })
+
+  return judged
+}
+
+// A repository whose HEAD is `c<n>`, its log one subject per commit.
+function repo(on: On, head: () => number) {
+  on('process.run', (_, e) => {
+    const args = e.argv.slice(3)
+    const done = (stdout: string) => ({ value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
+    if (args.join(' ') === 'rev-parse --short HEAD') {
+      return done(`c${head()}\n`)
+    }
+    const range = args[0] === 'log' ? /^c(\d+)\.\.HEAD$/.exec(args[args.length - 1] ?? '') : null
+    if (range !== null) {
+      const lines: string[] = []
+      for (let n = head(); n > Number(range[1]); n -= 1) {
+        lines.push(`c${n} commit number ${n}`)
+      }
+
+      return done(lines.map((line) => `${line}\n`).join(''))
+    }
+
+    return { value: { exitCode: 128, stdout: '', stderr: 'fatal', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+}
+
+function handoffFile(on: On) {
+  on('fs.read', (_, e) => {
+    if (e.path === '/CLAUDE.local.md') {
+      return { value: '# Live state\n\n## Task\n\nThe owner: "build the transcript reader".\n\n## Next step\n\nstep 9\n' }
+    }
+    throw new Error(`ENOENT: ${e.path}`)
+  })
+}
+
+function answered(text: string): Reply {
+  return { isAnswered: true, text, usage: NO_COST }
+}
+
+test('the chain goes on by itself, and a judge reads the evidence at the third, the fifth and every signal from the seventh since the person\'s last prompt', { options: { chain: true } }, async ($, on) => {
   const clock = mock.clock(on)
   const asked = engine(on)
+  const judged = judge(on, asked, () => answered('CONTINUE: each step moves the task on.'))
+  let commit = 0
+  repo(on, () => commit)
+  handoffFile(on)
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   await $.prompt.submit({ text: 'build it', wait: false, origin: { kind: 'composer' } })
   const continues = () => asked.filter((a) => a.startsWith('prompt Continue')).length
-  const chain = async (id: string) => {
-    const signalled = await $.tool.call({ tool: TOOL, next_step: 'session', note: 'go on' })
-    await $.turn.complete(turn(`${id}-1`))
+  const chain = async (note: string) => {
+    commit += 1
+    const signalled = await $.tool.call({ tool: TOOL, next_step: 'session', note })
+    await $.turn.complete(turn(`${note}-1`))
     await clock.settle()
-    await $.turn.complete(turn(`${id}-2`))
+    await $.turn.complete(turn(`${note}-2`))
     await clock.settle()
 
     return signalled
   }
 
-  expect((await chain('a')).deny).toBeUndefined()
-  expect((await chain('b')).deny).toBeUndefined()
-  expect(continues()).toBe(2)
+  for (let n = 1; n <= 8; n += 1) {
+    expect((await chain(`step ${n}`)).deny).toBeUndefined()
+  }
+  expect(continues()).toBe(8)
+  expect(judged.map((j) => j.before + 1)).toEqual([3, 5, 7, 8])
+  const third = judged[0]
+  expect(third?.model).toBe('haiku')
+  expect(third?.prompt).toMatch(/build the transcript reader/)
+  expect(third?.prompt).toMatch(/build it/)
+  expect(third?.prompt).toMatch(/1\. \(at commit c1\) step 1\n2\. \(at commit c2\) step 2/)
+  expect(third?.prompt).toMatch(/c3 commit number 3\n- c2 commit number 2/)
+  expect(third?.prompt).toMatch(/\(at commit c3\) it proposes to go on with:\nstep 3/)
 
-  const third = await $.tool.call({ tool: TOOL, next_step: 'session', note: 'go on' })
-  expect(third.deny).toMatch(/nobody at the prompt/)
-  expect(third.result).toBeUndefined()
-  await $.turn.complete(turn('c'))
-  await clock.settle()
-  expect(continues()).toBe(2)
-
+  // A prompt that is not the person's changes nothing: the ninth is judged.
   await $.prompt.submit({ text: 'a task finished', wait: false, origin: { kind: 'task-notification' } })
-  expect((await $.tool.call({ tool: TOOL, next_step: 'session', note: 'go on' })).deny).toMatch(/nobody at the prompt/)
+  await chain('step 9')
+  expect(judged.length).toBe(5)
 
+  // The person's next prompt starts the count over, and a step that is the owner's asks no judge.
   await $.prompt.submit({ text: 'carry on', wait: false, origin: { kind: 'composer' } })
-  expect((await chain('d')).deny).toBeUndefined()
-  expect(continues()).toBe(3)
+  await chain('step a')
+  await chain('step b')
+  expect(judged.length).toBe(5)
+  await $.tool.call({ tool: TOOL, next_step: 'owner', note: 'approve it' })
+  expect(judged.length).toBe(5)
+  await $.turn.complete(turn('owner-1'))
+  await clock.settle()
+  await $.turn.complete(turn('owner-2'))
+  await clock.settle()
+  await chain('step c')
+  expect(judged.length).toBe(6)
+  expect(continues()).toBe(12)
+})
+
+test('a judge that finds a loop, a step beyond the task, or gives no verdict stops the chain after the compaction, with its reason to the model and on the band', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const asked = engine(on)
+  const replies = [
+    answered('LOOP: the same fix is tried a third time with nothing committed.'),
+    answered('**BEYOND**: publishing the plugin is the owner\'s to decide'),
+    { isAnswered: false as const, reason: 'empty-reply' as const, usage: NO_COST },
+    answered('It looks fine to me.'),
+  ]
+  judge(on, asked, () => replies.shift() ?? answered('CONTINUE: fine.'))
+  repo(on, () => 1)
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const continues = () => asked.filter((a) => a.startsWith('prompt Continue')).length
+  const chain = async (note: string) => {
+    const signalled = await $.tool.call({ tool: TOOL, next_step: 'session', note })
+    await $.turn.complete(turn(`${note}-1`))
+    await clock.settle()
+    await $.turn.complete(turn(`${note}-2`))
+    await clock.settle()
+
+    return signalled
+  }
+  const stopsAt = async (pattern: RegExp) => {
+    await $.prompt.submit({ text: 'carry on', wait: false, origin: { kind: 'composer' } })
+    await chain('first')
+    await chain('second')
+    const before = continues()
+    const third = await chain('third')
+    expect(third.deny).toBeUndefined()
+    expect(third.result).toMatch(/^Clear point noted\. session-kit's judge stops the chain after the compaction: /)
+    expect(third.result).toMatch(pattern)
+    expect(third.result).toMatch(/End this turn now, with nothing more started/)
+    // The handoff and the compaction ran, and no continue was sent.
+    expect(asked.slice(-2).map((a) => a.split(' ')[0])).toEqual(['command', 'compact'])
+    expect(continues()).toBe(before)
+    const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+    const row = await ui.find({ type: 'Text', text: /next step/ })
+    expect(row?.text).toMatch(/^Compacted\. The next step is yours: third\. The chain stopped since /)
+    expect(row?.text).toMatch(pattern)
+    await ui.unmount()
+  }
+
+  await stopsAt(/the session is going round: the same fix is tried a third time with nothing committed\./)
+  await stopsAt(/the next step goes beyond the owner's task: publishing the plugin is the owner's to decide\./)
+  await stopsAt(/the judge gave no verdict \(empty-reply\), and an unjudged chain waits for the owner\./)
+  await stopsAt(/the judge gave no verdict \(its reply named none\), and an unjudged chain waits for the owner\./)
 })
 
 test('where no person is at the prompt, the chain compacts through /compact and then continues', { options: { chain: true } }, async ($, on) => {

@@ -27,6 +27,14 @@ export type ChainState = {
   waitsOnOwner: boolean
   /** The next step, in one line, as the model gave it. */
   note: string
+  /** Why the judge stopped the chain, when it did: the next step is then the owner's. */
+  stopped?: string
+}
+
+/** One chain that went on by itself: the next step it named, and HEAD when it continued (null outside a repository). */
+export type ChainStep = {
+  note: string
+  head: string | null
 }
 
 /**
@@ -75,8 +83,8 @@ declare module 'claude-code' {
       contextDismissedAt: number
       /** The chain under way; null while none is. */
       chain: ChainState | null
-      /** Chains that continued since the person's last prompt; the third signal is refused. */
-      chainsUnattended: number
+      /** The chains that went on by themselves since the person's last prompt, the evidence the judge reads. */
+      chainSteps: ChainStep[]
       /** The new task offered to the person; null while none is. */
       newTask: NewTaskState | null
       /** The person's last prompt, sent again after a clear or when they keep going. */

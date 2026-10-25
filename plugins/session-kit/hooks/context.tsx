@@ -8,9 +8,12 @@
 // (new, or just cleared) `new_task` offers nothing: there is nothing to clear.
 // Each band has a Dismiss button: the figure's stays away for a `step`, and
 // the chain's and the offer's stop what is left of them. The kit's line draws
-// above whatever the plugins beneath drew. A chain runs at most twice with no
-// prompt of the person's between: the third signal is refused, and their next
-// prompt lets one run again. A prompt that is not the person's own words (a
+// above whatever the plugins beneath drew. A chain goes on by itself, and at
+// the third, the fifth and every signal from the seventh since the person's
+// last prompt a Haiku judge reads the owner's task, the steps so far, the
+// commits between and the step proposed. When the session is going round, or
+// the step goes beyond the task, the chain stops after its compaction and the
+// next step is the owner's. A prompt that is not the person's own words (a
 // notification, a schedule, a peer, a plugin) neither counts as theirs nor is
 // sent again in their place. With the chain on, a turn that ends past the
 // floor with nobody at the prompt arms the cold-cache timer: a lead before
@@ -18,7 +21,7 @@
 // compacts, and stops there, so the person's next prompt writes a small
 // context to the cache instead of all of it. The lifetime is an option, 60
 // minutes on a subscription, and what the engine states (a subagent's
-// result, a model switch) replaces it; a 5-minute cache arms no timer. The
+// result, a model switch) replaces it. A 5-minute cache arms no timer. The
 // figure's line says how much the context grew over the last turn, read at
 // the turn's end, and a usage window of the plan at 80% gets a line of its
 // own, naming when it resets, which dismissed stays away until 95%, and from
@@ -38,15 +41,17 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PromptOrigin, Register, RenderSurface, SessionRateLimit, Timer, TurnCompleteInput } from 'claude-code'
 
-import type { ChainState, ContextFigure, NewTaskState } from '../types'
+import type { ChainState, ChainStep, ContextFigure, NewTaskState } from '../types'
+import { GIT } from './checkout'
 
 const NO_WINDOWS: SessionRateLimit[] = []
 const NO_MARKS: Record<string, number> = {}
+const NO_STEPS: ChainStep[] = []
 
 const warnedAt = atom({ plugin: 'session-kit', key: 'contextWarnedAt' } as const, 0)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
 const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
-const chainsUnattended = atom({ plugin: 'session-kit', key: 'chainsUnattended' } as const, 0)
+const chainSteps = atom({ plugin: 'session-kit', key: 'chainSteps' } as const, NO_STEPS)
 const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
 const freshContext = atom({ plugin: 'session-kit', key: 'freshContext' } as const, false)
@@ -65,7 +70,12 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const STEP_TOKENS = 25000
 const FIRMER_AT = 2
 const STOP_AT = 3
-const MAX_UNATTENDED = 2
+const JUDGE_MODEL = 'haiku'
+const JUDGE_MAX_TOKENS = 200
+const JUDGE_TIMEOUT_MS = 30000
+const TEXT_SHOWN = 2000
+const COMMITS_SHOWN = 12
+const SUBJECT_SHOWN = 200
 const CACHE_MINUTES = 60
 const CACHE_LEAD_MINUTES = 5
 const MINUTE_MS = 60000
@@ -125,10 +135,18 @@ const NOTHING_TO_CLEAR =
   'nothing to clear: start on the prompt. CLAUDE.local.md still describes the ' +
   'last task, and the next handoff rewrites it for this one.'
 
-const UNATTENDED_REFUSAL =
-  `session-kit has run ${MAX_UNATTENDED} chains since the person's last prompt and ` +
-  'runs no more with nobody at the prompt. End this turn now, with nothing more ' +
-  'started, and wait for the person: their next prompt lets the chain run again.'
+const JUDGE_SYSTEM =
+  'You judge whether an autonomous coding session should go on by itself while ' +
+  'its owner is away. Answer with one line: CONTINUE, LOOP or BEYOND, then a ' +
+  'colon and one sentence saying why.'
+
+const JUDGE_RULES =
+  'Answer LOOP when the session is going round: the same step again, steps that ' +
+  'undo each other, or a fix tried again that keeps failing, with nothing ' +
+  'committed between. Answer BEYOND when the proposed step goes further than the ' +
+  'owner\'s task asked: work the task does not name, or a decision that is the ' +
+  'owner\'s (publishing, pushing, installing, choosing between options the owner ' +
+  'has not chosen, approving its own work). Otherwise answer CONTINUE.'
 
 const COLD_NOTE = 'go on from the handoff, written before the cache went cold'
 
@@ -344,8 +362,84 @@ function stageLine(state: ChainState): string {
     case 'compacting':
       return 'session-kit is compacting the context.'
     case 'waiting':
-      return `Compacted. The next step is yours: ${state.note}`
+      return state.stopped === undefined
+        ? `Compacted. The next step is yours: ${state.note}`
+        : `Compacted. The next step is yours: ${sentence(state.note)} The chain stopped since ${state.stopped}`
   }
+}
+
+/** The text with its end made a full stop. */
+function sentence(text: string): string {
+  return `${text.trim().replace(/[\s.:;,!]+$/, '')}.`
+}
+
+function clip(text: string, max: number): string {
+  const flat = text.trim()
+
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat
+}
+
+/** Whether the chain's nth signal since the person's last prompt goes to the judge: the third, the fifth, and every one from the seventh. */
+export function judgedAt(n: number): boolean {
+  return n === 3 || n === 5 || n >= 7
+}
+
+type Judgement = { verdict: 'CONTINUE' | 'LOOP' | 'BEYOND' | null; reason: string }
+
+/** The verdict at the reply's start, bold or not, and the reason after it; null when the reply names none. */
+export function readVerdict(text: string): Judgement | null {
+  const said = /^\s*\**\s*(CONTINUE|LOOP|BEYOND)\b\**\s*[:.-]?\s*([\s\S]*)$/i.exec(text)
+  if (said === null) {
+    return null
+  }
+  const verdict = (said[1] ?? '').toUpperCase()
+
+  return verdict === 'CONTINUE' || verdict === 'LOOP' || verdict === 'BEYOND'
+    ? { verdict, reason: clip((said[2] ?? '').split('\n')[0] ?? '', TEXT_SHOWN) }
+    : null
+}
+
+/** Why the chain stops, as the band and the model read it. */
+function stopReason(j: Judgement): string {
+  switch (j.verdict) {
+    case 'LOOP':
+      return `the session is going round: ${sentence(j.reason)}`
+    case 'BEYOND':
+      return `the next step goes beyond the owner's task: ${sentence(j.reason)}`
+    default:
+      return `the judge gave no verdict (${j.reason}), and an unjudged chain waits for the owner.`
+  }
+}
+
+/** The task section of the handoff, the owner's words the chain is held to. */
+function taskSection(text: string): string | null {
+  const lines = text.split('\n')
+  const start = lines.findIndex((line) => /^##\s+Task\s*$/.test(line))
+  if (start < 0) {
+    return null
+  }
+  const rest = lines.slice(start + 1)
+  const end = rest.findIndex((line) => /^##\s/.test(line))
+  const body = (end < 0 ? rest : rest.slice(0, end)).join('\n').trim()
+
+  return body === '' ? null : body
+}
+
+type Evidence = { task: string; lastPrompt: string; steps: readonly ChainStep[]; commits: string[]; head: string | null; note: string }
+
+export function judgePrompt(ev: Evidence): string {
+  const at = (head: string | null) => (head === null ? '' : ` (at commit ${head})`)
+  const steps = ev.steps.map((s, i) => `${i + 1}.${at(s.head)} ${s.note}`).join('\n')
+  const commits = ev.commits.length === 0 ? 'none' : ev.commits.map((c) => `- ${c}`).join('\n')
+
+  return [
+    `The owner's task, in their words:\n${ev.task}`,
+    `The owner's last prompt:\n${ev.lastPrompt === '' ? '(none recorded)' : ev.lastPrompt}`,
+    `Since that prompt the session has compacted its context and gone on by itself ${ev.steps.length} times, each time naming its next step:\n${steps}`,
+    `Commits since the first of those:\n${commits}`,
+    `Now${at(ev.head)} it proposes to go on with:\n${ev.note}`,
+    JUDGE_RULES,
+  ].join('\n\n')
 }
 
 /** Where a session's chain writes its stages: a host that draws no log line still leaves this file. */
@@ -378,6 +472,57 @@ function stage($: EngineInterface, text: string): void {
   journal = journal
     .then(async () => journalLine($, `${new Date(await $.clock.now()).toISOString()} ${text}`))
     .catch(() => undefined)
+}
+
+// The engine's loader takes `$` only into a function of this file, so the test log keeps a git helper of its own.
+async function gitLines($: EngineInterface, args: string[]): Promise<string[] | null> {
+  try {
+    const ran = await $.process.run([...GIT, ...args], { cwd: await $.session.cwd() })
+
+    return ran.exitCode === 0 ? ran.stdout.split('\n').filter((line) => line.trim() !== '') : null
+  } catch {
+    return null
+  }
+}
+
+async function headOf($: EngineInterface): Promise<string | null> {
+  return (await gitLines($, ['rev-parse', '--short', 'HEAD']))?.[0]?.trim() ?? null
+}
+
+async function ownerTask($: EngineInterface): Promise<string> {
+  try {
+    const cwd = (await $.session.cwd()).replace(/\/+$/, '')
+    const task = taskSection(await $.fs.read(`${cwd}/CLAUDE.local.md`))
+
+    return task === null ? '(CLAUDE.local.md has no Task section)' : clip(task, TEXT_SHOWN)
+  } catch {
+    return '(no CLAUDE.local.md)'
+  }
+}
+
+/** The judge's word on the step proposed, from the owner's task, their last prompt, the steps so far and the commits between. */
+async function judgeChain($: EngineInterface, steps: readonly ChainStep[], note: string): Promise<Judgement> {
+  const head = await headOf($)
+  const first = steps.find((s) => s.head !== null)?.head ?? null
+  const log = first === null ? null : await gitLines($, ['log', '--format=%h %s', `-n${COMMITS_SHOWN}`, `${first}..HEAD`])
+  const prompt = judgePrompt({
+    task: await ownerTask($),
+    lastPrompt: clip(await read($, lastPrompt), TEXT_SHOWN),
+    steps,
+    commits: (log ?? []).map((line) => clip(line, SUBJECT_SHOWN)),
+    head,
+    note,
+  })
+  try {
+    const r = await $.model.complete({ model: JUDGE_MODEL, system: JUDGE_SYSTEM, prompt, maxTokens: JUDGE_MAX_TOKENS, timeoutMs: JUDGE_TIMEOUT_MS })
+    if (!r.isAnswered) {
+      return { verdict: null, reason: r.reason }
+    }
+
+    return readVerdict(r.text) ?? { verdict: null, reason: 'its reply named none' }
+  } catch (error) {
+    return { verdict: null, reason: reason(error) }
+  }
 }
 
 async function runHandoff($: EngineInterface): Promise<void> {
@@ -439,7 +584,8 @@ async function afterCompaction($: EngineInterface, state: ChainState, asOf: numb
     return
   }
   await update($, chain, () => null)
-  await update($, chainsUnattended, (n) => n + 1)
+  const step: ChainStep = { note: state.note, head: await headOf($) }
+  await update($, chainSteps, (steps) => [...steps, step])
   stage($, 'compacted, sending the continue prompt')
   await $.prompt.submit({ text: continuePrompt(state.note) })
 }
@@ -863,7 +1009,7 @@ export const register: Register = (on, options) => {
     if (e.command === undefined && e.text.trim() !== '' && isThePersons(e.origin)) {
       await update($, lastPrompt, () => e.text)
       if (chainOn) {
-        await update($, chainsUnattended, () => 0)
+        await update($, chainSteps, () => NO_STEPS)
       }
     }
     if (chainOn && e.command === undefined) {
@@ -974,16 +1120,28 @@ export const register: Register = (on, options) => {
     if ((nextStep !== 'session' && nextStep !== 'owner') || note === '') {
       return refuse('next_step must be "session" or "owner", and note the next step in one line.')
     }
-    const unattended = await read($, chainsUnattended)
-    if (unattended >= MAX_UNATTENDED) {
-      stage($, `a signal was refused: ${unattended} chains have run since the person's last prompt, and the next runs after it`)
-
-      return refuse(UNATTENDED_REFUSAL)
+    const steps = await read($, chainSteps)
+    const signal = steps.length + 1
+    let stopped: string | undefined
+    if (nextStep === 'session' && judgedAt(signal)) {
+      const judged = await judgeChain($, steps, note)
+      stage($, `the judge read signal ${signal} since the person's last prompt: ${judged.verdict ?? 'no verdict'}, ${judged.reason}`)
+      if (judged.verdict !== 'CONTINUE') {
+        stopped = stopReason(judged)
+      }
     }
-    const waitsOnOwner = nextStep === 'owner'
-    const requested: ChainState = { stage: 'requested', waitsOnOwner, note }
+    const waitsOnOwner = nextStep === 'owner' || stopped !== undefined
+    const requested: ChainState = stopped === undefined ? { stage: 'requested', waitsOnOwner, note } : { stage: 'requested', waitsOnOwner, note, stopped }
     await update($, chain, () => requested)
     await moment($, stageLine(requested))
+    if (stopped !== undefined) {
+      return answer(
+        `Clear point noted. session-kit's judge stops the chain after the compaction: ${stopped} ` +
+          'End this turn now, with nothing more started, saying in one line what is left ' +
+          'for the owner. When it ends, session-kit writes the handoff and compacts the ' +
+          'context, then stops.',
+      )
+    }
 
     return answer(
       'Clear point noted. End this turn now, with nothing more started. When it ' +
