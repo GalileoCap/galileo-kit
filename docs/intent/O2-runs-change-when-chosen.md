@@ -1,6 +1,6 @@
 ---
 id: O2
-from: [G1]
+from: [G5]
 source: inferred
 status: proposed 2026-10-24
 ---
