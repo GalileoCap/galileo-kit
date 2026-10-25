@@ -34,7 +34,7 @@ structural search and rewrite, import boundaries as a gate, and complete
 - **It holds no contracts and no rules of yours.** An import contract
   names your modules, so it lives in your `pyproject.toml`.
   [`integrating.md`](integrating.md) gives the two shapes as templates.
-  Gate rules for your own code are yours too; the recipes here are
+  Gate rules for your own code are yours too. The recipes here are
   templates for one-off sweeps.
 - **It does not wrap either tool.** `ast-grep` and `lint-imports` are
   run by their own documented CLIs. This package only fixes their
@@ -45,7 +45,7 @@ structural search and rewrite, import boundaries as a gate, and complete
   an agent start your toolchain's server.
 - **It does not find call sites for a signature change.** Your
   typechecker does, per package, after the change. A language server
-  answers "what depends on this?" before the change; the typechecker
+  answers "what depends on this?" before the change. The typechecker
   answers "what did I break?" after it. You want both.
 - **It has no dataflow or control-flow analysis.** For a concurrency
   bug, read the code.
