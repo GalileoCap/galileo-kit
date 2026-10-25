@@ -1,6 +1,8 @@
 # claude-kit
 
-Hooks and a skill for Claude Code that every project can use. It is a plugin marketplace (`galileo-kit`) holding one plugin (`session-kit`). Claude Code reserves plugin names starting with `claude-`, so the repository and the plugin are named differently.
+Everything its owner works with agents through: the rules every session follows (`global/`), the tools and plugins sessions use, and the vetting of each third-party piece before it is installed. It is a plugin marketplace (`galileo-kit`) holding one plugin (`session-kit`). Claude Code reserves plugin names starting with `claude-`, so the repository and the plugin are named differently.
+
+`CLAUDE.md` at the root holds the repository's intent and rules of engagement, and `docs/` the record behind them: `docs/intent/` (goals, objectives, constraints and actions, one file each), `docs/PLAN.md`, the research on plugins and mods, the reviews of candidates and the analysis behind the port of the hooks to a mod.
 
 ## What `session-kit` does
 

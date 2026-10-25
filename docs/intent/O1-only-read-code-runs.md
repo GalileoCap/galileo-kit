@@ -15,6 +15,6 @@ What the engine loads.
 
 ## Known by
 
-No plugin or mod is enabled on this machine without a review file under `reviews/`.
+No plugin or mod is enabled on this machine without a review file under `docs/reviews/`.
 
 Inferred from the research ask, "review them for malicious/inefficient code".

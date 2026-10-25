@@ -11,7 +11,7 @@ supersedes: []
 
 # A2 A fork is pinned in galileo-kit
 
-A fork lives in the `galileo-kit` marketplace with a pinned `"version"`, by default as a separate plugin. It moves into `session-kit` itself only when it shares code or state with it.
+A fork lives in this repository, the marketplace, with a pinned `"version"`, by default as a separate plugin beside `session-kit`. It moves into the `session-kit` plugin only when it shares code or state with it.
 
 ## Context
 
@@ -20,7 +20,7 @@ A plugin installed from its author's marketplace changes when the author publish
 ## Options
 
 - Install as is: serves nothing once the source moves.
-- Fork into `session-kit` itself: serves `O2`, and couples unrelated code to the kit's releases.
+- Fork into the `session-kit` plugin: serves `O2`, and couples unrelated code to its releases.
 - Fork beside it, as its own plugin: serves `O2`. Taken.
 
 ## Consequences

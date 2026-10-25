@@ -4,7 +4,7 @@ from: [O1, O2]
 source: owner
 status: decided 2026-10-24
 kind: behaviour
-implemented_by: [PLAN.md]
+implemented_by: [docs/PLAN.md]
 proven_by: unproven
 supersedes: []
 ---

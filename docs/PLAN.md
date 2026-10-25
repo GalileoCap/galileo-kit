@@ -18,16 +18,20 @@
 
 - 2026-10-24: the owner reviewed the intent and set the project's goals in their words: `G1` to `G5` under `docs/intent/`, replacing the session's single goal. `O1` and `O2` hang from `G5`. The sub-bullets of the goals gave `O3` to `O10`, proposed for the owner's approval.
 
+- 2026-10-24: the owner reviewed the intent and set the project's goals in their words: `G1` to `G5` under `docs/intent/`, replacing the session's single goal. `O1` and `O2` hang from `G5`. The sub-bullets of the goals gave `O3` to `O10`, approved the same day.
+
+- 2026-10-24: `claude-mods` merged into this repository with its history, since `G1` to `G5` are the kit's goals and one ladder per project means one ladder for both. Its documents moved under `docs/`, the candidate clones out to `~/devel/galileo/misc/mod-clones/`, and its `CLAUDE.md` became the kit's first. `session-kit-port.md`'s goals folded into the five, and its objectives, constraint and actions became `O11` to `O16`, `C1` and `A4` to `A21`, refitted to the process.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
 | --- | --- | --- | --- | --- |
-| `cache-tax` | `karanb192/cache-tax`, served by `karanb192/claude-code-mods` | `reviews/cache-tax.md` | Fork | Waits for the `session-kit` port |
+| `cache-tax` | `karanb192/cache-tax`, served by `karanb192/claude-code-mods` | `docs/reviews/cache-tax.md` | Fork | Waits for the `session-kit` port |
 
 ## Next
 
-1. The owner approves or corrects `O1` to `O10`, in `CLAUDE.md` under Intent. Then the session-kit analysis. First `session-kit-port.md` is refitted to the confirmed process: the new fields on each objective and action, `O10` as a constraint, the chain options as the options field of one action, and its entries as files under `session-kit`'s `docs/intent/`. Then the owner reads it: approves or corrects objectives O3 and O6 to O9, settles A4 and A5, and answers the port's questions (the context chain, one task per context). The seven open questions of the process document are answered on the way, the names among them.
-2. The port. Start in the `session-kit` repository at step 1 of the port document's order (the context mod with the engine's window), measuring hook times before and after. The index and check tool for `docs/intent/` is an action of the kit's own ladder and is built there.
+1. The owner decides the repository's name, then reads the port's entries: approves or cuts `O14` to `O16`, states or strikes `C1`, and validates `A4` to `A21`, the chain `A17` and one task per context `A19` among them. The open questions of the process document are answered on the way, the names among them.
+2. The port, in the order `A20` gives, starting with the context mod `A16` and the hook times measured before and after. The index and check tool `A21` is built beside it.
 3. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
 
 ## Open questions
@@ -37,5 +41,5 @@
 
 ## Deferred
 
-- A cold-send guard (the cache signal from `cache-tax`). It joins the port's context mod, or comes from `cache-tax` itself, decided at step 4 above. Details in `reviews/cache-tax.md`, under "What could move into `session-kit`".
+- A cold-send guard (the cache signal from `cache-tax`). It joins the port's context mod, or comes from `cache-tax` itself, decided at step 4 above. Details in `docs/reviews/cache-tax.md`, under "What could move into `session-kit`".
 - Turn on auto-update for `galileo-kit` once every plugin in it is ours.
