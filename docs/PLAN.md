@@ -1,0 +1,41 @@
+# Plan
+
+## Done
+
+- 2026-10-24: research on plugins, mods and their update process, in `claude-code-mods-research.md`.
+
+- 2026-10-24: `cache-tax` reviewed at `e4940af` (v2.3.1) into `reviews/cache-tax.md`. Verdict: fork. Nothing malicious. The Sonnet 5.5 cache-read price is wrong.
+
+- 2026-10-24: the owner changed the order. `session-kit` is ported to a mod first, and its intent documented on the way. Mods such as `cache-tax` are weighed after, to fold in or run beside it. Draft in `session-kit-port.md`.
+
+- 2026-10-24: the owner set the process every entry follows: goals (stated by the owner), objectives (approved by the owner), actions (decided by a session, validated by the owner). Drafted in `goals-objectives-actions.md`, and `session-kit-port.md` rewritten into it. The order is now: the process, then the session-kit analysis, then the port.
+
+- 2026-10-24: the owner asked for the process to be rethought against prior art (OKRs, ADRs and traceability, impact mapping, GQM, information hiding and ports-and-adapters, fitness functions). The comparison is `goals-objectives-actions-prior-art.md`, and `goals-objectives-actions.md` was revised from it: an objective names whose behaviour it changes and how it would be known met, an action carries its context, options, consequences and what implements and proves it, a validated action is superseded instead of rewritten, constraints are a fourth kind of entry, and the shared file splits into a loaded list and an on-demand record.
+
+- 2026-10-24: the owner corrected three things, applied the same day: the process is for projects of every kind, nothing is shared between projects (an entry a project needs is copied and owned), and the record is built to scale: one file per entry under `ladder/`, upward links only, a generated `INDEX.md` that leads with the validation queue, retirement instead of deletion. This project's own goal is the original ask.
+
+- 2026-10-24: the process confirmed, with the entries under `docs/intent/`. The process and its prior art moved into `session-kit`'s `global/`, with a rule in `global/CLAUDE.md` that names them. This project's six entries are files under `docs/intent/`, and its `CLAUDE.md` lists the active ones and names each rule's action.
+
+- 2026-10-24: the owner reviewed the intent and set the project's goals in their words: `G1` to `G5` under `docs/intent/`, replacing the session's single goal. `O1` and `O2` hang from `G5`. The sub-bullets of the goals gave `O3` to `O10`, proposed for the owner's approval.
+
+## Candidates
+
+| Mod | Source | Review | Verdict | Owner's decision |
+| --- | --- | --- | --- | --- |
+| `cache-tax` | `karanb192/cache-tax`, served by `karanb192/claude-code-mods` | `reviews/cache-tax.md` | Fork | Waits for the `session-kit` port |
+
+## Next
+
+1. The owner approves or corrects `O1` to `O10`, in `CLAUDE.md` under Intent. Then the session-kit analysis. First `session-kit-port.md` is refitted to the confirmed process: the new fields on each objective and action, `O10` as a constraint, the chain options as the options field of one action, and its entries as files under `session-kit`'s `docs/intent/`. Then the owner reads it: approves or corrects objectives O3 and O6 to O9, settles A4 and A5, and answers the port's questions (the context chain, one task per context). The seven open questions of the process document are answered on the way, the names among them.
+2. The port. Start in the `session-kit` repository at step 1 of the port document's order (the context mod with the engine's window), measuring hook times before and after. The index and check tool for `docs/intent/` is an action of the kit's own ladder and is built there.
+3. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
+
+## Open questions
+
+- Mod ordering: does a mod's `tool.call` or `tool.check` deny run before or after another user-installed mod's approval? This decides whether a mod port of the `session-kit` guard can hold against a third-party mod. Source: the "React to events" page, https://code.claude.com/docs/en/plugins/mods/events.md, and the mods admin page on seats (`prepend`, `append`).
+- Login type: is this machine's session credential a personal or a Team/Enterprise login? On a personal login without managed settings, an installed mod can approve a tool call that the `session-kit` `PreToolUse` guard blocks.
+
+## Deferred
+
+- A cold-send guard (the cache signal from `cache-tax`). It joins the port's context mod, or comes from `cache-tax` itself, decided at step 4 above. Details in `reviews/cache-tax.md`, under "What could move into `session-kit`".
+- Turn on auto-update for `galileo-kit` once every plugin in it is ours.
