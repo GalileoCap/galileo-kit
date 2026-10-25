@@ -67,12 +67,16 @@
 - 2026-10-25: `chain` on by default, by the owner's decision that it would be once a real session proved it: the clear-point chain (`A17`) and both `new_task` presses (`A19`, one task per context) have run end to end. session-kit 0.21.0.
 - 2026-10-25: in gastainas the owner cleared by hand and gave a new task, and the session called `new_task` anyway, since the rule measured the prompt against `CLAUDE.local.md`, which still described the task before. The rule (`A19`, one task per context) now measures against the task the context holds, and `new_task` in a fresh context (no prompt of the person's, no answer of the model's) answers that there is nothing to clear. The test that holds it failed on 0.21.0. session-kit 0.21.1, 40 engine tests.
 - 2026-10-25: the owner asked for the bands to be dismissable (`A43`, the bands are dismissable). Each band above the prompt has a Dismiss button: the figure's stays away for a step, the chain's stops the chain where it stands, the offer's drops the offer and sends nothing. session-kit 0.22.0, 43 engine tests.
+- 2026-10-25: the owner asked for an analysis of effortless, replay-theater and agent-profiler, and of more mods to learn from. The three are reviewed into `reviews/effortless.md`, `reviews/replay-theater.md` and `reviews/agent-profiler.md`, each with the verdict reject: nothing malicious in any, and each is a poor fit beside the kit. effortless updates itself on one press and checks GitHub at every load, and replay-theater and effortless both hide the kit's bands. Eleven more were read for their patterns, chosen from the community catalogue of 6,097 mods, into `analyses/mods-for-the-kit.md`: 25 candidates, M1 to M25. The first of them are defects in what the kit has: its band hides every band beneath it, the chain has no loop guard, any prompt but a plugin's counts as the person's, and the guard refused two calls of this session for text they only quoted.
 
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
 | --- | --- | --- | --- | --- |
 | `cache-tax` | `karanb192/cache-tax`, served by `karanb192/claude-code-mods` | `docs/reviews/cache-tax.md` | Fork | Waits for the `session-kit` port |
+| `effortless` | `HeyCubit/effortless`, its own marketplace | `docs/reviews/effortless.md` | Reject | Waits on the owner |
+| `replay-theater` | `anthropics/claude-code-playground`, folder marketplace `claude-code-playground-mods` | `docs/reviews/replay-theater.md` | Reject | Waits on the owner |
+| `agent-profiler` | `YeonwooSung/my-claude-code-mods` | `docs/reviews/agent-profiler.md` | Reject, or one session as is for a live figure | Waits on the owner |
 
 ## Next
 
@@ -82,6 +86,7 @@
 4. The transcript tooling (`A22`): its `rules` command and, after the first real session with the modules, the `measure` module.
 5. The reference mod (`A24`), after the first real-session run: the name drawn beside each id in a reply.
 6. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
+7. The mod analysis (`docs/analyses/mods-for-the-kit.md`): the owner's choice of patterns, by its last section. The defects (M1 a band that composes, M2 a loop guard on the chain, M3 prompt origins as a closed set, M25 the guard's false refusals) come first, each with the test that fails before it.
 
 ## Open questions
 
