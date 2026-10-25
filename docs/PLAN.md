@@ -24,6 +24,8 @@
 
 - 2026-10-24: the repository renamed `galileo-kit` everywhere, by the owner's choice. Then step 1 of the port, `A16`: the context hook is a hooks module, `plugins/session-kit/hooks/context.tsx`, reading the engine's own figure after each tool call, with the threshold and step as plugin options and a band above the prompt past the threshold. `A4` retired. Hook times measured before and after in `docs/measurements/hook-times.md`: 28 ms per tool call saved, the window figure the larger gain. session-kit 0.6.0, validated and tested against the 2.1.308 engine the desktop app bundles.
 
+- 2026-10-25: the owner added an objective, `O17`: the system is observed, analysed and improved over time, with tooling over the sessions' transcripts and the hooks' effect as `A22`. The owner paused the port before reviewing its plan.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
@@ -32,7 +34,7 @@
 
 ## Next
 
-1. The owner decides the repository's name, then reads the port's entries: approves or cuts `O14` to `O16`, states or strikes `C1`, and validates `A4` to `A21`, the chain `A17` and one task per context `A19` among them. The open questions of the process document are answered on the way, the names among them.
+1. Paused by the owner until they have reviewed the port plan. The owner reads the port's entries: approves or cuts `O14` to `O16`, states or strikes `C1`, and validates `A4` to `A21`, the chain `A17` and one task per context `A19` among them. The open questions of the process document are answered on the way, the names among them.
 2. The port, in the order `A20` gives: `A16` is done and waits on the owner's validation in real sessions. Next the chain `A17` behind its toggle, with `A18`'s backstop. The index and check tool `A21` is built beside it.
 3. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
 

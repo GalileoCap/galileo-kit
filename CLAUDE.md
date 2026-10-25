@@ -35,6 +35,7 @@ Goals in the owner's words, the objectives the owner approved under them, and th
 - `O14` Commands run with the project's own tools and configuration. From `G3`, `G4`. Proposed.
 - `O15` Routine work takes the cheaper path. From `G4`. Proposed.
 - `O16` A document the work rests on is read whole. From `G4`. Proposed.
+- `O17` The system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. From `G1`, `G4`.
 - `C1` The kit is never the reason a session fails, the guard excepted. Proposed.
 
 ## Rules of engagement
