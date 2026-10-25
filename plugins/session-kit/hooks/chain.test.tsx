@@ -279,3 +279,36 @@ test('the backstop tells the engine\'s own compaction what a handoff keeps', asy
   expect(backstop('keep the plan')).toMatch(/^keep the plan\n/)
   expect(backstop('keep the plan')).toMatch(/next step/)
 })
+
+test('dismissing the band stops the chain where it stands, before the handoff or during the compaction', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const asked = engine(on, { refuseCompactions: 1 })
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const dismiss = async () => {
+    const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+    await ui.press({ key: 'chain-dismiss' })
+    expect(await ui.find({ type: 'Text', text: /clear point|handoff|compact/i })).toBeUndefined()
+    await ui.unmount()
+  }
+
+  await $.tool.call({ tool: TOOL, next_step: 'session', note: 'next' })
+  await dismiss()
+  await $.turn.complete(turn('t1'))
+  await clock.settle()
+  expect(asked).toEqual(['register clear_point'])
+
+  // The first compaction is refused, and the band is dismissed before the second try.
+  await $.tool.call({ tool: TOOL, next_step: 'session', note: 'next' })
+  await $.turn.complete(turn('t2'))
+  await clock.settle()
+  await $.turn.complete(turn('t3'))
+  await clock.settle()
+  await dismiss()
+  await clock.advance(2000)
+  expect(asked).toEqual(['register clear_point', 'command session-kit:handoff'])
+})

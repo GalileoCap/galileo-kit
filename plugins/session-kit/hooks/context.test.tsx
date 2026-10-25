@@ -113,3 +113,39 @@ test('the band shows the count past the threshold and leaves the engine below it
     await ui.unmount()
   }
 })
+
+test('a dismissed band stays away until the figure moves a step on, and comes back after a compaction', async ($, on) => {
+  const state = { percent: 30 }
+  engine(on, state)
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+
+  const bandAt = async (p: number) => {
+    state.percent = p
+    await $.tool.call({ tool: 'Bash', command: 'ls' })
+    const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+    const row = await ui.find({ type: 'Text', text: /Context|engine/ })
+    await ui.unmount()
+
+    return row?.text
+  }
+
+  expect(await bandAt(30)).toMatch(/Context 300,000/)
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'context-dismiss' })
+  await ui.unmount()
+  expect(await bandAt(30)).toBe('engine')
+  expect(await bandAt(32)).toBe('engine')
+  expect(await bandAt(33)).toMatch(/Context 330,000/)
+  const again = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  await again.press({ key: 'context-dismiss' })
+  await again.unmount()
+  expect(await bandAt(34)).toBe('engine')
+  // Compacted: the figure fell below where it was dismissed.
+  expect(await bandAt(5)).toBe('engine')
+  expect(await bandAt(26)).toMatch(/Context 260,000/)
+})

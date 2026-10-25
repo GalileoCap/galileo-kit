@@ -39,6 +39,8 @@ declare module 'claude-code' {
       contextWarnedAt: number
       /** The last figure read from the engine, for the band; null before any. */
       contextFigure: ContextFigure | null
+      /** The context size at which the person dismissed the figure's band; 0 before any. */
+      contextDismissedAt: number
       /** The chain under way; null while none is. */
       chain: ChainState | null
       /** The new task offered to the person; null while none is. */

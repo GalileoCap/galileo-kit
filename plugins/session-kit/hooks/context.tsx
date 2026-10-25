@@ -6,6 +6,8 @@
 // after which the band offers the handoff and a clear, or to keep going here,
 // and sends the person's prompt again. In a context that holds no task yet
 // (new, or just cleared) `new_task` offers nothing: there is nothing to clear.
+// Each band has a Dismiss button: the figure's stays away for a `step`, and
+// the chain's and the offer's stop what is left of them.
 //
 // The model is the one that knows where a clear point is, so the warning
 // goes to it, on the tool result, while it can still choose where to stop,
@@ -26,6 +28,7 @@ const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
 const freshContext = atom({ plugin: 'session-kit', key: 'freshContext' } as const, false)
+const figureDismissedAt = atom({ plugin: 'session-kit', key: 'contextDismissedAt' } as const, 0)
 
 const THRESHOLD_TOKENS = 250000
 const STEP_TOKENS = 25000
@@ -133,6 +136,11 @@ export function triggerTokens(thresholdTokens: number, thresholdPercent: number,
   return Number.isFinite(trigger) ? trigger : THRESHOLD_TOKENS
 }
 
+/** Whether `tokens` is within a step above `mark`: a context smaller than the mark has been compacted. */
+function withinStep(mark: number, tokens: number, step: number): boolean {
+  return mark > 0 && mark <= tokens && tokens < mark + step
+}
+
 function asNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
 }
@@ -194,6 +202,10 @@ export function journalPath(tempdir: string, sessionId: string): string {
 
 let journal: Promise<void> = Promise.resolve()
 
+// Counts the person's dismissals of the chain's band, so a compaction already
+// asked for when one lands continues nothing after it.
+let chainDismissals = 0
+
 async function journalLine($: EngineInterface, line: string): Promise<void> {
   const path = journalPath((await $.env.get('TMPDIR')) ?? '/tmp', await $.session.id())
   let before = ''
@@ -225,7 +237,10 @@ async function runHandoff($: EngineInterface): Promise<void> {
   }
 }
 
-async function compactThenContinue($: EngineInterface, state: ChainState, tries = COMPACT_TRIES): Promise<void> {
+async function compactThenContinue($: EngineInterface, state: ChainState, asOf: number, tries = COMPACT_TRIES): Promise<void> {
+  if (asOf !== chainDismissals) {
+    return
+  }
   let compacted
   try {
     compacted = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS })
@@ -234,7 +249,7 @@ async function compactThenContinue($: EngineInterface, state: ChainState, tries 
     stage($, `the compaction was refused (${reason(error)}), ${tries - 1} tries left`)
     if (tries > 1) {
       $.clock.after(COMPACT_RETRY_MS, () => {
-        void compactThenContinue($, state, tries - 1)
+        void compactThenContinue($, state, asOf, tries - 1)
       })
 
       return
@@ -251,10 +266,15 @@ async function compactThenContinue($: EngineInterface, state: ChainState, tries 
 
     return
   }
-  await afterCompaction($, state)
+  await afterCompaction($, state, asOf)
 }
 
-async function afterCompaction($: EngineInterface, state: ChainState): Promise<void> {
+async function afterCompaction($: EngineInterface, state: ChainState, asOf: number): Promise<void> {
+  if (asOf !== chainDismissals) {
+    stage($, 'compacted after the band was dismissed, so nothing continues')
+
+    return
+  }
   if (state.waitsOnOwner) {
     await update($, chain, () => ({ ...state, stage: 'waiting' }))
     stage($, 'compacted, and waiting on the owner')
@@ -270,7 +290,10 @@ async function afterCompaction($: EngineInterface, state: ChainState): Promise<v
  * Where no person is at the prompt (the SDK, the desktop app), `$.session.compact`
  * is refused and a compaction runs inside a turn, so the chain runs `/compact`.
  */
-async function compactByCommand($: EngineInterface, state: ChainState): Promise<void> {
+async function compactByCommand($: EngineInterface, state: ChainState, asOf: number): Promise<void> {
+  if (asOf !== chainDismissals) {
+    return
+  }
   stage($, 'compacting through the /compact command, since no person is at the prompt')
   try {
     await $.command.run({ command: COMPACT_COMMAND, args: COMPACT_INSTRUCTIONS })
@@ -281,7 +304,22 @@ async function compactByCommand($: EngineInterface, state: ChainState): Promise<
 
     return
   }
-  await afterCompaction($, state)
+  await afterCompaction($, state, asOf)
+}
+
+async function dismissChain($: EngineInterface): Promise<void> {
+  chainDismissals += 1
+  await update($, chain, () => null)
+  stage($, 'the person dismissed the band, so the chain stops here')
+}
+
+async function dismissFigure($: EngineInterface): Promise<void> {
+  const now = await read($, figure)
+  await update($, figureDismissedAt, () => now?.tokens ?? 0)
+}
+
+async function dismissOffer($: EngineInterface): Promise<void> {
+  await update($, newTask, () => null)
 }
 
 function newTaskLine(state: NewTaskState): string {
@@ -371,7 +409,7 @@ export const register: Register = (on, options) => {
     }
     const warned = await read($, warnedAt)
     // A context smaller than the last warning has been compacted: warn afresh.
-    if (warned && warned <= now.tokens && now.tokens < warned + step) {
+    if (withinStep(warned, now.tokens, step)) {
       return ran
     }
     await update($, warnedAt, () => now.tokens)
@@ -400,7 +438,11 @@ export const register: Register = (on, options) => {
     const offered = await read($, newTask)
     const running = await read($, chain)
     const now = await read($, figure)
-    const past = now !== null && now.tokens >= triggerTokens(thresholdTokens, thresholdPercent, now.window)
+    const dismissedAt = await read($, figureDismissedAt)
+    const past =
+      now !== null &&
+      now.tokens >= triggerTokens(thresholdTokens, thresholdPercent, now.window) &&
+      !withinStep(dismissedAt, now.tokens, step)
     if (e.props.hasSurvey || (offered === null && running === null && !past)) {
       return next(e)
     }
@@ -415,13 +457,15 @@ export const register: Register = (on, options) => {
           {offered.stage === 'offered' ? (
             <Button key="new-task-here" label="Keep going here" onPress={() => keepGoing($)} />
           ) : null}
+          <Button key="new-task-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissOffer($)} />
         </Box>
       )
     }
     if (running !== null) {
       return (
         <Box>
-          <Text dimColor>{stageLine(running)}</Text>
+          <Text dimColor>{stageLine(running)} </Text>
+          <Button key="chain-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissChain($)} />
         </Box>
       )
     }
@@ -429,8 +473,9 @@ export const register: Register = (on, options) => {
     return (
       <Box>
         <Text dimColor>
-          Context {now?.tokens.toLocaleString('en-US')} tokens ({now?.percent}% of {now?.window.toLocaleString('en-US')}): find a clear point, commit, write the handoff, {chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'}
+          Context {now?.tokens.toLocaleString('en-US')} tokens ({now?.percent}% of {now?.window.toLocaleString('en-US')}): find a clear point, commit, write the handoff, {chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'}{' '}
         </Text>
+        <Button key="context-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissFigure($)} />
       </Box>
     )
   }).catch(($, e, next) => next(e))
@@ -556,8 +601,9 @@ export const register: Register = (on, options) => {
       case 'handoff': {
         await update($, chain, () => ({ ...state, stage: 'compacting' }))
         stage($, 'the handoff turn ended: compacting')
+        const asOf = chainDismissals
         $.clock.after(0, () => {
-          void (isInteractive ? compactThenContinue($, state) : compactByCommand($, state))
+          void (isInteractive ? compactThenContinue($, state, asOf) : compactByCommand($, state, asOf))
         })
         break
       }

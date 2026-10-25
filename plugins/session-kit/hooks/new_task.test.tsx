@@ -147,6 +147,35 @@ test('the prompt is sent again after a clear that starts the session\'s state ov
   expect(asked).toEqual(['command session-kit:handoff', 'command clear', `prompt as user: ${PROMPT}`])
 })
 
+test('dismissing the offer drops it and sends nothing, before or after the handoff starts', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const asked = engine(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.prompt.submit({ text: PROMPT, wait: false, origin: { kind: 'composer' } })
+  asked.length = 0
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    await $.tool.call({ tool: TOOL, task: 'rewrite the README' })
+    const ui = await $.ui.mount({ ...BAND, surface })
+    await ui.press({ key: 'new-task-dismiss' })
+    await clock.settle()
+    expect(await ui.find({ type: 'Text', text: /New task/ })).toBeUndefined()
+    await ui.unmount()
+  }
+  expect(asked).toEqual([])
+
+  // Dismissed while the handoff runs: no clear follows it.
+  await $.tool.call({ tool: TOOL, task: 'rewrite the README' })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'new-task-clear' })
+  await clock.settle()
+  await ui.press({ key: 'new-task-dismiss' })
+  await ui.unmount()
+  await $.turn.complete(turn('t-handoff'))
+  await clock.settle()
+  expect(asked).toEqual(['command session-kit:handoff'])
+})
+
 test('in a context that holds no task yet, new or just cleared, the signal is answered with nothing to clear and offers nothing', { options: { chain: true } }, async ($, on) => {
   engine(on, { holdsTask: false })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
