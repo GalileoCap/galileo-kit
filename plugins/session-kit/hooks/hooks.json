@@ -1,4 +1,7 @@
 {
+  "modules": [
+    "./context.tsx"
+  ],
   "hooks": {
     "PreToolUse": [
       {
@@ -48,15 +51,6 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/test_log.py\""
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context_pressure.py\""
           }
         ]
       }

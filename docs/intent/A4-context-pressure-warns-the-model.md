@@ -2,7 +2,7 @@
 id: A4
 from: [O12, O5]
 source: session
-status: decided 2026-10-11
+status: retired 2026-10-24
 kind: check
 implemented_by: [plugins/session-kit/hooks/context_pressure.py, plugins/session-kit/hooks/hooks.json]
 proven_by: [plugins/session-kit/hooks/test_context_pressure.py]
@@ -19,4 +19,4 @@ The model is the one that knows where a clear point is, so the warning goes to i
 
 ## Consequences
 
-One Python start and a 256 kB transcript read per tool call of any kind. The window defaults to 1M tokens, set by `CLAUDE_KIT_CTX_WINDOW` since no API reports it, so on a 200k model that nobody set it for the trigger is never reached and the hook stays quiet. Reworked 2026-10-22. Superseded by `A16` once the context mod lands.
+One Python start and a 256 kB transcript read per tool call of any kind. The window defaults to 1M tokens, set by `CLAUDE_KIT_CTX_WINDOW` since no API reports it, so on a 200k model that nobody set it for the trigger is never reached and the hook stays quiet. Reworked 2026-10-22. Retired 2026-10-24, superseded by `A16`: the hook and its test left `hooks.json` and the tree in session-kit 0.6.0, and git keeps them.

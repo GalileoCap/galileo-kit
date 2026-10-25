@@ -8,7 +8,7 @@ Everything its owner works with agents through: the rules every session follows 
 
 | Piece | Event | What it does |
 | --- | --- | --- |
-| `context_pressure.py` | PostToolUse | Warns every 25k tokens once the context passes half the window, firmer past 65% and 80%. It never holds a tool call or the end of a turn. |
+| `context.tsx` | `tool.call`, `session.measure`, `ui.render` | A hooks module. After every tool call it reads the engine's own context figure and, once the context passes half the window, adds a warning to the tool result every 25k tokens, firmer past 65% and 80%. Past the threshold a band above the prompt shows the figure to the person. It never holds a tool call or the end of a turn, and a failure in it leaves the call as it ran. |
 | `guard.py` | PreToolUse (Bash, Artifact) | Refuses `git commit --no-verify`, `git push --force` (not `--force-with-lease`), `git rebase -i`, `git reset --hard`, a bare `git stash` or `stash pop`, `-x` on a test run, shell `timeout` around a Bash call, test output piped inline to `grep`/`head`/`tail`, amending a commit already on a remote, and publishing an Artifact. |
 | `nudge_single_edit.py` | PreToolUse (Bash) | A Python heredoc doing one read, one replace and one write is told to use the Edit tool. |
 | `doc_length.py` | PostToolUse (Edit, Write) | Warns when a `docs/*.md` file passes 1500 lines. |
@@ -22,7 +22,7 @@ Everything its owner works with agents through: the rules every session follows 
 
 ## Configuration
 
-- `CLAUDE_KIT_CTX_WINDOW` (default 1000000), `CLAUDE_KIT_CTX_THRESHOLD` (0.50) and `CLAUDE_KIT_CTX_STEP` (25000) tune the context warnings. No API reports the window, so a session on a smaller one sets it.
+- The context warnings are the plugin's two options, `threshold` (percent of the window, 50) and `step` (tokens between warnings, 25000), set in `/config` under the plugin or in `settings.json` under `pluginConfigs`. The window is the engine's own figure for the session's model.
 - `CLAUDE_KIT_DOC_LINES` (1500) sets the doc-length warning.
 - A project names its own test runners in `.claude/claude-kit.json`, so the `-x` and piped-output rules and the test log cover them:
 
@@ -84,7 +84,6 @@ A project that depends on the kit declares it in `.claude/settings.json`, so any
 
 ```bash
 python3 plugins/session-kit/hooks/test_guard.py
-python3 plugins/session-kit/hooks/test_context_pressure.py
 bash global/test_install.sh
 bash plugins/session-kit/lib/test_uv_package.sh
 bash plugins/session-kit/hooks/test_direnv_env.sh
@@ -93,6 +92,14 @@ python3 plugins/session-kit/hooks/test_test_log.py
 plugins/session-kit/tells/scripts/check     # ruff ALL, basedpyright strict, zero warnings
 plugins/session-kit/tells/scripts/test
 claude plugin validate . && claude plugin validate plugins/session-kit --strict
+claude plugin test plugins/session-kit            # the hooks module's tests, against the engine itself
+python3 plugins/session-kit/hooks/time_hooks.py   # what the settings hooks add to a tool call, see docs/measurements/hook-times.md
+```
+
+The hooks module is type-checked against the declarations the engine writes when it loads a mod (`.claude-plugin/types/`, ignored by git), or against the `claude-code.d.ts` the `plugin-authoring` skill lays out, with the `tsconfig.json` from that file's header kept outside the plugin:
+
+```bash
+nix-shell -p typescript --run "tsc -p <that tsconfig>"
 ```
 
 The guard's cases live in a file because the guard matches the text of a command: a shell harness whose own arguments carry the patterns is denied by the rules it checks.

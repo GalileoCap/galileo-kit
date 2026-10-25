@@ -4,8 +4,8 @@ from: [O12, O9]
 source: session
 status: decided 2026-10-24
 kind: check
-implemented_by: [not yet written: the context module of the session-kit mod]
-proven_by: unproven
+implemented_by: [plugins/session-kit/hooks/context.tsx, plugins/session-kit/hooks/hooks.json, plugins/session-kit/types/index.d.ts, plugins/session-kit/.claude-plugin/plugin.json]
+proven_by: [plugins/session-kit/hooks/context.test.tsx, docs/measurements/hook-times.md]
 supersedes: [A4]
 ---
 
@@ -25,4 +25,4 @@ The kit's first mod measures the context from `$.session.usage()`, with the engi
 
 ## Consequences
 
-Retires one Python start per tool call. Validated when the hook times, measured before and after with the debug log, show the saving, and when the warning fires on a 200k model where `A4` stayed quiet. Undone if the mod API moves under it faster than the kit can follow, in which case `A4` returns.
+Retires one Python start per tool call: 28 ms on this machine, measured by `plugins/session-kit/hooks/time_hooks.py` before and after, a small share of a call that reaches the model. The window is the engine's, so the warning fires on a 200k model where `A4` stayed quiet. The threshold and the step are `userConfig` options in place of the environment variables. Validated when the owner has seen the warning and the band in a few real sessions, on the terminal and in the desktop app. Undone if the mod API moves under it faster than the kit can follow, in which case `A4` returns.
