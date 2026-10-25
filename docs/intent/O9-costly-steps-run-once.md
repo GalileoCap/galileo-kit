@@ -2,7 +2,7 @@
 id: O9
 from: [G4]
 source: inferred
-status: proposed 2026-10-24
+status: approved 2026-10-24
 ---
 
 # O9 Costly steps run once

@@ -2,7 +2,7 @@
 id: O2
 from: [G5]
 source: inferred
-status: proposed 2026-10-24
+status: approved 2026-10-24
 ---
 
 # O2 What runs changes when I choose

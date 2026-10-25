@@ -2,7 +2,7 @@
 id: O4
 from: [G1]
 source: inferred
-status: proposed 2026-10-24
+status: approved 2026-10-24
 ---
 
 # O4 Tools reach every project through one place

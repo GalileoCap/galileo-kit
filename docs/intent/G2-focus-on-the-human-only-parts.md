@@ -17,7 +17,7 @@ In the owner's words:
 > - They are human-only because the projects serve humans, so they are the ones who decide if it works for them or not. And this physically cannot be automated.
 > - In the ideal world I would only be concerned with the human-only things. The reality is not there yet, but I believe I can build a workflow such that I can confidently reduce how much I am concerned with
 >
-> Things agents can take on: This is mostly architecture, code, documentation, and .
+> Things agents can take on: This is mostly architecture, code, documentation, and that sort of thing.
 >
 > - They can be taken on by agents because they are "mechanical".
 > - Current LLMs may not be perfect for these tasks, and for some things they still require a lot of human assistance (eg: they tend to over-test projects, and have trouble identifying which tests are actually valuable).
@@ -30,5 +30,3 @@ In the owner's words:
 > - Thus neither the human nor the AI would need to concern themselves about it
 > - This can include testing, verification, ensuring some steps were done...
 > - We can't trust the agent to say "I ran the tests", because it may believe it did when it didn't
-
-The list of what agents take on ends in a blank item in the owner's message, kept as written.

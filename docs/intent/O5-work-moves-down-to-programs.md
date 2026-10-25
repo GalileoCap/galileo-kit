@@ -2,7 +2,7 @@
 id: O5
 from: [G2]
 source: inferred
-status: proposed 2026-10-24
+status: approved 2026-10-24
 ---
 
 # O5 Work moves down to programs

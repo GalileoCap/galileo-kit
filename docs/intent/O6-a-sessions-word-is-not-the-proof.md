@@ -2,7 +2,7 @@
 id: O6
 from: [G2]
 source: inferred
-status: proposed 2026-10-24
+status: approved 2026-10-24
 ---
 
 # O6 A session's word is not the proof

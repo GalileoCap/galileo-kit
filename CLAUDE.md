@@ -11,23 +11,23 @@ How the owner works with agents across every project: the rules and the process 
 
 ## Intent
 
-Goals, in the owner's words, and the objectives proposed under them.
+Goals in the owner's words, and the objectives the owner approved under them.
 
 - `G1` Structure and organize the way I work with agents across all projects and tasks.
 - `G2` Focus on the parts of each project only I can do, with the rest taken on by agents or moved to programs.
 - `G3` Produced code and documents of consistent quality while I review only the relevant parts.
 - `G4` Optimize time and reduce costs.
 - `G5` Minimize the vulnerability surface of installed apps, programs and code.
-- `O1` Only code that has been read runs inside my sessions. From `G5`. Proposed.
-- `O2` What runs in my sessions changes only when I choose. From `G5`. Proposed.
-- `O3` Rules are written once in `session-kit`, and a project owns a copy of each entry it needs. From `G1`. Proposed.
-- `O4` A tool useful to every project reaches each of them through `galileo-kit`. From `G1`. Proposed.
-- `O5` Every step has a kind, human, agent or program, and moves to a program wherever one can do it. From `G2`. Proposed.
-- `O6` A step that matters leaves a record a program wrote, and done rests on that record. From `G2`. Proposed.
-- `O7` Independent subsystems wired through contracts, with the owner reviewing architecture and integration surface. From `G3`. Proposed.
-- `O8` Quality held by gates at zero warnings, so the owner reviews substance. From `G3`. Proposed.
-- `O9` A costly step runs once and its output is read again from its file. From `G4`. Proposed.
-- `O10` The prompt cache stays warm across a session. From `G4`. Proposed, held lighter.
+- `O1` Only code that has been read runs inside my sessions. From `G5`.
+- `O2` What runs in my sessions changes only when I choose. From `G5`.
+- `O3` Rules are written once in `session-kit`, and a project owns a copy of each entry it needs. From `G1`.
+- `O4` A tool useful to every project reaches each of them through `galileo-kit`. From `G1`.
+- `O5` Every step has a kind, human, agent or program, and moves to a program wherever one can do it. From `G2`.
+- `O6` A step that matters leaves a record a program wrote, and done rests on that record. From `G2`.
+- `O7` Independent subsystems wired through contracts, with the owner reviewing architecture and integration surface. From `G3`.
+- `O8` Quality held by gates at zero warnings, so the owner reviews substance. From `G3`.
+- `O9` A costly step runs once and its output is read again from its file. From `G4`.
+- `O10` The prompt cache stays warm across a session. From `G4`. Held lighter.
 
 ## Rules of engagement
 

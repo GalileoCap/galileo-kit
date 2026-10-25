@@ -2,7 +2,7 @@
 id: O10
 from: [G4]
 source: inferred
-status: proposed 2026-10-24
+status: approved 2026-10-24
 ---
 
 # O10 The cache stays warm
