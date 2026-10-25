@@ -40,6 +40,7 @@ function engine(on: On, { percent = 55, refuseCompactions = 0 } = {}) {
   let refusals = refuseCompactions
   on('session.usage', () => ({ value: usage(percent) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('session.cwd', () => ({ value: '/' }))
   on('tool.register', (_, e) => {
     asked.push(`register ${e.name}`)
 

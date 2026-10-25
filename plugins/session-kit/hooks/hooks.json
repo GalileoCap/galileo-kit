@@ -1,6 +1,6 @@
 {
   "modules": [
-    "./context.tsx"
+    "./kit.tsx"
   ],
   "hooks": {
     "PreToolUse": [
@@ -12,25 +12,12 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.py\""
           }
         ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "json=$(cat); case \"$json\" in *python3*\"<<\"*) printf '%s' \"$json\" | python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/nudge_single_edit.py\" ;; esac"
-          }
-        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/doc_length.py\""
-          },
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/format.py\""
@@ -47,21 +34,6 @@
           {
             "type": "command",
             "command": "json=$(cat); case \"$json\" in *'\"bashEditDiff\"'*) printf '%s' \"$json\" | python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/format.py\"; printf '%s' \"$json\" | { command -v uv >/dev/null 2>&1 || exit 0; UV_PROJECT_ENVIRONMENT=\"${CLAUDE_PLUGIN_DATA:-${CLAUDE_PLUGIN_ROOT}}/venv\" uv run --quiet --frozen --project \"${CLAUDE_PLUGIN_ROOT}/tells\" session-tells hook; } ;; esac"
-          },
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/test_log.py\""
-          }
-        ]
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/test_log.py\""
           }
         ]
       }

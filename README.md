@@ -8,13 +8,14 @@ Everything its owner works with agents through: the rules every session follows 
 
 | Piece | Event | What it does |
 | --- | --- | --- |
-| `context.tsx` | `tool.call`, `session.measure`, `session.compact`, `turn.complete`, `ui.render` | A hooks module. After every tool call it reads the engine's own context figure and, once the context passes half the window, adds a warning to the tool result every 25k tokens, firmer past 65% and 80%. Past the threshold a band above the prompt shows the figure to the person. It never holds a tool call or the end of a turn, and a failure in it leaves the call as it ran. The engine's own compaction, the one at its threshold, gets instructions to keep what a handoff keeps. With the `chain` option on, the model gets a `clear_point` tool: at a clear point it calls it with who takes the next step, and when that turn ends the module runs the handoff skill, compacts the context and submits a continue prompt, or stops after the compaction when the next step is the owner's, which the band says. |
+| `kit.tsx` | the hooks module | The module the engine loads for the plugin, one per plugin. It calls the register of each concern below, one file each. |
+| `context.tsx` | `tool.call`, `session.measure`, `session.compact`, `turn.complete`, `ui.render` | Through `kit.tsx`. After every tool call it reads the engine's own context figure and, once the context passes half the window, adds a warning to the tool result every 25k tokens, firmer past 65% and 80%. Past the threshold a band above the prompt shows the figure to the person. It never holds a tool call or the end of a turn, and a failure in it leaves the call as it ran. The engine's own compaction, the one at its threshold, gets instructions to keep what a handoff keeps. With the `chain` option on, the model gets a `clear_point` tool: at a clear point it calls it with who takes the next step, and when that turn ends the module runs the handoff skill, compacts the context and submits a continue prompt, or stops after the compaction when the next step is the owner's, which the band says. |
 | `guard.py` | PreToolUse (Bash, Artifact) | Refuses `git commit --no-verify`, `git push --force` (not `--force-with-lease`), `git rebase -i`, `git reset --hard`, a bare `git stash` or `stash pop`, `-x` on a test run, shell `timeout` around a Bash call, test output piped inline to `grep`/`head`/`tail`, amending a commit already on a remote, and publishing an Artifact. |
-| `nudge_single_edit.py` | PreToolUse (Bash) | A Python heredoc doing one read, one replace and one write is told to use the Edit tool. |
-| `doc_length.py` | PostToolUse (Edit, Write) | Warns when a `docs/*.md` file passes 1500 lines. |
+| `nudge.ts` | `tool.call` (Bash) | A Python heredoc doing one read, one replace and one write is told to use the Edit tool. In-process, through `kit.tsx`. |
+| `doc_length.ts` | `tool.call` (Edit, Write) | Tells the model when a `docs/*.md` file it edited is past the cap (`docLines`, 1500), to split it. In-process, through `kit.tsx`. |
 | `session-tells hook` | PostToolUse (Edit, Write, Bash) | Lists the banned prose tells on the lines an edit wrote, each with its fix, and counts the rest of the file's. Never blocks. Bash edits are read from the `bashEditDiff` Claude Code reports. |
 | `format.py` | PostToolUse (Edit, Write, Bash) | Formats the files an edit wrote with the project's own tools, chosen by its config: ruff (`uv run ruff` beside a `uv.lock`), oxlint and biome (from `node_modules/.bin`). Passes on the lint the fix could not clear. |
-| `test_log.py` | PostToolUse, PostToolUseFailure (Bash) | Keeps the last test run's whole output in `<tempdir>/claude-kit-last-test-<session>.log`, and on a failure says where it is. |
+| `test_log.ts` | `tool.call` (Bash) | Keeps the last test run's whole output in `<tempdir>/claude-kit-last-test-<session>.log`, and on a failure says where it is. In-process, through `kit.tsx`. |
 | `direnv_env.sh` | SessionStart, CwdChanged, FileChanged | Puts the project's direnv environment in front of every Bash command, with the plugin's `bin/` kept at the end of PATH. A project with no `.envrc` is left alone. |
 | `pyright_env.py` | SessionStart | For a project whose `.claude/claude-kit.json` sets `"pyright_env": true`, writes the root `pyrightconfig.json` with `session-codeintel pyright-env`, one execution environment per uv package, and names any package it left out. Off by default, because it would replace a root config kept by hand. |
 | `bin/session-tells`, `bin/session-codeintel` | Bash tool's PATH | The two packages below as commands, while the plugin is enabled. Each runs in the environment its hook uses, in `CLAUDE_PLUGIN_DATA`. |
@@ -25,7 +26,7 @@ Everything its owner works with agents through: the rules every session follows 
 
 - The context warnings are the plugin's options `threshold` (percent of the window, 50) and `step` (tokens between warnings, 25000), set in `/config` under the plugin or in `settings.json` under `pluginConfigs`. The window is the engine's own figure for the session's model.
 - `chain` (off) turns on the handoff chain: the `clear_point` tool, and the handoff, compaction and continue that run when the turn it was called in ends. The continue prompt reaches the model as the plugin's, telling it to read again the documents `CLAUDE.local.md` lists and take its next step. An interrupted turn cancels the chain.
-- `CLAUDE_KIT_DOC_LINES` (1500) sets the doc-length warning.
+- `docLines` (1500) is the cap past which a `docs/*.md` file an edit touched is named to the model.
 - A project names its own test runners in `.claude/claude-kit.json`, so the `-x` and piped-output rules and the test log cover them:
 
   ```json
@@ -90,7 +91,6 @@ bash global/test_install.sh
 bash plugins/session-kit/lib/test_uv_package.sh
 bash plugins/session-kit/hooks/test_direnv_env.sh
 python3 plugins/session-kit/hooks/test_format.py
-python3 plugins/session-kit/hooks/test_test_log.py
 plugins/session-kit/tells/scripts/check     # ruff ALL, basedpyright strict, zero warnings
 plugins/session-kit/tells/scripts/test
 claude plugin validate . && claude plugin validate plugins/session-kit --strict

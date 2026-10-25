@@ -27,6 +27,7 @@ test('the model is warned past half the window, every 25k tokens, and afresh aft
   let percent = 40
   on('session.usage', () => ({ value: usage(percent) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('session.cwd', () => ({ value: '/' }))
   on('tool.call', () => ({ result: {} }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
@@ -52,6 +53,7 @@ test('the threshold and the step come from the options', { options: { threshold:
   let percent = 52
   on('session.usage', () => ({ value: usage(percent) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('session.cwd', () => ({ value: '/' }))
   on('tool.call', () => ({ result: {} }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
@@ -71,6 +73,7 @@ test('the threshold and the step come from the options', { options: { threshold:
 test('a denied call carries no warning', async ($, on) => {
   on('session.usage', () => ({ value: usage(90) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('session.cwd', () => ({ value: '/' }))
   on('tool.call', () => ({ deny: 'no' }))
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
@@ -82,6 +85,7 @@ test('the band shows the figure past the threshold and leaves the engine below i
   let percent = 40
   on('session.usage', () => ({ value: usage(percent) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('session.cwd', () => ({ value: '/' }))
   on('tool.call', () => ({ result: {} }))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)

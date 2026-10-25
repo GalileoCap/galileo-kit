@@ -30,6 +30,8 @@
 
 - 2026-10-25: `A21`, the index and check: `session-intent index` and `check`, standard library Python under `plugins/session-kit/intent/`. Its first run found six stale entries, fixed in place. `INDEX.md` is generated and held current by the check.
 
+- 2026-10-25: step 3 of the port, `A11`, `A8` and `A7` in-process as `hooks/test_log.ts`, `hooks/doc_length.ts` and `hooks/nudge.ts`. The engine loads one hooks module per plugin, so `hooks/kit.tsx` imports and calls each concern's register, which corrects `A20`'s premise. session-kit 0.8.0, 22 engine tests green. A Bash call pays about 32 ms of settings hooks, down from about 100.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |

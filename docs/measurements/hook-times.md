@@ -38,3 +38,17 @@ Runs per command: 10, the first discarded. Root: /Users/galileo/devel/galileo/mi
 | PostToolUse | Edit|Write|MultiEdit | `command -v uv >/dev/null 2>&1 \|\| exit 0; UV_PROJECT_ENVIR...` | 79 | 78 |
 | PostToolUse | Bash | `json=$(cat); case "$json" in *'"bashEditDiff"'*) printf '...` | 6 | 6 |
 | PostToolUse | Bash | `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/test_log.py"` | 31 | 31 |
+
+## After step 3 of the port, session-kit 0.8.0
+
+The nudge filter, the document-length check and the test log are in-process, in `hooks/nudge.ts`, `hooks/doc_length.ts` and `hooks/test_log.ts`, loaded through `hooks/kit.tsx`, the module the engine loads for the plugin. A Bash call now pays the guard and the Bash edit filter, about 32 ms, down from about 100 ms before the port. An Edit or Write pays the formatter wrapper and the tells hook, about 115 ms, down from about 160 ms, before either does its work.
+
+Runs per command: 15, the first discarded. Root: /Users/galileo/devel/galileo/misc/galileo-kit/plugins/session-kit
+
+| Event | Matcher | Command | Median ms | Min ms |
+| --- | --- | --- | --- | --- |
+| baseline |  | `python3 -c pass` | 19 | 18 |
+| PreToolUse | Bash|Artifact | `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/guard.py"` | 26 | 26 |
+| PostToolUse | Edit|Write|MultiEdit | `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/format.py"` | 34 | 32 |
+| PostToolUse | Edit|Write|MultiEdit | `command -v uv >/dev/null 2>&1 \|\| exit 0; UV_PROJECT_ENVIR...` | 80 | 79 |
+| PostToolUse | Bash | `json=$(cat); case "$json" in *'"bashEditDiff"'*) printf '...` | 6 | 6 |

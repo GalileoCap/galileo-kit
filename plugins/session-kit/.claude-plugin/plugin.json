@@ -1,6 +1,6 @@
 {
   "name": "session-kit",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Hooks and a handoff skill that every project can use: context-pressure warnings, git and test-run guards, prose-tells warnings, formatting with the project's own tools, a test-run log, a direnv environment, a root pyrightconfig.json for multi-package repositories, the session-tells and session-codeintel commands, and CLAUDE.local.md handoffs.",
   "author": {
     "name": "Galileo Cappella"
@@ -24,6 +24,12 @@
       "type": "boolean",
       "description": "When the model signals a clear point with the clear_point tool, write the handoff, compact the context and continue, or stop when the next step is the owner's.",
       "default": false
+    },
+    "docLines": {
+      "title": "Document length cap",
+      "type": "number",
+      "description": "Lines past which a markdown file under docs/ is named to the model after an edit, to be split.",
+      "default": 1500
     }
   }
 }
