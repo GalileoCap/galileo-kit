@@ -10,8 +10,11 @@ objective with no action, an action that names no objective, a status
 without a date, a retired entry nothing supersedes, a file whose name does
 not carry its id, a missing field, the ``CLAUDE.md`` Intent block out of
 step with the active entries, and an ``INDEX.md`` that is missing or stale.
-It exits 1 on any. Links are written upward only, so everything downward
-is derived here and never kept by hand.
+It exits 1 on any. ``session-intent names [id ...]`` prints each entry's
+id and name, every entry when no id is given, so a session that lost the
+names to a compaction gets them back in one call; an unknown id is a
+problem. Links are written upward only, so everything downward is derived
+here and never kept by hand.
 """
 
 from __future__ import annotations
@@ -251,9 +254,26 @@ def render_index(entries: dict[str, Entry]) -> str:
     return "\n".join(out) + "\n"
 
 
+def names(entries: dict[str, Entry], wanted: list[str]) -> tuple[list[str], list[str]]:
+    """Each entry's id and name, goals first and the ladder downward, a retired one marked."""
+    lines: list[str] = []
+    problems: list[str] = []
+    ladder = {"G": 0, "O": 1, "A": 2, "C": 3}
+    chosen = sorted(entries.values(), key=lambda e: (ladder.get(e.level, 9), e.key())) if not wanted else []
+    for id_ in wanted:
+        if id_ in entries:
+            chosen.append(entries[id_])
+        else:
+            problems.append(f"{id_}: no such entry")
+    for e in chosen:
+        lines.append(f"{e.id} {e.title}" + (" (retired)" if e.retired else ""))
+    return lines, problems
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="The index and check over docs/intent.")
-    parser.add_argument("command", choices=("index", "check"))
+    parser = argparse.ArgumentParser(description="The index, check and names over docs/intent.")
+    parser.add_argument("command", choices=("index", "check", "names"))
+    parser.add_argument("ids", nargs="*", help="for names: the ids to print, all when none")
     parser.add_argument("--root", default=".", help="the project root; its docs/intent and CLAUDE.md are read")
     args = parser.parse_args()
     root = Path(args.root).resolve()
@@ -262,6 +282,13 @@ def main() -> int:
         print(f"{intent}: no such directory")
         return 2
     entries, problems = read_record(intent)
+    if args.command == "names":
+        lines, missing = names(entries, args.ids)
+        for l in lines:
+            print(l)
+        for p in problems + missing:
+            print(p)
+        return 1 if missing else 0
     index = intent / "INDEX.md"
     if args.command == "index":
         index.write_text(render_index(entries), encoding="utf-8")

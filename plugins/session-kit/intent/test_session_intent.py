@@ -166,6 +166,16 @@ run(root, "index")
 code, out = run(root, "check")
 case("a 'not yet written' placeholder is not read as a path", code == 0, out)
 
+# names prints each entry's id and name, all or the ones asked for, and refuses an unknown id.
+root = project(CLEAN)
+code, out = run(root, "names")
+case("names prints every entry with its name, the ladder downward, the retired one marked",
+     code == 0 and out.index("G1 A goal") < out.index("O1 An approved objective") < out.index("A1 A decided action") and "A2 A retired action (retired)" in out, out)
+code, out = run(root, "names", "A1", "O2")
+case("names prints only the ids asked for", code == 0 and out.strip().splitlines() == ["A1 A decided action", "O2 A proposed objective"], out)
+code, out = run(root, "names", "A9")
+case("names fails on an unknown id", code == 1 and "A9: no such entry" in out, out)
+
 if failures:
     print(f"\n{len(failures)} failed")
     for f in failures:

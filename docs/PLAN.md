@@ -40,6 +40,8 @@
 
 - 2026-10-25: the owner set the warning threshold to a token count, 150,000 by default, with the percent of the window as the alternative. session-kit 0.10.0. The "skip the ask" line of the global rule moved to 100,000 tokens with it.
 
+- 2026-10-25: the owner said the ids had stopped meaning anything and made clear communication an objective, `O18`. The rule that an id carries its name is in the global rules (`A23`), `session-intent names` prints them, and the reference mod that draws the name beside each id in a reply is shaped as `A24`, to be built after the first real-session run. `docs/BRIEFING.md` holds the state in plain words.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
@@ -48,10 +50,11 @@
 
 ## Next
 
-1. Install 0.7.0 on this machine and watch a real session: `A16`'s warning past half the window and its band on the terminal and in the desktop app, then `A17` with `chain` on, one run end to end, and the summary read back. The marketplace clone pulls from GitHub, so the install needs the owner's push, or a marketplace added from the local path.
-2. The port, in the order `A20` gives: steps 1, 2, 3 and 5 are built, with `A21` beside them. Left: step 4, the guard's mod form, once mod ordering is answered.
-3. `A22`'s `rules` command and, after the first real session with the modules, the `measure` module.
-4. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
+1. Install 0.10.0 on this machine and watch a real session: the context warning (`A16`, context measured in-process) from 150,000 tokens and its band on the terminal and in the desktop app, then the clear-point chain (`A17`) with `chain` on, one run end to end, and the summary read back, and one press of each `new_task` button (`A19`, one task per context). The marketplace clone pulls from GitHub, so the install needs the owner's push, or a marketplace added from the local path.
+2. The port (`A20`, one module per concern): steps 1, 2, 3 and 5 are built, with the index and check (`A21`) beside them. Left: step 4, the guard's mod form, once mod ordering is answered.
+3. The transcript tooling (`A22`): its `rules` command and, after the first real session with the modules, the `measure` module.
+4. The reference mod (`A24`), after the first real-session run: the name drawn beside each id in a reply.
+5. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
 
 ## Open questions
 

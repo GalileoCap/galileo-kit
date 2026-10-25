@@ -8,6 +8,7 @@ Everything the owner works with agents through: the rules every session follows,
 - `docs/PLAN.md`: the order of work, candidates, decisions, open questions and deferred work.
 - `docs/claude-code-mods-research.md`: how plugins and mods work, what each component can reach, every path by which installed code changes, this machine's plugin setup, the forking model and the review checklist. Read it before reviewing a mod.
 - `docs/session-kit-port.md`: the analysis behind the port of `session-kit`'s hooks to a mod: the API, the context chain, one task per context, the order. Its entries are under `docs/intent/`.
+- `docs/BRIEFING.md`: where the work stands, in plain words, rewritten whole when the owner asks.
 - `docs/session-tooling-design.md`: the shape of `A22`, the tooling over the transcripts and the hooks' effect. `docs/measurements/`: the hook times and the reports `session-transcripts report` writes, one per date, versioned so a change can be argued from one against the next.
 - `docs/reviews/<name>.md`: one review per candidate.
 
@@ -37,6 +38,7 @@ Goals in the owner's words, the objectives the owner approved under them, and th
 - `O15` Routine work takes the cheaper path. From `G4`. Proposed.
 - `O16` A document the work rests on is read whole. From `G4`. Proposed.
 - `O17` The system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. From `G1`, `G4`.
+- `O18` Communication with the owner is clear: an id of the intent is never written without its name. From `G1`, `G3`.
 - `C1` The kit is never the reason a session fails, the guard excepted. Proposed.
 
 ## Rules of engagement

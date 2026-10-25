@@ -32,6 +32,8 @@
 
 **What is kept gets an entry in the project's intent.** A decision kept without its reason is decided again by the next session that meets it, and a session that agrees with whatever is in front of it carries a stale decision as far as a right one. The ladder from a goal to an action makes every kept piece say what it serves, so a session can see when an action has lost its objective, and the owner approves at the level where the words are theirs. The one-off exemption is there because the process costs a file per entry, and a task whose result dies with the session has nothing for the file to hold. The process is in `goals-objectives-actions.md` beside this file, and what it borrows from OKRs, ADRs, impact mapping and the rest is in `goals-objectives-actions-prior-art.md`.
 
+**An id carries its name.** The record of this repository reached five goals, eighteen objectives and twenty-four actions in two days, and the owner said that a reply asking "Approve O14?" could not be acted on: the numbers accumulate faster than anyone can hold them. A session falls into bare ids after a compaction, when its summary kept the ids and dropped the names, so the rule comes with the command that gives the names back. The name goes at the first mention and not at every one, since a name repeated in every clause is noise of its own.
+
 ## Sessions
 
 **One task per context.** A context that carries two tasks pays for both on every turn and keeps less of each through a compaction, and a clear before the new task avoids paying the cache write on a context about to be abandoned. Only the model can tell that a prompt changed subject, so the rule asks it to name the change before starting, and the tool makes the naming mechanical and the clear one press.
