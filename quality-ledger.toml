@@ -768,6 +768,42 @@ disposition = "keep"
 why = "a path outside the root is shown from home instead, the next statement"
 
 [[fallbacks]]
+site = "plugins/session-kit/rulebook/session_rulebook.py"
+where = "latest_measured"
+form = "except-returns"
+code = "except OSError: continue"
+class = "silent"
+disposition = "keep"
+why = "a timeline file that cannot be read is passed over for the next older one, and the token counts are a measure beside the gate, never the gate"
+
+[[fallbacks]]
+site = "plugins/session-kit/rulebook/session_rulebook.py"
+where = "main"
+form = "if-none"
+code = "engine_report(measured, rules, root) if measured else []"
+class = "declared"
+disposition = "keep"
+why = "with no timeline there is no engine count to print, and the words stand alone"
+
+[[fallbacks]]
+site = "plugins/session-kit/rulebook/session_rulebook.py"
+where = "memory_line"
+form = "except-returns"
+code = "except ValueError: continue"
+class = "silent"
+disposition = "keep"
+why = "a line of the timeline that is not JSON is skipped and nothing counts the skips"
+
+[[fallbacks]]
+site = "plugins/session-kit/rulebook/session_rulebook.py"
+where = "memory_line"
+form = "or"
+code = "f.get('type') or '?'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
 site = "plugins/session-kit/suppressions/session_suppressions.py"
 where = "sites_in"
 form = "except-returns"
