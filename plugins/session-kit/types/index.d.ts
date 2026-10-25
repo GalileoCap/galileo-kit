@@ -1,5 +1,13 @@
 // The values session-kit keeps in `$.state`, declared for the engine's
-// contract check (`claude plugin validate`) and for the editor.
+// contract check (`claude plugin validate`) and for the editor. The contract
+// must be self-contained, so a type of the engine's it keeps is spelled here.
+
+/** One rate-limit window as the engine's `SessionRateLimit` spells it: the kind, the percent used, and when it resets. */
+export type UsageWindow = {
+  kind: string
+  percentUsed: number
+  resetsAt?: string
+}
 
 export type ContextFigure = {
   tokens: number
@@ -55,6 +63,14 @@ declare module 'claude-code' {
       coldTimerAt: number
       /** The prompt cache's lifetime in minutes as the engine last stated it; 0 before any statement, when the option holds. */
       cacheMinutes: number
+      /** The context size at the last main-loop turn's end; 0 before any. */
+      turnEndTokens: number
+      /** How much the context grew over the last main-loop turn; 0 before a second turn, and when it shrank. */
+      turnGrowth: number
+      /** The account's rate-limit windows as the engine last measured them; empty off a subscription. */
+      rateLimits: UsageWindow[]
+      /** Per window kind, the percent used at which the person dismissed its line; dropped when the window resets. */
+      limitsDismissed: Record<string, number>
     }
   }
 }

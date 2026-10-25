@@ -334,7 +334,8 @@ test('dismissing the band stops the chain where it stands, before the handoff or
   const dismiss = async () => {
     const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
     await ui.press({ key: 'chain-dismiss' })
-    expect(await ui.find({ type: 'Text', text: /clear point|handoff|compact/i })).toBeUndefined()
+    // The chain's own lines; the figure's line stays, since the turn end past the threshold draws it.
+    expect(await ui.find({ type: 'Text', text: /^(Clear point|session-kit is|Compacted)/ })).toBeUndefined()
     await ui.unmount()
   }
 

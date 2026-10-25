@@ -158,7 +158,8 @@ test('handoff and clear writes the handoff, clears, and sends the person\'s own 
   expect(asked).toEqual(['command session-kit:handoff', 'command clear', `prompt as user: ${PROMPT}`])
 
   ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  expect(await ui.find({ type: 'Text', text: /New task|handoff|Clearing/ })).toBeUndefined()
+  // The offer's own lines; the figure's line stays, since the turn end past the threshold draws it.
+  expect(await ui.find({ type: 'Text', text: /^(New task|session-kit is|Clearing)/ })).toBeUndefined()
   await ui.unmount()
 })
 

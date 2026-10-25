@@ -18,7 +18,14 @@
 // compacts, and stops there, so the person's next prompt writes a small
 // context to the cache instead of all of it. The lifetime is an option, 60
 // minutes on a subscription, and what the engine states (a subagent's
-// result, a model switch) replaces it; a 5-minute cache arms no timer.
+// result, a model switch) replaces it; a 5-minute cache arms no timer. The
+// figure's line says how much the context grew over the last turn, read at
+// the turn's end, and a usage window of the plan at 80% gets a line of its
+// own, naming when it resets, which dismissed stays away until 95%, and from
+// there until the window resets. Where a surface draws no band (the phone,
+// VS Code), the moments that matter go out as a toast instead: the warning,
+// a window reaching 80 or 95, a new task named, a clear point signalled and
+// the compaction done, and the cold-cache timer firing.
 //
 // The model is the one that knows where a clear point is, so the warning
 // goes to it, on the tool result, while it can still choose where to stop,
@@ -29,9 +36,12 @@
 // fails. The engine's own compaction gets the backstop whatever the option.
 
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, PromptOrigin, Register, Timer, TurnCompleteInput } from 'claude-code'
+import type { EngineInterface, PromptOrigin, Register, RenderSurface, SessionRateLimit, Timer, TurnCompleteInput } from 'claude-code'
 
 import type { ChainState, ContextFigure, NewTaskState } from '../types'
+
+const NO_WINDOWS: SessionRateLimit[] = []
+const NO_MARKS: Record<string, number> = {}
 
 const warnedAt = atom({ plugin: 'session-kit', key: 'contextWarnedAt' } as const, 0)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
@@ -43,8 +53,15 @@ const freshContext = atom({ plugin: 'session-kit', key: 'freshContext' } as cons
 const figureDismissedAt = atom({ plugin: 'session-kit', key: 'contextDismissedAt' } as const, 0)
 const coldTimerAt = atom({ plugin: 'session-kit', key: 'coldTimerAt' } as const, 0)
 const statedCacheMinutes = atom({ plugin: 'session-kit', key: 'cacheMinutes' } as const, 0)
+const turnEndTokens = atom({ plugin: 'session-kit', key: 'turnEndTokens' } as const, 0)
+const turnGrowth = atom({ plugin: 'session-kit', key: 'turnGrowth' } as const, 0)
+const rateLimits = atom({ plugin: 'session-kit', key: 'rateLimits' } as const, NO_WINDOWS)
+const limitsDismissed = atom({ plugin: 'session-kit', key: 'limitsDismissed' } as const, NO_MARKS)
 
 const THRESHOLD_TOKENS = 250000
+const LIMIT_WARN = 80
+const LIMIT_FIRM = 95
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const STEP_TOKENS = 25000
 const FIRMER_AT = 2
 const STOP_AT = 3
@@ -174,6 +191,90 @@ export function advice(tokens: number, trigger: number, chainOn = false): string
 
 export function warning(f: ContextFigure, trigger: number, chainOn = false): string {
   return `Context at ${f.tokens.toLocaleString('en-US')} tokens (${f.percent}% of ${f.window.toLocaleString('en-US')}). ${advice(f.tokens, trigger, chainOn)}`
+}
+
+/** The band's line for the person: the figure, how much the last turn grew it when it did, and what to do. */
+function figureLine(f: ContextFigure, grewBy: number, chainOn: boolean): string {
+  const growth = grewBy > 0 ? `, up ${grewBy.toLocaleString('en-US')} in the last turn` : ''
+  const close = chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'
+
+  return `Context ${f.tokens.toLocaleString('en-US')} tokens (${f.percent}% of ${f.window.toLocaleString('en-US')})${growth}: find a clear point, commit, write the handoff, ${close}`
+}
+
+function clockTime(when: Date): string {
+  return `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`
+}
+
+function limitName(kind: string): string {
+  switch (kind) {
+    case 'five_hour':
+      return 'The 5-hour usage window'
+    case 'seven_day':
+      return 'The 7-day usage window'
+    case 'spend_limit':
+      return 'The spend limit'
+    default:
+      return `The ${kind.replace(/_/g, ' ')} window`
+  }
+}
+
+/** A 5-hour window resets within the day, so its time is enough; any other names the day too. */
+function resetClause(w: SessionRateLimit): string {
+  if (w.resetsAt === undefined) {
+    return ''
+  }
+  const when = new Date(w.resetsAt)
+  if (Number.isNaN(when.getTime())) {
+    return ''
+  }
+
+  return w.kind === 'five_hour'
+    ? ` and resets at ${clockTime(when)}`
+    : ` and resets on ${when.getDate()} ${MONTHS[when.getMonth()]} at ${clockTime(when)}`
+}
+
+function limitLine(w: SessionRateLimit): string {
+  return `${limitName(w.kind)} is at ${w.percentUsed}%${resetClause(w)}.`
+}
+
+/** 0 below the warning, 1 from 80%, 2 from 95%. */
+function limitTier(percentUsed: number): number {
+  if (percentUsed >= LIMIT_FIRM) {
+    return 2
+  }
+
+  return percentUsed >= LIMIT_WARN ? 1 : 0
+}
+
+/** Whether a window's line draws: past 80 and not dismissed, or dismissed below 95 and now past it. */
+function showsLimit(w: SessionRateLimit, mark: number | undefined): boolean {
+  if (w.percentUsed < LIMIT_WARN) {
+    return false
+  }
+
+  return mark === undefined || (mark < LIMIT_FIRM && w.percentUsed >= LIMIT_FIRM)
+}
+
+function sameWindows(a: SessionRateLimit[], b: SessionRateLimit[]): boolean {
+  return a.length === b.length && a.every((w, i) => w.kind === b[i]?.kind && w.percentUsed === b[i]?.percentUsed && w.resetsAt === b[i]?.resetsAt)
+}
+
+/** The band is raised on the terminal and desktop surfaces only. */
+function drawsBand(surface: RenderSurface): boolean {
+  return surface === 'terminal' || surface === 'desktop'
+}
+
+/** A moment the band would show, sent as a toast where a surface draws no band; an engine that cannot say gets none. */
+async function moment($: EngineInterface, text: string): Promise<void> {
+  let surfaces: readonly RenderSurface[]
+  try {
+    surfaces = await $.session.surfaces()
+  } catch {
+    return
+  }
+  if (surfaces.some((s) => !drawsBand(s))) {
+    $.ui.toast(text)
+  }
 }
 
 /** Where the warning starts: the token count, or the percent of the window, whichever is reached first; 0 turns one off. */
@@ -330,8 +431,10 @@ async function afterCompaction($: EngineInterface, state: ChainState, asOf: numb
     return
   }
   if (state.waitsOnOwner) {
-    await update($, chain, () => ({ ...state, stage: 'waiting' }))
+    const waiting: ChainState = { ...state, stage: 'waiting' }
+    await update($, chain, () => waiting)
     stage($, 'compacted, and waiting on the owner')
+    await moment($, stageLine(waiting))
 
     return
   }
@@ -377,6 +480,10 @@ async function dismissOffer($: EngineInterface): Promise<void> {
   await update($, newTask, () => null)
 }
 
+async function dismissLimit($: EngineInterface, w: SessionRateLimit): Promise<void> {
+  await update($, limitsDismissed, (marks) => ({ ...marks, [w.kind]: w.percentUsed }))
+}
+
 // The cold-cache timer under way; a hot reload drops it, and the next
 // session.start sets it again from the deadline kept in `$.state`.
 let coldTimer: Timer | null = null
@@ -404,10 +511,7 @@ function lifetimeStated(result: unknown): number | null {
 }
 
 function coldLine(at: number): string {
-  const when = new Date(at)
-  const clock = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`
-
-  return `Left alone, session-kit writes the handoff and compacts at ${clock}, before the cache goes cold.`
+  return `Left alone, session-kit writes the handoff and compacts at ${clockTime(new Date(at))}, before the cache goes cold.`
 }
 
 async function disarmCold($: EngineInterface): Promise<void> {
@@ -431,7 +535,9 @@ async function runColdChain($: EngineInterface, lead: number): Promise<void> {
     return
   }
   await update($, chain, () => ({ stage: 'handoff', waitsOnOwner: true, note: COLD_NOTE }))
-  stage($, `the cache goes cold in ${lead} minutes with nobody at the prompt: writing the handoff`)
+  const text = `the cache goes cold in ${lead} minutes with nobody at the prompt: writing the handoff`
+  stage($, text)
+  await moment($, `session-kit: ${text}.`)
   await runHandoff($)
 }
 
@@ -473,6 +579,19 @@ async function holdColdTimerAgain($: EngineInterface, lead: number): Promise<voi
   } else {
     await update($, coldTimerAt, () => 0)
   }
+}
+
+/** The figure at the turn's end, with no tool call to read it after, and how much the turn grew it. */
+async function measureTurn($: EngineInterface): Promise<void> {
+  const { context } = await $.session.usage()
+  if (context.tokens === undefined || context.percent === undefined) {
+    return
+  }
+  const now: ContextFigure = { tokens: context.tokens, window: context.window, percent: context.percent }
+  await update($, figure, () => now)
+  const last = await read($, turnEndTokens)
+  await update($, turnGrowth, () => (last > 0 && now.tokens > last ? now.tokens - last : 0))
+  await update($, turnEndTokens, () => now.tokens)
 }
 
 async function stepOffer($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'>, offered: NewTaskState): Promise<void> {
@@ -625,14 +744,35 @@ export const register: Register = (on, options) => {
       return ran
     }
     await update($, warnedAt, () => now.tokens)
+    await moment($, figureLine(now, 0, chainOn))
 
     return { ...ran, context: [...(ran.context ?? []), warning(now, trigger, chainOn)] }
   }).catch(($, e, next) => next(e))
 
+  // The engine's own measurement, after each main-loop turn and when a usage window moves a point.
   on('session.measure', async ($, e, next) => {
     const { tokens, window, percent } = e.context
     if (tokens !== undefined && percent !== undefined) {
       await update($, figure, () => ({ tokens, window, percent }))
+    }
+    const before = await read($, rateLimits)
+    if (sameWindows(before, e.rateLimits)) {
+      return next(e)
+    }
+    await update($, rateLimits, () => e.rateLimits)
+    // A dismissal is dropped once its window reset below where it was dismissed.
+    const marks = await read($, limitsDismissed)
+    const kept = Object.fromEntries(
+      Object.entries(marks).filter(([kind, mark]) => e.rateLimits.some((w) => w.kind === kind && w.percentUsed >= mark)),
+    )
+    if (Object.keys(kept).length !== Object.keys(marks).length) {
+      await update($, limitsDismissed, () => kept)
+    }
+    for (const w of e.rateLimits) {
+      const was = before.find((b) => b.kind === w.kind)
+      if (limitTier(w.percentUsed) > limitTier(was?.percentUsed ?? 0)) {
+        await moment($, limitLine(w))
+      }
     }
 
     return next(e)
@@ -654,11 +794,14 @@ export const register: Register = (on, options) => {
     const now = await read($, figure)
     const dismissedAt = await read($, figureDismissedAt)
     const coldAt = await read($, coldTimerAt)
+    const grewBy = await read($, turnGrowth)
+    const marks = await read($, limitsDismissed)
+    const limits = (await read($, rateLimits)).filter((w) => showsLimit(w, marks[w.kind]))
     const past =
       now !== null &&
       now.tokens >= triggerTokens(thresholdTokens, thresholdPercent, now.window) &&
       !withinStep(dismissedAt, now.tokens, step)
-    if (e.props.hasSurvey || (offered === null && running === null && !past && coldAt === 0)) {
+    if (e.props.hasSurvey || (offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
       return below
     }
     const { Box, Button, Text } = $.ui.resolve(e)
@@ -683,12 +826,10 @@ export const register: Register = (on, options) => {
           <Button key="chain-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissChain($)} />
         </Box>,
       )
-    } else if (past) {
+    } else if (past && now !== null) {
       lines.push(
         <Box key="figure">
-          <Text dimColor>
-            Context {now?.tokens.toLocaleString('en-US')} tokens ({now?.percent}% of {now?.window.toLocaleString('en-US')}): find a clear point, commit, write the handoff, {chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'}{' '}
-          </Text>
+          <Text dimColor>{figureLine(now, grewBy, chainOn)} </Text>
           <Button key="context-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissFigure($)} />
         </Box>,
       )
@@ -698,6 +839,14 @@ export const register: Register = (on, options) => {
         <Box key="cold">
           <Text dimColor>{coldLine(coldAt)} </Text>
           <Button key="cold-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissCold($)} />
+        </Box>,
+      )
+    }
+    for (const w of limits) {
+      lines.push(
+        <Box key={`limit-${w.kind}`}>
+          <Text dimColor>{limitLine(w)} </Text>
+          <Button key={`limit-dismiss-${w.kind}`} label="Dismiss" role="dismiss" onPress={() => dismissLimit($, w)} />
         </Box>,
       )
     }
@@ -725,11 +874,32 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
+  let isInteractive = true
+  on('turn.complete', async ($, e, next) => {
+    if (e.agentId !== undefined) {
+      return next(e)
+    }
+    await measureTurn($)
+    if (!chainOn) {
+      return next(e)
+    }
+    const offered = await read($, newTask)
+    if (offered !== null) {
+      await stepOffer($, e, offered)
+    }
+    const state = await read($, chain)
+    if (state !== null) {
+      await stepChain($, e, state, isInteractive)
+    }
+    await armCold($, cold, (window) => triggerTokens(thresholdTokens, thresholdPercent, window))
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
   if (!chainOn) {
     return
   }
 
-  let isInteractive = true
   on('session.start', async ($, e, next) => {
     isInteractive = e.isInteractive
     await $.tool.register({
@@ -789,6 +959,7 @@ export const register: Register = (on, options) => {
       return answer(NOTHING_TO_CLEAR)
     }
     await update($, newTask, () => ({ stage: 'offered', task }))
+    await moment($, `New task: ${task}. From a terminal or the desktop, the band offers the handoff and a clear, or to keep going here.`)
 
     return answer(
       'New task noted. Start nothing on it. End this turn now, saying in one line ' +
@@ -810,7 +981,9 @@ export const register: Register = (on, options) => {
       return refuse(UNATTENDED_REFUSAL)
     }
     const waitsOnOwner = nextStep === 'owner'
-    await update($, chain, () => ({ stage: 'requested', waitsOnOwner, note }))
+    const requested: ChainState = { stage: 'requested', waitsOnOwner, note }
+    await update($, chain, () => requested)
+    await moment($, stageLine(requested))
 
     return answer(
       'Clear point noted. End this turn now, with nothing more started. When it ' +
@@ -818,21 +991,4 @@ export const register: Register = (on, options) => {
         (waitsOnOwner ? 'stops, since the next step is the owner\'s.' : `continues with: ${note}`),
     )
   }).catch(() => refuse('session-kit could not record the clear point, so the chain did not start.'))
-
-  on('turn.complete', async ($, e, next) => {
-    if (e.agentId !== undefined) {
-      return next(e)
-    }
-    const offered = await read($, newTask)
-    if (offered !== null) {
-      await stepOffer($, e, offered)
-    }
-    const state = await read($, chain)
-    if (state !== null) {
-      await stepChain($, e, state, isInteractive)
-    }
-    await armCold($, cold, (window) => triggerTokens(thresholdTokens, thresholdPercent, window))
-
-    return next(e)
-  }).catch(($, e, next) => next(e))
 }
