@@ -17,8 +17,11 @@ export const HANDOFF_COMMAND = '/session-kit:handoff'
 
 export type HandoffState = 'missing' | 'stale' | 'current'
 
+// A repository's own config names no command git would run here: a `core.fsmonitor` set in `.git/config` is code.
+const GIT = ['git', '-c', 'core.fsmonitor=false']
+
 async function lastCommitMs($: EngineInterface, cwd: string): Promise<number | null> {
-  const ran = await $.process.run(['git', 'log', '-1', '--format=%ct'], { cwd })
+  const ran = await $.process.run([...GIT, 'log', '-1', '--format=%ct'], { cwd })
   const seconds = Number(ran.stdout.trim())
 
   return ran.exitCode === 0 && Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null
@@ -40,7 +43,7 @@ export async function handoffState($: EngineInterface, cwd: string): Promise<Han
 
 /** The paths `git status` lists, uncommitted; empty outside a repository. */
 export async function uncommitted($: EngineInterface, cwd: string): Promise<string[]> {
-  const ran = await $.process.run(['git', 'status', '--porcelain'], { cwd })
+  const ran = await $.process.run([...GIT, 'status', '--porcelain'], { cwd })
   if (ran.exitCode !== 0) {
     return []
   }

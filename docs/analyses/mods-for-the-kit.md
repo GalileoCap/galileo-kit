@@ -95,7 +95,7 @@ Each was written down by a mod's author from live runs. Those checked against th
 - `$.config.set` hot-reloads the module and raises `session.start` again (compact-adviser `hooks/register.ts:13-15`). A hot reload runs `register` in a fresh environment and drops its timers (checked, reference.md line 73). Module variables survive `/clear` and are lost on a reload, and `$.store` survives both.
 - After `/clear` no `session.start` fires. `session.end` arrives with reason `clear` and the process goes on under a new session id (context-inspector `hooks/register.tsx:146-153`). This bears on the open question whether `$.session.turns()` starts over at a desktop `/clear`.
 - A toast within two seconds of another is dropped, so a result goes to `$.ui.status` or `$.ui.log` (compact-adviser `hooks/register.ts:387-389`).
-- `PromptOrigin` is a closed set: `composer`, `bridge`, `sdk`, `task-notification`, `scheduled-trigger`, another session's message, `plugin`, `unclassified` (checked, types line 9255 on).
+- `PromptOrigin` is a closed set of sixteen kinds, `composer`, `bridge`, `sdk`, `task-notification`, `scheduled-trigger`, `plugin` and `unclassified` among them, listed whole in `A46` (checked, types line 9255 on).
 - A resume or fork carries the cache's state and the price of re-writing it in `classic.SessionStart` (checked, types lines 12261-12273), and each response splits its cache writes by lifetime (checked, line 17819).
 
 ## Patterns seen and left
@@ -126,3 +126,4 @@ The owner read the analysis and answered.
 - M8 was wrong, and the owner corrected it: once the cache has lapsed the value is gone. The pattern to build is M26, the cold-cache timer, with M7 as its clock. The owner is on a usage plan, so the 1-hour lifetime applies, and the timer reads the lifetime from the response all the same.
 - The order proposed above holds: the defects first (M1, M2, M3, M25, M24, and M4 once a real session shows the tools missing after a reload), then M26 with M7, M9 and M5, then proof, observation, and the rest each on its own decision.
 - Asked by the owner, from effortless: whether a session should get a tool to change its own effort, before a new task. Put to the owner with the session's answer in `PLAN.md`, under Open questions.
+- Built the same day, session-kit 0.23.0: M1 as `A44` (the band composes with the bands beneath it), M2 as `A45` (a loop guard on the chain), M3 as `A46` (prompt origins as a closed set), M25 as `A47` (the guard reads the command as the shell runs it) and M24 as `A48` (git runs with the repository's own config unable to run code).

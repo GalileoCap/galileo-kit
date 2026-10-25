@@ -52,6 +52,11 @@ CASES: list[tuple[dict, str, str]] = [
     (bash("pnpm test | tail -5"), DENY, "another runner piped inline"),
     (bash("git stash"), DENY, "bare git stash"),
     (bash("git stash pop"), DENY, "git stash pop"),
+    (bash("uv run --project x pytest -x"), DENY, "-x behind a launcher"),
+    (bash("session-watched -- pytest -x"), DENY, "-x behind session-watched"),
+    (bash("cd x && python -m pytest tests | tail -20"), DENY, "a runner behind python -m, piped"),
+    (bash('echo "$(git reset --hard)"'), DENY, "a substitution inside double quotes runs"),
+    (bash("cat <<EOF\n$(git reset --hard)\nEOF"), DENY, "a substitution inside a heredoc body runs"),
     ({"tool_name": "Artifact", "tool_input": {}}, DENY, "publishing an Artifact"),
     # must allow
     (bash("git push --force-with-lease origin main"), ALLOW, "force-with-lease"),
@@ -66,6 +71,11 @@ CASES: list[tuple[dict, str, str]] = [
     (bash("pytest &> /tmp/t.log"), ALLOW, "test output to a file"),
     (bash("cat > s.sh <<'EOF'\ntimeout 30 foo\nEOF"), ALLOW, "timeout inside a script body"),
     (bash("git commit --amend"), ALLOW, "amending an unpublished commit"),
+    (bash("echo '{\"deny\": \"x; git reset --hard\"}' > rules.json"), ALLOW, "a command named inside quoted text, after a separator in it"),
+    (bash("grep -n pytest file | head"), ALLOW, "a grep that names a runner, piped"),
+    (bash("echo pytest -x"), ALLOW, "a runner named after another command"),
+    (bash('git commit -m "never pass --no-verify"'), ALLOW, "a flag named inside a commit message"),
+    (bash("cat > s.sh <<'EOF'\npytest -x\nEOF"), ALLOW, "-x inside a script body"),
     ({"tool_name": "Bash", "tool_input": {}}, ALLOW, "empty command"),
     ({"tool_name": "Edit", "tool_input": {"new_string": "x"}}, ALLOW, "a tool it does not cover"),
 ]
@@ -81,6 +91,7 @@ def project_cases() -> list[tuple[str, str, str]]:
         return [
             (run(bash("scripts/test -x"), folder), DENY, "a project runner with -x"),
             (run(bash("scripts/test | head"), folder), DENY, "a project runner piped inline"),
+            (run(bash("./scripts/test | head"), folder), DENY, "a project runner behind a path, piped inline"),
             (run(bash("scripts/test &> log"), folder), ALLOW, "a project runner to a file"),
             (run(bash("scripts/test -x")), ALLOW, "the same runner with no config"),
         ]

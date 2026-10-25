@@ -143,6 +143,8 @@ test('when the next step is the owner\'s, the chain stops after the compaction a
     const ui = await $.ui.mount({ ...BAND, surface })
     const row = await ui.find({ type: 'Text', text: /next step/ })
     expect(row?.text).toMatch(/yours.*approve O14 to O16/)
+    // The chain's line draws above the band beneath it, never in its place.
+    expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
     await ui.unmount()
   }
 
@@ -199,6 +201,11 @@ test('a compaction refused while the turn still runs is tried again', { options:
 test('the band shows each stage of the chain', { options: { chain: true } }, async ($, on) => {
   const clock = mock.clock(on)
   engine(on)
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
   const bandSays = async (pattern: RegExp) => {
@@ -214,6 +221,41 @@ test('the band shows each stage of the chain', { options: { chain: true } }, asy
   await $.turn.complete(turn('t1'))
   await clock.settle()
   expect(await bandSays(/handoff/i)).toMatch(/writing the handoff/)
+})
+
+test('a third chain since the person\'s last prompt is refused, a prompt that is not theirs changes nothing, and their next prompt lets one run again', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const asked = engine(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.prompt.submit({ text: 'build it', wait: false, origin: { kind: 'composer' } })
+  const continues = () => asked.filter((a) => a.startsWith('prompt Continue')).length
+  const chain = async (id: string) => {
+    const signalled = await $.tool.call({ tool: TOOL, next_step: 'session', note: 'go on' })
+    await $.turn.complete(turn(`${id}-1`))
+    await clock.settle()
+    await $.turn.complete(turn(`${id}-2`))
+    await clock.settle()
+
+    return signalled
+  }
+
+  expect((await chain('a')).deny).toBeUndefined()
+  expect((await chain('b')).deny).toBeUndefined()
+  expect(continues()).toBe(2)
+
+  const third = await $.tool.call({ tool: TOOL, next_step: 'session', note: 'go on' })
+  expect(third.deny).toMatch(/nobody at the prompt/)
+  expect(third.result).toBeUndefined()
+  await $.turn.complete(turn('c'))
+  await clock.settle()
+  expect(continues()).toBe(2)
+
+  await $.prompt.submit({ text: 'a task finished', wait: false, origin: { kind: 'task-notification' } })
+  expect((await $.tool.call({ tool: TOOL, next_step: 'session', note: 'go on' })).deny).toMatch(/nobody at the prompt/)
+
+  await $.prompt.submit({ text: 'carry on', wait: false, origin: { kind: 'composer' } })
+  expect((await chain('d')).deny).toBeUndefined()
+  expect(continues()).toBe(3)
 })
 
 test('where no person is at the prompt, the chain compacts through /compact and then continues', { options: { chain: true } }, async ($, on) => {

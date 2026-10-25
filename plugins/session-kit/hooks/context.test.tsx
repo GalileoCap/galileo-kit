@@ -89,7 +89,7 @@ test('a denied call carries no warning', async ($, on) => {
   expect(ran.context).toBeUndefined()
 })
 
-test('the band shows the count past the threshold and leaves the engine below it', async ($, on) => {
+test('the band shows the count past the threshold, above the bands beneath it, and leaves the engine alone below it', async ($, on) => {
   const state = { percent: 10 }
   engine(on, state)
   on('ui.render', ($, e) => {
@@ -110,6 +110,8 @@ test('the band shows the count past the threshold and leaves the engine below it
     await $.tool.call({ tool: 'Bash', command: 'ls' })
     ui = await $.ui.mount({ ...BAND, surface })
     expect((await ui.find({ type: 'Text', text: /Context 300,000/ }))?.text).toMatch(/Context 300,000 tokens \(30% of 1,000,000\)/)
+    // The band beneath, another plugin's or the engine's, is drawn under the kit's and never hidden by it.
+    expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
     await ui.unmount()
   }
 })

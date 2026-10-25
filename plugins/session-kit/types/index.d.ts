@@ -43,6 +43,8 @@ declare module 'claude-code' {
       contextDismissedAt: number
       /** The chain under way; null while none is. */
       chain: ChainState | null
+      /** Chains that continued since the person's last prompt; the third signal is refused. */
+      chainsUnattended: number
       /** The new task offered to the person; null while none is. */
       newTask: NewTaskState | null
       /** The person's last prompt, sent again after a clear or when they keep going. */

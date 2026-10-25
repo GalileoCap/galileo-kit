@@ -7,7 +7,12 @@
 // and sends the person's prompt again. In a context that holds no task yet
 // (new, or just cleared) `new_task` offers nothing: there is nothing to clear.
 // Each band has a Dismiss button: the figure's stays away for a `step`, and
-// the chain's and the offer's stop what is left of them.
+// the chain's and the offer's stop what is left of them. The kit's line draws
+// above whatever the plugins beneath drew. A chain runs at most twice with no
+// prompt of the person's between: the third signal is refused, and their next
+// prompt lets one run again. A prompt that is not the person's own words (a
+// notification, a schedule, a peer, a plugin) neither counts as theirs nor is
+// sent again in their place.
 //
 // The model is the one that knows where a clear point is, so the warning
 // goes to it, on the tool result, while it can still choose where to stop,
@@ -18,13 +23,14 @@
 // fails. The engine's own compaction gets the backstop whatever the option.
 
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, PromptOrigin, Register } from 'claude-code'
 
 import type { ChainState, ContextFigure, NewTaskState } from '../types'
 
 const warnedAt = atom({ plugin: 'session-kit', key: 'contextWarnedAt' } as const, 0)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
 const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
+const chainsUnattended = atom({ plugin: 'session-kit', key: 'chainsUnattended' } as const, 0)
 const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
 const freshContext = atom({ plugin: 'session-kit', key: 'freshContext' } as const, false)
@@ -34,6 +40,24 @@ const THRESHOLD_TOKENS = 250000
 const STEP_TOKENS = 25000
 const FIRMER_AT = 2
 const STOP_AT = 3
+const MAX_UNATTENDED = 2
+
+// The kinds of prompt that are not the person's own words. What a plugin's
+// `$.command.run` stamps is `plugin` too. The rest (typed, from the phone, the
+// SDK host's, a channel's, a Slack ping, one the engine could not stamp) stay
+// the person's, since which of them a desktop stamps is not known.
+const NOT_THE_PERSONS: ReadonlySet<PromptOrigin['kind']> = new Set([
+  'plugin',
+  'task-notification',
+  'scheduled-trigger',
+  'peer',
+  'peer-send-message',
+  'projects-relay',
+  'coordinator',
+  'observer',
+  'observer-activity',
+  'auto-continuation',
+])
 
 const TOOL_NAME = 'clear_point'
 const TOOL = 'mcp__session-kit__clear_point'
@@ -65,6 +89,11 @@ const NOTHING_TO_CLEAR =
   'This context holds no other task (it is new, or just cleared), so there is ' +
   'nothing to clear: start on the prompt. CLAUDE.local.md still describes the ' +
   'last task, and the next handoff rewrites it for this one.'
+
+const UNATTENDED_REFUSAL =
+  `session-kit has run ${MAX_UNATTENDED} chains since the person's last prompt and ` +
+  'runs no more with nobody at the prompt. End this turn now, with nothing more ' +
+  'started, and wait for the person: their next prompt lets the chain run again.'
 
 const HANDOFF_FIELDS =
   'Keep the task in the user\'s own words, every decision with who took it and ' +
@@ -169,6 +198,11 @@ async function opensFreshContext($: EngineInterface): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+/** Whether a prompt is the person's own words, which a clear sends again in their place and which lets a chain run again. */
+function isThePersons(origin: PromptOrigin | undefined): boolean {
+  return origin === undefined || !NOT_THE_PERSONS.has(origin.kind)
 }
 
 /** A registered tool answers with its text: the engine's output schema for one takes a string. */
@@ -282,6 +316,7 @@ async function afterCompaction($: EngineInterface, state: ChainState, asOf: numb
     return
   }
   await update($, chain, () => null)
+  await update($, chainsUnattended, (n) => n + 1)
   stage($, 'compacted, sending the continue prompt')
   await $.prompt.submit({ text: continuePrompt(state.note) })
 }
@@ -434,7 +469,9 @@ export const register: Register = (on, options) => {
     return next({ ...e, instructions: backstop(e.instructions) })
   }).catch(($, e, next) => next(e))
 
+  // The kit's line draws above whatever the plugins beneath drew, so no band of theirs is hidden.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const below = await next(e)
     const offered = await read($, newTask)
     const running = await read($, chain)
     const now = await read($, figure)
@@ -444,11 +481,12 @@ export const register: Register = (on, options) => {
       now.tokens >= triggerTokens(thresholdTokens, thresholdPercent, now.window) &&
       !withinStep(dismissedAt, now.tokens, step)
     if (e.props.hasSurvey || (offered === null && running === null && !past)) {
-      return next(e)
+      return below
     }
     const { Box, Button, Text } = $.ui.resolve(e)
+    let line
     if (offered !== null) {
-      return (
+      line = (
         <Box>
           <Text dimColor>{newTaskLine(offered)} </Text>
           {offered.stage === 'offered' ? (
@@ -460,29 +498,38 @@ export const register: Register = (on, options) => {
           <Button key="new-task-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissOffer($)} />
         </Box>
       )
-    }
-    if (running !== null) {
-      return (
+    } else if (running !== null) {
+      line = (
         <Box>
           <Text dimColor>{stageLine(running)} </Text>
           <Button key="chain-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissChain($)} />
         </Box>
       )
+    } else {
+      line = (
+        <Box>
+          <Text dimColor>
+            Context {now?.tokens.toLocaleString('en-US')} tokens ({now?.percent}% of {now?.window.toLocaleString('en-US')}): find a clear point, commit, write the handoff, {chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'}{' '}
+          </Text>
+          <Button key="context-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissFigure($)} />
+        </Box>
+      )
     }
 
     return (
-      <Box>
-        <Text dimColor>
-          Context {now?.tokens.toLocaleString('en-US')} tokens ({now?.percent}% of {now?.window.toLocaleString('en-US')}): find a clear point, commit, write the handoff, {chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'}{' '}
-        </Text>
-        <Button key="context-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissFigure($)} />
+      <Box flexDirection="column">
+        {line}
+        {below}
       </Box>
     )
   }).catch(($, e, next) => next(e))
 
   on('prompt.submit', async ($, e, next) => {
-    if (e.origin?.kind !== 'plugin' && e.text.trim() !== '') {
+    if (e.command === undefined && e.text.trim() !== '' && isThePersons(e.origin)) {
       await update($, lastPrompt, () => e.text)
+      if (chainOn) {
+        await update($, chainsUnattended, () => 0)
+      }
     }
     if (chainOn && e.command === undefined) {
       const isFresh = await opensFreshContext($)
@@ -552,6 +599,12 @@ export const register: Register = (on, options) => {
     const note = typeof e.note === 'string' && e.note.trim() !== '' ? e.note.trim() : ''
     if ((nextStep !== 'session' && nextStep !== 'owner') || note === '') {
       return refuse('next_step must be "session" or "owner", and note the next step in one line.')
+    }
+    const unattended = await read($, chainsUnattended)
+    if (unattended >= MAX_UNATTENDED) {
+      stage($, `a signal was refused: ${unattended} chains have run since the person's last prompt, and the next runs after it`)
+
+      return refuse(UNATTENDED_REFUSAL)
     }
     const waitsOnOwner = nextStep === 'owner'
     await update($, chain, () => ({ stage: 'requested', waitsOnOwner, note }))

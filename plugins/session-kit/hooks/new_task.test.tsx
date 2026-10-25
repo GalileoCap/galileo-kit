@@ -78,6 +78,8 @@ test('the signal tells the model to stop, and the band offers the handoff and th
     expect((await ui.find({ type: 'Text', text: /New task/ }))?.text).toMatch(/rewrite the README install section/)
     expect(await ui.find({ type: 'Button', text: /Handoff and clear/ })).toBeDefined()
     expect(await ui.find({ type: 'Button', text: /Keep going here/ })).toBeDefined()
+    // The offer draws above the band beneath it, never in its place.
+    expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
     await ui.unmount()
   }
 })
@@ -96,6 +98,44 @@ test('keep going here sends the person\'s own prompt again and clears the offer'
   expect(asked).toEqual([`prompt as user: ${PROMPT}`])
   expect(await ui.find({ type: 'Text', text: /New task/ })).toBeUndefined()
   await ui.unmount()
+})
+
+test('a prompt that is not the person\'s own words is never the one sent again, and one from the phone is', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const asked = engine(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.prompt.submit({ text: PROMPT, wait: false, origin: { kind: 'composer' } })
+  const resent = async () => {
+    asked.length = 0
+    const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+    await ui.press({ key: 'new-task-here' })
+    await clock.settle()
+    await ui.unmount()
+
+    return asked
+  }
+
+  const others = [
+    { kind: 'task-notification' },
+    { kind: 'scheduled-trigger' },
+    { kind: 'peer' },
+    { kind: 'peer-send-message' },
+    { kind: 'projects-relay' },
+    { kind: 'coordinator' },
+    { kind: 'observer' },
+    { kind: 'observer-activity' },
+    { kind: 'auto-continuation' },
+    { kind: 'plugin', name: 'other' },
+  ] as const
+  for (const origin of others) {
+    await $.prompt.submit({ text: `not theirs: ${origin.kind}`, wait: false, origin })
+  }
+  await $.tool.call({ tool: TOOL, task: 'rewrite the README' })
+  expect(await resent()).toEqual([`prompt as user: ${PROMPT}`])
+
+  await $.prompt.submit({ text: 'from the phone', wait: false, origin: { kind: 'bridge' } })
+  await $.tool.call({ tool: TOOL, task: 'rewrite the README' })
+  expect(await resent()).toEqual(['prompt as user: from the phone'])
 })
 
 test('handoff and clear writes the handoff, clears, and sends the person\'s own prompt again', { options: { chain: true } }, async ($, on) => {

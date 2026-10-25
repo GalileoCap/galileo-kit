@@ -7,14 +7,18 @@ import { world } from './world.test-helper'
 type Repo = { commitSeconds: number | null; status: string }
 
 // The engine beneath: git, the dim lines it draws, and the context each prompt reached it with.
-function git(on: On, repo: Repo): { logged: string[]; sent: (readonly string[] | undefined)[] } {
+function git(on: On, repo: Repo): { logged: string[]; sent: (readonly string[] | undefined)[]; ran: string[][] } {
   const logged: string[] = []
   const sent: (readonly string[] | undefined)[] = []
+  const ran: string[][] = []
   on('process.run', (_, e) => {
+    ran.push([...e.argv])
     if (repo.commitSeconds === null) {
       return { value: { exitCode: 128, stdout: '', stderr: 'fatal: not a git repository', isStdoutTruncated: false, isStderrTruncated: false } }
     }
-    const stdout = e.argv[1] === 'log' ? `${repo.commitSeconds}\n` : repo.status
+    // The subcommand follows `git` and any `-c key=value` pair.
+    const subcommand = e.argv[1] === '-c' ? e.argv[3] : e.argv[1]
+    const stdout = subcommand === 'log' ? `${repo.commitSeconds}\n` : repo.status
 
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
@@ -31,7 +35,7 @@ function git(on: On, repo: Repo): { logged: string[]; sent: (readonly string[] |
   on('prompt.context', (_, e) => ({ blocks: e.blocks }))
   on('turn.complete', () => ({ text: '' }))
 
-  return { logged, sent }
+  return { logged, sent, ran }
 }
 
 function handoffWrittenAt(on: On, mtimeMs: number) {
@@ -89,10 +93,10 @@ test('a current handoff, and a slash command in a fresh window, carry nothing', 
   expect(sent).toEqual([undefined, undefined])
 })
 
-test('the end of a turn names the uncommitted changes and the stale handoff in one dim line, and says nothing when clean', async ($, on) => {
+test('the end of a turn names the uncommitted changes and the stale handoff in one dim line, says nothing when clean, and runs git with the repository\'s own config unable to run code', async ($, on) => {
   world(on, { files: { '/proj/CLAUDE.local.md': 'state' } })
   const repo: Repo = { commitSeconds: 1_700_000_000, status: ' M a.py\n?? b.py\n' }
-  const { logged } = git(on, repo)
+  const { logged, ran } = git(on, repo)
   handoffWrittenAt(on, 1_699_999_000_000)
   await $.session.start({ cwd: '/proj', surface: 'terminal', isInteractive: true })
 
@@ -100,6 +104,8 @@ test('the end of a turn names the uncommitted changes and the stale handoff in o
   expect(logged.length).toBe(1)
   expect(logged[0]).toMatch(/2 uncommitted changes/)
   expect(logged[0]).toMatch(/CLAUDE\.local\.md predates the last commit/)
+  // A repository whose config names a fsmonitor command would run it at every turn end.
+  expect(ran.map((argv) => argv.slice(0, 3).join(' '))).toEqual(['git -c core.fsmonitor=false', 'git -c core.fsmonitor=false'])
 
   repo.status = ''
   await $.turn.complete({ ...turn, agentId: 'agent-1' })

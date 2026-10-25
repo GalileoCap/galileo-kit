@@ -43,7 +43,7 @@ At session start and on a directory change, when direnv is not loaded, a system 
 
 ## Refusals, by the guard (`hooks/guard.py`)
 
-A refused tool call returns its reason to the model as the denial.
+A refused tool call returns its reason to the model as the denial. A rule reads the command with its quoted text and heredoc bodies blanked, unless one holds a substitution, and the two test-runner rules match a runner only where a command segment starts, behind a launcher or a path (`A47`, the guard reads the command as the shell runs it).
 
 - `git commit --no-verify`: "git commit --no-verify skips the hooks. Fix the failure instead of bypassing it."
 - `git push --force` or `-f`: "git push --force rewrites the remote. Use --force-with-lease if it is intended."
@@ -58,15 +58,15 @@ A refused tool call returns its reason to the model as the denial.
 
 ## Tools the model is given, with the `chain` option on (the default)
 
-`clear_point`, with `next_step` ("session" or "owner") and `note`: "Call this at a clear point: the tree is committed and green, nothing is in flight, and the next step is known. When this turn ends, session-kit writes the handoff (CLAUDE.local.md), compacts the context, and continues with the next step, or stops when that step waits on the owner. Then end the turn with nothing more started." Its result: "Clear point noted. End this turn now, with nothing more started. When it ends, session-kit writes the handoff and compacts the context, then" either "stops, since the next step is the owner's." or "continues with: <note>".
+`clear_point`, with `next_step` ("session" or "owner") and `note`: "Call this at a clear point: the tree is committed and green, nothing is in flight, and the next step is known. When this turn ends, session-kit writes the handoff (CLAUDE.local.md), compacts the context, and continues with the next step, or stops when that step waits on the owner. Then end the turn with nothing more started." Its result: "Clear point noted. End this turn now, with nothing more started. When it ends, session-kit writes the handoff and compacts the context, then" either "stops, since the next step is the owner's." or "continues with: <note>". A third chain since the person's last prompt is refused (`A45`, a loop guard on the chain): "session-kit has run 2 chains since the person's last prompt and runs no more with nobody at the prompt. End this turn now, with nothing more started, and wait for the person: their next prompt lets the chain run again."
 
-`new_task`, with `task`: "Call this when the prompt just given is a task unrelated to the task this context holds, before starting on it: one task per context. session-kit then offers the person the handoff and a clear, or to keep going here, and sends their prompt again after. Then end the turn, saying in one line that it is a new task, with nothing started. A context that holds no task yet (new, or just cleared) takes the prompt as its task, whatever CLAUDE.local.md describes." Its result: "New task noted. Start nothing on it. End this turn now, saying in one line that it is a new task: the band offers the handoff and a clear, or to keep going here." In a context that holds no task yet: "This context holds no other task (it is new, or just cleared), so there is nothing to clear: start on the prompt. CLAUDE.local.md still describes the last task, and the next handoff rewrites it for this one."
+`new_task`, with `task`: "Call this when the prompt just given is a task unrelated to the task this context holds, before starting on it: one task per context. session-kit then offers the person the handoff and a clear, or to keep going here, and sends their prompt again after. Then end the turn, saying in one line that it is a new task, with nothing started. A context that holds no task yet (new, or just cleared) takes the prompt as its task, whatever CLAUDE.local.md describes." Its result: "New task noted. Start nothing on it. End this turn now, saying in one line that it is a new task: the band offers the handoff and a clear, or to keep going here, and the prompt is sent again after." In a context that holds no task yet: "This context holds no other task (it is new, or just cleared), so there is nothing to clear: start on the prompt. CLAUDE.local.md still describes the last task, and the next handoff rewrites it for this one."
 
 ## Prompts the module submits
 
 After the chain's compaction, as the plugin's prompt: "Continue. Read again in full the documents CLAUDE.local.md lists, then take its next step: <note>".
 
-After a `new_task` clear, or on "Keep going here": the person's own last prompt, sent again as their words.
+After a `new_task` clear, or on "Keep going here": the person's own last prompt, sent again as their words. A prompt that is not their own words (a notification, a schedule, another session's, a plugin's, a slash command) is never sent in their place (`A46`, prompt origins as a closed set).
 
 ## Instructions given to a compaction
 
@@ -76,4 +76,4 @@ To the chain's compaction: "CLAUDE.local.md holds the handoff written for this c
 
 ## What the person sees and the model does not
 
-The band above the prompt past the threshold: "Context <tokens> tokens (<percent>% of <window>): find a clear point, commit, write the handoff, ask to compact.", ending "call clear_point." with the `chain` option on. The chain's stage line and the `new_task` offer with its two buttons. Each band has a Dismiss button (`A43`, the bands are dismissable), which the model never sees. The toasts when a chain step did not run. At the end of a main-loop turn, one dim line from `hooks/checkout.ts` when the tree holds uncommitted changes or the handoff is missing or stale: "session-kit: <n> uncommitted changes at the end of the turn. CLAUDE.local.md predates the last commit (/session-kit:handoff)."
+The band above the prompt past the threshold: "Context <tokens> tokens (<percent>% of <window>): find a clear point, commit, write the handoff, ask to compact.", ending "call clear_point." with the `chain` option on. The chain's stage line and the `new_task` offer with its two buttons. Each band has a Dismiss button (`A43`, the bands are dismissable), which the model never sees, and draws above the bands of the plugins beneath it (`A44`, the band composes with the bands beneath it). The toasts when a chain step did not run. At the end of a main-loop turn, one dim line from `hooks/checkout.ts` when the tree holds uncommitted changes or the handoff is missing or stale: "session-kit: <n> uncommitted changes at the end of the turn. CLAUDE.local.md predates the last commit (/session-kit:handoff)."
