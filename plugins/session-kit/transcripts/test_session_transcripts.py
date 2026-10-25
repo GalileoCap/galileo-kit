@@ -160,6 +160,7 @@ report = root / "report.md"
 code, out = run(root, "report", "--out", str(report))
 text = report.read_text(encoding="utf-8") if report.exists() else ""
 case("report writes the sessions, warnings, cache and compactions tables to the file", code == 0 and all(h in text for h in ["## Sessions", "## Warnings", "## Cache", "## Compactions"]), out + text[:400])
+case("the report sums the warnings per session", "2 warnings over 2 sessions" in text and "| 1 | 550,000 | 1 | 1 | 1 | 1 |" in text and "| 1 | 520,000 | 0 | 0 | 0 | none |" in text, text)
 case("the report holds no prompt text", "widget" not in text and "After lunch" not in text, text)
 
 # An archive of sessions is read beside the live ones: each `<project>/<id>.tar.xz` holds the session's

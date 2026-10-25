@@ -322,6 +322,37 @@ def warnings_table(sessions: list[Session]) -> str:
     return f"{body}\n\n{handoffs} of {total} warnings were followed by a handoff in the same session."
 
 
+def warnings_summary(sessions: list[Session]) -> str:
+    """One row per session that was warned, for the report: the per-warning rows are the `warnings` command's."""
+    rows: list[list[str]] = []
+    total = handoffs = compactions = 0
+    all_tokens: list[int] = []
+    for s in sessions:
+        if not s.warnings:
+            continue
+        n = len(s.warnings)
+        total += n
+        with_handoff = sum(w.handoff_turns is not None for w in s.warnings)
+        with_compaction = sum(w.compaction_turns is not None for w in s.warnings)
+        handoffs += with_handoff
+        compactions += with_compaction
+        all_tokens += [w.tokens for w in s.warnings]
+        later = sorted(w.compaction_turns for w in s.warnings if w.compaction_turns is not None)
+        rows.append([
+            short(s.id), project_name(s.project), day(s.started), str(n), f"{min(w.tokens for w in s.warnings):,}",
+            str(with_handoff), str(sum(w.commit_turns is not None for w in s.warnings)), str(with_compaction),
+            str(later[len(later) // 2]) if later else "none",
+        ])
+    body = table(["Session", "Project", "Started", "Warnings", "First at", "Followed by a handoff", "By a commit", "By a compaction", "Median turns to the compaction"], rows)
+    if not all_tokens:
+        return f"{body}\n\nNo warning fired."
+    all_tokens.sort()
+    return (
+        f"{body}\n\n{total} warnings over {len(rows)} sessions, from {all_tokens[0]:,} tokens, median {all_tokens[len(all_tokens) // 2]:,}. "
+        f"{handoffs} were followed by a handoff and {compactions} by a compaction in the same session."
+    )
+
+
 def cache_table(sessions: list[Session]) -> str:
     rows: list[list[str]] = []
     by_project: dict[str, list[Session]] = {}
@@ -413,9 +444,9 @@ def full_report(sessions: list[Session], roots: list[Path], since: datetime | No
         "",
         "## Warnings",
         "",
-        "Each context warning the kit gave the model, and how many turns later the handoff, a commit and a compaction came, in the same session.",
+        "Each session the kit warned about its context, with what followed in the same session. `session-transcripts warnings` lists every warning.",
         "",
-        warnings_table(sessions),
+        warnings_summary(sessions),
         "",
         "## Cache",
         "",

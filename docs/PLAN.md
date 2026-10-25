@@ -44,6 +44,8 @@
 
 - 2026-10-25: the owner raised the warning to 250,000 tokens, firmer at 500,000, since the median of 152,000 counted only the sessions kept and a compaction after two small tasks would cost more than it saves. session-kit 0.11.0. The id rule widened to every kind of id a project uses, and the reference mod (`A24`) to a `references` list in `.claude/claude-kit.json`. `docs/what-reaches-the-model.md` lists every text the kit puts in front of a session, for the owner's review.
 
+- 2026-10-25: the owner's archive of 381 sessions read with the reader's new `--archive` option. Over 421 sessions the manual compactions sit at a median of 256,000 tokens, the retired warning fired 5,985 times from 500,000 and was followed by a compaction within a turn almost every time. The 250,000 and 500,000 tiers hold against it. The report's warnings are now summed per session, which keeps it under the documents cap.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |

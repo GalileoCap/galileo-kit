@@ -5,7 +5,7 @@ source: owner
 status: decided 2026-10-25
 kind: check
 implemented_by: [plugins/session-kit/transcripts/session_transcripts.py, plugins/session-kit/bin/session-transcripts, plugins/session-kit/hooks/time_hooks.py, docs/measurements]
-proven_by: [plugins/session-kit/transcripts/test_session_transcripts.py, docs/measurements/sessions-2026-10-25.md]
+proven_by: [plugins/session-kit/transcripts/test_session_transcripts.py, docs/measurements/sessions-2026-10-25.md, docs/measurements/sessions-2026-10-25-with-archive.md]
 supersedes: []
 ---
 
