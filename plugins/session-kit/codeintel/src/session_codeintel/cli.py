@@ -1,16 +1,17 @@
-"""The ``session-codeintel`` command: recipes, pyright-env, looks, layers and measure."""
+"""The ``session-codeintel`` command: one subcommand per tool."""
 
 from __future__ import annotations
 
 import argparse
 import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from session_codeintel import layers, looks, measure, pyright_env, recipes
+from session_codeintel import layers, looks, measure, pyright_env, quality, recipes, template
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
 REFUSED = 2
 """An unknown recipe, or a pyright-env that could write nothing — argparse's usage status."""
@@ -28,15 +29,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     ``docs/api.md``.
     """
     args = _parser().parse_args(argv)
-    if args.command == "pyright-env":
-        return _pyright_env(Path(args.root))
-    if args.command == "looks":
-        return _looks(Path(args.root).resolve())
-    if args.command == "layers":
-        return _layers(Path(args.root).resolve())
-    if args.command == "measure":
-        return _measure(Path(args.root).resolve(), args.at, args.area, args.skip, args.out)
-    return _recipes(args.action, args.name if args.action == "path" else "")
+    handler: Callable[[argparse.Namespace], int] = _handlers()[args.command]
+    return handler(args)
+
+
+def _handlers() -> dict[str, Callable[[argparse.Namespace], int]]:
+    """Map each subcommand to the function that runs it from the parsed arguments."""
+    return {
+        "recipes": lambda a: _recipes(a.action, a.name if a.action == "path" else ""),
+        "pyright-env": lambda a: _pyright_env(Path(a.root)),
+        "looks": lambda a: _looks(Path(a.root).resolve()),
+        "layers": lambda a: _layers(Path(a.root).resolve()),
+        "measure": lambda a: _measure(Path(a.root).resolve(), a.at, a.area, a.skip, a.out),
+        "quality": lambda a: _quality(Path(a.root).resolve(), report=a.report),
+        "template": _template,
+    }
 
 
 def _recipes(action: str, name: str) -> int:
@@ -129,8 +136,64 @@ def _measure(
     return 0
 
 
+def _quality(root: Path, *, report: bool) -> int:
+    """Run the three gates: the problems and 1, the clean line and 0, or the rows of --report."""
+    held = quality.read_settings(root)
+    try:
+        found = quality.check(root, held)
+    except quality.LedgerError as refused:
+        _err(f"{held.ledger}: {refused}")
+        return REFUSED
+    except (FileNotFoundError, SyntaxError) as refused:
+        _err(str(refused))
+        return REFUSED
+    if report:
+        _out(quality.skeleton(found).rstrip("\n"))
+        return 0
+    for line in quality.lines(found):
+        _out(line)
+    if found.clean:
+        _out(
+            f"{found.modules} modules: no duplicate, every fallback judged ({found.rows} rows), "
+            "every file under its cap"
+        )
+        return 0
+    plural = "" if found.problems == 1 else "s"
+    _out(f"{found.problems} problem{plural}")
+    return PARTIAL
+
+
+def _template(args: argparse.Namespace) -> int:
+    """Write, refresh or check a project's bar; name each file dealt with or each finding."""
+    project = Path(args.dir)
+    if args.verb == "new":
+        answers = template.Answers(args.name, args.python, docs=args.docs)
+        _written(template.new(project, answers))
+        return 0
+    if args.verb == "refresh":
+        if not _written(template.refresh(project)):
+            _out("up to date")
+        return 0
+    findings = template.check(project)
+    for finding in findings:
+        _err(finding.detail)
+    if findings:
+        return PARTIAL
+    held = version(template.PACKAGE)
+    _out(f"{len(template.base_files())} base files match {template.COMMAND} {held}")
+    return 0
+
+
+def _written(written: list[template.Written]) -> bool:
+    """Print one line per file dealt with; whether there was any."""
+    for one in written:
+        note = "  (exists, this project's)" if one.action == "skipped" else ""
+        _out(f"{one.action}  {one.path}{note}")
+    return bool(written)
+
+
 def _parser() -> argparse.ArgumentParser:
-    """Build the command's parser: five subcommands, one of them with two actions."""
+    """Build the command's parser: seven subcommands, two with actions of their own."""
     parser = argparse.ArgumentParser(prog="session-codeintel")
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -163,6 +226,24 @@ def _parser() -> argparse.ArgumentParser:
         "--skip", action="append", default=[], metavar="PATH", help="left out of each area"
     )
     sizes.add_argument("--out", metavar="FILE", help="write the report there")
+
+    gates = commands.add_parser("quality", help="the duplicate, fallback and file-length gates")
+    gates.add_argument("root", nargs="?", default=".", metavar="ROOT")
+    gates.add_argument("--report", action="store_true", help="print ledger rows to fill in")
+
+    bar = commands.add_parser("template", help="the quality bar as base files a project extends")
+    verbs = bar.add_subparsers(dest="verb", required=True)
+    started = verbs.add_parser("new", help="start a project, or give an existing one the bar")
+    started.add_argument("dir", help="the project's directory")
+    started.add_argument("--name", required=True, help="the distribution name")
+    started.add_argument("--python", default="3.12", help="the Python floor")
+    started.add_argument(
+        "--no-docs", dest="docs", action="store_false", help="leave out the five pages"
+    )
+    refreshed = verbs.add_parser("refresh", help="write the base files back from the template")
+    refreshed.add_argument("dir", help="the project's directory")
+    checked = verbs.add_parser("check", help="fail when a base file drifts from the template")
+    checked.add_argument("dir", help="the project's directory")
     return parser
 
 

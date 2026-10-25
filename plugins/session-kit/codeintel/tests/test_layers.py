@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from session_codeintel.cli import main
 from session_codeintel.layers import HEADER, Settings, read_settings, render, write
-from tests.tools import run
+from tests.tools import run, tree
 
 if TYPE_CHECKING:
     import pytest
@@ -50,14 +50,6 @@ PLANTED = {
         "/** @effects clock */\nexport function then(): number { return Date.now() }\n"
     ),
 }
-
-
-def tree(root: Path, files: dict[str, str]) -> None:
-    """Write each file under the root."""
-    for name, text in files.items():
-        path = root / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
 
 
 def project(tmp_path: Path) -> Path:

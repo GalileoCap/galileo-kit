@@ -35,33 +35,9 @@ addopts = "--strict-markers --strict-config"
 filterwarnings = ["error"]
 
 [tool.ruff]
-line-length = 100
-target-version = "py312"
+extend = "ruff.base.toml"
 
 [tool.ruff.lint]
-select = ["ALL"]
-# The owner's bar, as abstract-template writes it for their other projects.
-ignore = [
-    "D203",    # one-blank-line-before-class: D211 is kept, and ruff warns on the pair
-    "D213",    # multi-line-summary-second-line: D212 is kept, likewise
-    "COM812",  # missing-trailing-comma: conflicts with the formatter
-    "CPY001",  # per-file copyright headers: licensing lives in LICENSE
-]
-
-[tool.ruff.lint.mccabe]
-max-complexity = 8
-
-[tool.ruff.lint.pylint]
-max-statements = 35
-max-branches = 10
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = [
-    "S101",    # assert: the point of a test
-    "PLR2004", # magic value in comparison: the expected value is the assertion
-]
-
-[tool.basedpyright]
-typeCheckingMode = "strict"
-pythonVersion = "3.12"
-include = ["src", "tests"]
+# This package's own exceptions to the bar, each with its reason. They add to
+# ruff.base.toml's, as `extend-select` and `extend-per-file-ignores` do.
+ignore = []

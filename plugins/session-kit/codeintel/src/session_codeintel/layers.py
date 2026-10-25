@@ -17,10 +17,12 @@ file without it is never replaced.
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeGuard
+from typing import TYPE_CHECKING
+
+from session_codeintel.settings import block as read_block
+from session_codeintel.settings import is_record, strings, text
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -89,59 +91,36 @@ class Outcome:
     refused: tuple[str, ...]
 
 
-def _is_record(value: object) -> TypeGuard[dict[str, object]]:
-    return isinstance(value, dict)
-
-
-def _text(block: dict[str, object], key: str) -> str | None:
-    value = block.get(key)
-    return value.strip("/") if isinstance(value, str) and value.strip("/") else None
-
-
-def _is_list(value: object) -> TypeGuard[list[object]]:
-    return isinstance(value, list)
-
-
-def _texts(block: dict[str, object], key: str) -> tuple[str, ...]:
-    value = block.get(key)
-    return tuple(s for s in value if isinstance(s, str)) if _is_list(value) else ()
-
-
 def read_settings(root: Path) -> Settings | None:
     """Read the ``layers`` block; None when the file or the block is missing."""
-    try:
-        text = (root / ".claude" / "claude-kit.json").read_text(encoding="utf-8")
-        parsed: object = json.loads(text)
-    except (OSError, ValueError):
-        return None
-    block = parsed.get("layers") if _is_record(parsed) else None
-    if not _is_record(block):
+    block = read_block(root, "layers")
+    if block is None:
         return None
     return Settings(
-        rules=_text(block, "rules") or "lint/ast-grep/rules",
-        tests=_text(block, "tests") or "lint/ast-grep/tests",
+        rules=text(block, "rules") or "lint/ast-grep/rules",
+        tests=text(block, "tests") or "lint/ast-grep/tests",
         python=_python(block.get("python")),
         typescript=_typescript(block.get("typescript")),
     )
 
 
 def _python(block: object) -> Python | None:
-    if not _is_record(block):
+    if not is_record(block):
         return None
-    core, shell = _text(block, "core"), _text(block, "shell")
+    core, shell = text(block, "core"), text(block, "shell")
     if core is None or shell is None:
         return None
-    source = _text(block, "source") or core.rsplit("/", 1)[0]
-    return Python(core=core, shell=shell, source=source, unwinds=_texts(block, "unwinds"))
+    source = text(block, "source") or core.rsplit("/", 1)[0]
+    return Python(core=core, shell=shell, source=source, unwinds=strings(block.get("unwinds")))
 
 
 def _typescript(block: object) -> TypeScript | None:
-    if not _is_record(block):
+    if not is_record(block):
         return None
-    core, effects = _text(block, "core"), _text(block, "effects")
+    core, effects = text(block, "core"), text(block, "effects")
     if core is None or effects is None:
         return None
-    return TypeScript(core=core, effects=effects, outside=_texts(block, "outside"))
+    return TypeScript(core=core, effects=effects, outside=strings(block.get("outside")))
 
 
 def render(root: Path, settings: Settings) -> dict[str, str]:
@@ -228,18 +207,18 @@ def write(root: Path, files: dict[str, str]) -> Outcome:
     written: list[str] = []
     unchanged: list[str] = []
     refused: list[str] = []
-    for path, text in sorted(files.items()):
+    for path, content in sorted(files.items()):
         target = root / path
         if target.exists():
             current = target.read_text(encoding="utf-8")
-            if current == text:
+            if current == content:
                 unchanged.append(path)
                 continue
             if not current.startswith(HEADER):
                 refused.append(path)
                 continue
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(text, encoding="utf-8")
+        target.write_text(content, encoding="utf-8")
         written.append(path)
     return Outcome(written=tuple(written), unchanged=tuple(unchanged), refused=tuple(refused))
 

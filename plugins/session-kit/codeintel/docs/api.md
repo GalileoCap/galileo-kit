@@ -1,6 +1,6 @@
 # The surface
 
-**The command line is the public surface**: the six commands below,
+**The command line is the public surface**: the commands below,
 their output lines and their exit statuses. A repository wires them, and
 this package's version number protects them. The Python
 modules behind it are described after it, for a contributor or a reader
@@ -21,6 +21,10 @@ session-codeintel pyright-env [ROOT]
 session-codeintel looks [ROOT]
 session-codeintel layers [ROOT]
 session-codeintel measure [ROOT] [--at REF]... [--area PATH]... [--skip PATH]... [--out FILE]
+session-codeintel quality [ROOT] [--report]
+session-codeintel template new <dir> --name <name> [--python <version>] [--no-docs]
+session-codeintel template refresh <dir>
+session-codeintel template check <dir>
 ```
 
 ### `recipes list`
@@ -153,6 +157,107 @@ included, and, when
 | --- | --- |
 | 0 | the report was printed or written |
 | 2 | git refused a ref, and argparse's own usage errors |
+
+### `quality [ROOT] [--report]`
+
+Runs the three quality gates over the Python files of the areas named
+under `quality.areas` in `ROOT/.claude/claude-kit.json` (each with
+`name`, `path` and `skip`), or the root alone, with the dependency
+directories and every venv left out. The duplicate gate fails on a
+function body written twice: at any length under the same name, at three
+statements or more under different names, dunders and the methods a
+`Protocol` declares aside (`quality.protocols_from` names other trees
+whose protocols count). The fallback finder fails on a site the ledger
+has not judged, outside the tests: `x or v`, `.get(k, v)`,
+`getattr(o, n, v)`, a broad `except`, an `except` that returns a literal
+or swallows, and `if x is None: x = v` in its statement and ternary
+spellings, `isinstance` read as a presence test. The file-length lint
+fails on a file over `quality.max_code_lines` code lines (500), unless a
+`quality.long` entry (`file`, `cap`, `reason`) raises its cap, or lifts it
+when `cap` is absent.
+
+The ledger is `quality.ledger` (`quality-ledger.toml`), TOML: a
+`[[duplicates]]` row has `members` (`path:qualname`, sorted), `home`,
+`disposition` (`move` or `keep`) and `why`. A `[[fallbacks]]` row has
+`site`, `where`, `form`, `code`, `count` (1), `class` (`declared`,
+`spoken`, `silent` or `refusal-class`), `disposition` (`keep`, `speak`,
+`refuse`, `remove` or `raised`) and `why`. A row the gate cannot read
+refuses the ledger whole, a `dead` class included, since a dead fallback
+is removed and not judged. The gate fails on a row nothing matches, so
+the ledger only shrinks. `--report` prints rows for every new family and
+unjudged site with the judgement blank, to paste in and fill.
+
+| stream | line | when |
+| --- | --- | --- |
+| stdout | `new duplicate (<n> statements): keep one copy, or add a ledger row naming its home:` then `    <path:qualname>` per member | once per family the ledger does not name |
+| stdout | `stale duplicate row: the family is no longer as listed, remove or fix it:` then the members | once per row no family matches |
+| stdout | `unjudged fallback  <path>:<line>  in <where>  [<form>]  <code>  (found <n>, ledger <m>)` | once per site the ledger does not cover, or covers with a lower count |
+| stdout | `stale fallback row  <path>  in <where>  [<form>]  <code>  (ledger <n>, found <m>): remove or fix it` | once per row found fewer times than it says |
+| stdout | `<path>: <n> code lines, <m> over its cap of <c>` | once per file over its cap, largest first |
+| stdout | `the long entry for <path> names a file that is not there` | once per `long` entry naming no module |
+| stdout | `<n> problems` | after the lines above |
+| stdout | `<n> modules: no duplicate, every fallback judged (<rows> rows), every file under its cap` | nothing to report |
+| stdout | the rows | `--report` |
+| stderr | `<ledger>: <what is wrong>` | a row the gate cannot read |
+| stderr | `<path>: not a directory, and protocols_from names a tree that is there` | a `protocols_from` tree is missing |
+
+| exit | meaning |
+| --- | --- |
+| 0 | every gate passes, or `--report` printed its rows |
+| 1 | a problem, as printed |
+| 2 | the ledger or a settings tree refused, and argparse's own usage errors |
+
+### `template new <dir> --name <name> [--python <version>] [--no-docs]`
+
+Writes the Python kind into `<dir>`, creating it if needed: every base
+file (`ruff.base.toml`, `pyright.base.json`, `scripts/check.base.sh`,
+each headed `Written by session-codeintel template`), and every project
+file only if absent (`pyproject.toml` extending the base with its own
+`ignore = []`, `pyrightconfig.json` extending the base with `include` and
+the Python version, `scripts/check` running the base legs, `scripts/test`,
+`src/<module>/__init__.py`, `src/<module>/py.typed`, `tests/__init__.py`,
+and the five pages under `docs/` unless `--no-docs`). `--python` is the
+floor (`3.12`). The module is the name with its dashes as underscores.
+
+| stream | line | when |
+| --- | --- | --- |
+| stdout | `created  <path>`, `refreshed  <path>` (a base file that existed) or `skipped  <path>  (exists, this project's)` | one per file |
+
+Exit 0, or 2 for argparse's own usage errors.
+
+### `template refresh <dir>`
+
+Rewrites every base file whose bytes differ from the template, and no
+other file.
+
+| stream | line | when |
+| --- | --- | --- |
+| stdout | `refreshed  <path>` | per base file rewritten |
+| stdout | `up to date` | none differed |
+
+Exit 0.
+
+### `template check <dir>`
+
+Compares each base file byte for byte, then reads each project file the
+way its tool does (ruff's `extend` from the TOML, `extends` from the
+JSONC, an uncommented line naming the base in `scripts/check`) and
+checks that `pyproject.toml` sets neither `select` nor `per-file-ignores`
+under `[tool.ruff]` or `[tool.ruff.lint]`, which would discard the base's.
+
+| stream | line | when |
+| --- | --- | --- |
+| stdout | `3 base files match session-codeintel template <version>` | clean |
+| stderr | `<base> differs from session-codeintel template <version>: run \`session-codeintel template refresh <dir>\`, or move the change into <the file extending it>` | a base file edited |
+| stderr | `<base> is missing: run \`session-codeintel template refresh <dir>\`` | a base file gone |
+| stderr | `<file> does not extend <base>, so the bar does not apply to this project: <how to link it>` | a project file that lost the link, or is missing |
+| stderr | `pyproject.toml sets <table> <key>, which discards ruff.base.toml's: use extend-<key>` | a discarding setting |
+
+| exit | meaning |
+| --- | --- |
+| 0 | clean |
+| 1 | findings, as printed |
+| 2 | argparse's own usage errors |
 
 ## The modules behind it, which are private
 

@@ -43,6 +43,21 @@ structural search and rewrite, import boundaries as a gate, and complete
   change is argued from one row against the next. The numbers generic-app
   argued its conventions from (2.6% less code, 16.5% less complexity,
   six defects) came from the same counts.
+- **Holds the quality gates no linter has.** `session-codeintel quality`
+  fails on a function body written twice, on a fallback the ledger has
+  not judged (`x or v`, `.get(k, v)`, a broad `except` and the rest,
+  each a substitution the caller cannot see), and on a file over the
+  code-line cap. The ledger is a ratchet: it names every site with its
+  class and disposition, fails on a row the tree no longer matches, and
+  is deleted when empty. The rules behind it are tagents' code-quality
+  rulebook, written for code an LLM writes: it re-derives what exists,
+  copies the nearest pattern and adds a default to quiet a type checker.
+- **Carries the quality bar as a template.** `session-codeintel template`
+  writes three base files a project's own configs extend (ruff over every
+  rule, basedpyright strict, the gate's legs), refreshes them when the bar
+  moves, and fails when a project's copy drifts or its config stops
+  extending the base. The Python kind only, until a project of another
+  kind takes it.
 - **Writes the `pyrightconfig.json` that makes a language server
   complete.** A server started at the root of a repository of several
   `uv` projects sees one interpreter, and answers "no references" for

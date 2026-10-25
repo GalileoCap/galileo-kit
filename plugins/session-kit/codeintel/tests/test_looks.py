@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from session_codeintel.cli import main
 from session_codeintel.looks import Allowance, Settings, check, read_settings, scan
+from tests.tools import tree
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -15,14 +16,6 @@ if TYPE_CHECKING:
 
 PAGE = 'const A = () => <p className="space-y-1 text-sm">a</p>\n'
 TONE = "text-muted-foreground text-sm"
-
-
-def tree(root: Path, files: dict[str, str]) -> None:
-    """Write each file under the root."""
-    for name, text in files.items():
-        path = root / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
 
 
 def test_every_way_a_class_string_is_written_is_a_site_and_one_class_is_no_look(

@@ -19,7 +19,9 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeGuard
+
+from session_codeintel.settings import block as read_block
+from session_codeintel.settings import is_list, is_record, strings
 
 AST_GREP = Path(sys.executable).parent / "ast-grep"
 """The pinned binary this package's environment installs, never PATH's."""
@@ -133,46 +135,29 @@ def normalized(classes: str) -> str:
     return " ".join(sorted(name for name in classes.split() if name))
 
 
-def _is_record(value: object) -> TypeGuard[dict[str, object]]:
-    return isinstance(value, dict)
-
-
-def _is_list(value: object) -> TypeGuard[list[object]]:
-    return isinstance(value, list)
-
-
-def _strings(value: object) -> tuple[str, ...]:
-    return tuple(s for s in value if isinstance(s, str)) if _is_list(value) else ()
-
-
 def read_settings(root: Path) -> Settings:
     """Read the ``looks`` block; the defaults when the file or the block is missing."""
-    try:
-        text = (root / ".claude" / "claude-kit.json").read_text(encoding="utf-8")
-        parsed: object = json.loads(text)
-    except (OSError, ValueError):
-        return Settings()
-    block = parsed.get("looks") if _is_record(parsed) else None
-    if not _is_record(block):
+    block = read_block(root, "looks")
+    if block is None:
         return Settings()
     src = block.get("src")
     src = src.strip("/") if isinstance(src, str) and src else "src"
     skip = block.get("skip")
-    skip_dirs = _strings(skip) if _is_list(skip) else (f"{src}/components/ui",)
+    skip_dirs = strings(skip) if is_list(skip) else (f"{src}/components/ui",)
     allowed = block.get("allowed")
     return Settings(src=src, skip=skip_dirs, allowed=_allowances(allowed))
 
 
 def _allowances(entries: object) -> tuple[Allowance, ...]:
     found: list[Allowance] = []
-    for entry in entries if _is_list(entries) else []:
-        if not _is_record(entry):
+    for entry in entries if is_list(entries) else []:
+        if not is_record(entry):
             continue
         look = entry.get("look")
         if not isinstance(look, str):
             continue
         reason = entry.get("reason")
-        files = tuple(sorted(set(_strings(entry.get("files")))))
+        files = tuple(sorted(set(strings(entry.get("files")))))
         why = reason if isinstance(reason, str) else ""
         found.append(Allowance(look=normalized(look), files=files, reason=why))
     return tuple(found)
@@ -206,8 +191,8 @@ def scan(root: Path, settings: Settings, ast_grep: Path = AST_GREP) -> list[Site
 def _sites(output: str, root: Path) -> list[Site]:
     matches: object = json.loads(output or "[]")
     found: list[Site] = []
-    for match in matches if _is_list(matches) else []:
-        if not _is_record(match):
+    for match in matches if is_list(matches) else []:
+        if not is_record(match):
             continue
         text, file, line = match.get("text"), match.get("file"), _line(match.get("range"))
         if not isinstance(text, str) or not isinstance(file, str) or line is None:
@@ -219,8 +204,8 @@ def _sites(output: str, root: Path) -> list[Site]:
 
 
 def _line(range_: object) -> int | None:
-    start = range_.get("start") if _is_record(range_) else None
-    line = start.get("line") if _is_record(start) else None
+    start = range_.get("start") if is_record(range_) else None
+    line = start.get("line") if is_record(start) else None
     return line + 1 if isinstance(line, int) else None
 
 

@@ -1,0 +1,1325 @@
+# The kit's quality ledger: every duplicate family and every fallback site session-codeintel
+# quality finds in plugins/session-kit, judged. A row that nothing matches fails the gate, so
+# the file only shrinks honestly. A class of silent with disposition raised is a finding for
+# the owner.
+
+[[duplicates]]
+members = [
+    "plugins/session-kit/docs_check/test_session_docs.py:case",
+    "plugins/session-kit/intent/test_session_intent.py:case",
+    "plugins/session-kit/rulebook/test_session_rulebook.py:case",
+    "plugins/session-kit/suppressions/test_session_suppressions.py:case",
+    "plugins/session-kit/transcripts/test_session_transcripts.py:case",
+]
+home = "plugins/session-kit/docs_check/test_session_docs.py:case"
+disposition = "keep"
+why = "each standard-library command and hook test is a file of its own, run with python3 and importing nothing beside it, so the small harness is written in each"
+
+[[duplicates]]
+members = [
+    "plugins/session-kit/hooks/test_format.py:real",
+    "plugins/session-kit/hooks/test_pyright_env.py:real",
+]
+home = "plugins/session-kit/hooks/test_format.py:real"
+disposition = "keep"
+why = "each standard-library command and hook test is a file of its own, run with python3 and importing nothing beside it, so the small harness is written in each"
+
+[[duplicates]]
+members = [
+    "plugins/session-kit/hooks/test_format.py:stub",
+    "plugins/session-kit/hooks/test_pyright_env.py:stub",
+]
+home = "plugins/session-kit/hooks/test_format.py:stub"
+disposition = "keep"
+why = "each standard-library command and hook test is a file of its own, run with python3 and importing nothing beside it, so the small harness is written in each"
+
+[[duplicates]]
+members = [
+    "plugins/session-kit/suppressions/test_session_suppressions.py:run",
+    "plugins/session-kit/transcripts/test_session_transcripts.py:run",
+]
+home = "plugins/session-kit/suppressions/test_session_suppressions.py:run"
+disposition = "keep"
+why = "each standard-library command and hook test is a file of its own, run with python3 and importing nothing beside it, so the small harness is written in each"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/cli.py"
+where = "_looks"
+form = "except-returns"
+code = "except RuntimeError: return REFUSED"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/cli.py"
+where = "_measure"
+form = "except-returns"
+code = "except RuntimeError: return REFUSED"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/cli.py"
+where = "_quality"
+form = "except-returns"
+code = "except (FileNotFoundError, SyntaxError): return REFUSED"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/cli.py"
+where = "_quality"
+form = "except-returns"
+code = "except quality.LedgerError: return REFUSED"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/cli.py"
+where = "_recipes"
+form = "except-returns"
+code = "except recipes.UnknownRecipeError: return REFUSED"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/fallbacks.py"
+where = "_Finder._add"
+form = "or"
+code = "'.'.join(self._scope) or MODULE_LEVEL"
+class = "declared"
+disposition = "keep"
+why = "a named constant spells the absent scope or the bare except"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/fallbacks.py"
+where = "_Finder._handler"
+form = "if-none"
+code = "ast.unparse(node.type) if node.type is not None else BARE"
+class = "declared"
+disposition = "keep"
+why = "a named constant spells the absent scope or the bare except"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/layers.py"
+where = "read_settings"
+form = "or"
+code = "text(block, 'rules') or 'lint/ast-grep/rules'"
+class = "declared"
+disposition = "keep"
+why = "the documented default, named in api.md"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/layers.py"
+where = "read_settings"
+form = "or"
+code = "text(block, 'tests') or 'lint/ast-grep/tests'"
+class = "declared"
+disposition = "keep"
+why = "the documented default, named in api.md"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/looks.py"
+where = "_allowances"
+form = "if-none"
+code = "reason if isinstance(reason, str) else ''"
+class = "silent"
+disposition = "raised"
+why = "an allowance without a reason is accepted with an empty one, where the settings' shape asks for a reason"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/looks.py"
+where = "_sites"
+form = "or"
+code = "output or '[]'"
+class = "declared"
+disposition = "keep"
+why = "a tool that printed nothing found no match, and an empty list is that answer"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/looks.py"
+where = "lines"
+form = "if-none"
+code = "', '.join(drift.found) if drift.found else 'none'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/looks.py"
+where = "read_settings"
+form = "if-none"
+code = "src.strip('/') if isinstance(src, str) and src else 'src'"
+class = "declared"
+disposition = "keep"
+why = "the documented default, named in api.md"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/measure.py"
+where = "_area"
+form = "or"
+code = "named or EXTENSIONS"
+class = "declared"
+disposition = "keep"
+why = "the documented default, named in api.md"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/measure.py"
+where = "py_complexity"
+form = "or"
+code = "done.stdout or b'[]'"
+class = "declared"
+disposition = "keep"
+why = "a tool that printed nothing found no match, and an empty list is that answer"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/measure.py"
+where = "py_counts"
+form = "except-returns"
+code = "except (tokenize.TokenError, SyntaxError): pass"
+class = "silent"
+disposition = "raised"
+why = "a file the tokenizer refuses is counted as far as it got, and the report says nothing of it"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/measure.py"
+where = "ts_complexity"
+form = "get"
+code = "marks.get(file, [])"
+class = "declared"
+disposition = "keep"
+why = "a file with no branch has an empty list of marks"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/measure.py"
+where = "ts_complexity"
+form = "or"
+code = "done.stdout or b'[]'"
+class = "declared"
+disposition = "keep"
+why = "a tool that printed nothing found no match, and an empty list is that answer"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/pyright_env.py"
+where = "_path_dependencies"
+form = "get"
+code = "pyproject['tool'].get('uv', {})"
+class = "declared"
+disposition = "keep"
+why = "a pyproject without the table has no settings under it, and the shape is the tool's"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/pyright_env.py"
+where = "_path_dependencies"
+form = "get"
+code = "pyproject['tool'].get('uv', {}).get('sources', {})"
+class = "declared"
+disposition = "keep"
+why = "a pyproject without the table has no settings under it, and the shape is the tool's"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/pyright_env.py"
+where = "_python_version"
+form = "get"
+code = "pyproject['project'].get('requires-python', '')"
+class = "declared"
+disposition = "keep"
+why = "a pyproject without the table has no settings under it, and the shape is the tool's"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/pyright_env.py"
+where = "_python_version"
+form = "get"
+code = "tool.get('basedpyright', {})"
+class = "declared"
+disposition = "keep"
+why = "a pyproject without the table has no settings under it, and the shape is the tool's"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/pyright_env.py"
+where = "_python_version"
+form = "get"
+code = "tool.get('pyright', {})"
+class = "declared"
+disposition = "keep"
+why = "a pyproject without the table has no settings under it, and the shape is the tool's"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/pyright_env.py"
+where = "_read"
+form = "get"
+code = "data.get('project', {})"
+class = "declared"
+disposition = "keep"
+why = "a pyproject without the table has no settings under it, and the shape is the tool's"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/pyright_env.py"
+where = "_read"
+form = "get"
+code = "data.get('tool', {})"
+class = "declared"
+disposition = "keep"
+why = "a pyproject without the table has no settings under it, and the shape is the tool's"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/quality.py"
+where = "_fallback_row"
+form = "get"
+code = "row.get('count', 1)"
+class = "declared"
+disposition = "keep"
+why = "a row without a count is one site, as the ledger's shape says"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/quality.py"
+where = "compare_fallbacks"
+form = "get"
+code = "counts.get(row.key, 0)"
+count = 2
+class = "declared"
+disposition = "keep"
+why = "zero is the count for a name seen no times"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/quality.py"
+where = "read_settings"
+form = "or"
+code = "areas or DEFAULT_AREAS"
+class = "declared"
+disposition = "keep"
+why = "the documented default, named in api.md"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/quality.py"
+where = "read_settings"
+form = "or"
+code = "settings.text(block, 'ledger') or LEDGER"
+class = "declared"
+disposition = "keep"
+why = "the documented default, named in api.md"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/settings.py"
+where = "block"
+form = "except-returns"
+code = "except (OSError, ValueError): return None"
+class = "spoken"
+disposition = "keep"
+why = "the absence is in the return type and the docstring, and the caller decides"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/template.py"
+where = "_links"
+form = "except-returns"
+code = "except ValueError: return False"
+class = "spoken"
+disposition = "keep"
+why = "a file that does not parse is reported as not extending its base, in the finding's words"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/template.py"
+where = "_ruff_table"
+form = "except-returns"
+code = "except ValueError: return {}"
+class = "spoken"
+disposition = "keep"
+why = "a file that does not parse is reported as not extending its base, in the finding's words"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/template.py"
+where = "without_comments"
+form = "or"
+code = "found.group(1) or ''"
+class = "declared"
+disposition = "keep"
+why = "a comment match has no string group and is dropped, which is the function's purpose"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "main"
+form = "broad-except"
+code = "except Exception"
+class = "silent"
+disposition = "keep"
+why = "a settings hook never breaks the session it runs in (C1), and the engine shows nothing of a hook that fails"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "respond"
+form = "except-returns"
+code = "except (OSError, subprocess.TimeoutExpired): continue"
+class = "spoken"
+disposition = "keep"
+why = "the formatter that did not run is named in the hook's own message"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "respond"
+form = "or"
+code = "payload.get('hook_event_name') or 'PostToolUse'"
+class = "declared"
+disposition = "keep"
+why = "the event the hook answers for when the payload names none, a named constant"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "written_files"
+form = "if-none"
+code = "os.path.abspath(os.path.join(cwd, one)) if one else ''"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "written_files"
+form = "or"
+code = "(payload.get('tool_input') or {}).get('file_path') or ''"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "written_files"
+form = "or"
+code = "diff.get('files') or []"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "written_files"
+form = "or"
+code = "one.get('filePath') or ''"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "written_files"
+form = "or"
+code = "payload.get('tool_input') or {}"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "written_files"
+form = "or"
+code = "payload.get('tool_response') or {}"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/format.py"
+where = "written_files"
+form = "or"
+code = "response.get('bashEditDiff') or {}"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/guard.py"
+where = "head_is_published"
+form = "except-returns"
+code = "except (OSError, subprocess.SubprocessError): return False"
+class = "silent"
+disposition = "raised"
+why = "when git cannot answer, the guard lets an amend of a pushed commit through, and failing closed would refuse it, and the owner decides"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/guard.py"
+where = "head_is_published"
+form = "or"
+code = "cwd or None"
+class = "declared"
+disposition = "keep"
+why = "subprocess takes None for the current directory"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/guard.py"
+where = "main"
+form = "broad-except"
+code = "except Exception"
+class = "silent"
+disposition = "keep"
+why = "a settings hook never breaks the session it runs in (C1), and the engine shows nothing of a hook that fails"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/guard.py"
+where = "main"
+form = "get"
+code = "(payload.get('tool_input') or {}).get('command', '')"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/guard.py"
+where = "main"
+form = "get"
+code = "payload.get('cwd', '')"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/guard.py"
+where = "main"
+form = "get"
+code = "payload.get('tool_name', '')"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/guard.py"
+where = "main"
+form = "or"
+code = "payload.get('tool_input') or {}"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/guard.py"
+where = "project_test_commands"
+form = "except-returns"
+code = "except (OSError, ValueError, AttributeError): return []"
+class = "silent"
+disposition = "raised"
+why = "a settings file that does not parse drops the project's test commands from the refusals without a word"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/guard.py"
+where = "project_test_commands"
+form = "get"
+code = "json.load(fh).get('test_commands', [])"
+class = "declared"
+disposition = "keep"
+why = "a project naming no test commands has none, the documented setting"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/pyright_env.py"
+where = "asked"
+form = "except-returns"
+code = "except (OSError, ValueError): return False"
+class = "declared"
+disposition = "keep"
+why = "no settings file means the project did not ask"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/pyright_env.py"
+where = "main"
+form = "except-returns"
+code = "except (OSError, subprocess.TimeoutExpired): return 0"
+class = "spoken"
+disposition = "keep"
+why = "the failure is said in the hook's message before the status"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/pyright_env.py"
+where = "main"
+form = "or"
+code = "'; '.join(lines) or f'pyright-env exited {done.returncode}'"
+class = "spoken"
+disposition = "keep"
+why = "the failure is said in the hook's message before the status"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/pyright_env.py"
+where = "payload"
+form = "except-returns"
+code = "except ValueError: return {}"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/pyright_env.py"
+where = "payload"
+form = "if-none"
+code = "data if isinstance(data, dict) else {}"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/pyright_env.py"
+where = "payload"
+form = "or"
+code = "sys.stdin.read() or '{}'"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/time_hooks.py"
+where = "commands"
+form = "get"
+code = "group.get('matcher', '')"
+class = "declared"
+disposition = "keep"
+why = "a hook group without a matcher matches every tool, the engine's own default"
+
+[[fallbacks]]
+site = "plugins/session-kit/hooks/time_hooks.py"
+where = "main"
+form = "or"
+code = "os.environ.get('CLAUDE_PLUGIN_ROOT') or PLUGIN"
+class = "declared"
+disposition = "keep"
+why = "the plugin's own directory when the engine's variable is unset, a named constant"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "Lock.__enter__"
+form = "or"
+code = "holder or 'unknown'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "Lock.__exit__"
+form = "except-returns"
+code = "except FileNotFoundError: pass"
+count = 2
+class = "declared"
+disposition = "keep"
+why = "a lock already released has nothing to remove, which is the state wanted"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "Lock.holder"
+form = "except-returns"
+code = "except (OSError, ValueError): return None"
+class = "spoken"
+disposition = "keep"
+why = "the absence is in the return type and the docstring, and the caller decides"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "alive"
+form = "except-returns"
+code = "except PermissionError: return True"
+class = "declared"
+disposition = "keep"
+why = "a pid that cannot be signalled is dead, and one that may not be is alive, so a lock is never reclaimed from a live holder"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "alive"
+form = "except-returns"
+code = "except ProcessLookupError: return False"
+class = "declared"
+disposition = "keep"
+why = "a pid that cannot be signalled is dead, and one that may not be is alive, so a lock is never reclaimed from a live holder"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "check_entry"
+form = "get"
+code = "entry.fields.get('status', '')"
+class = "spoken"
+disposition = "keep"
+why = "an entry without the list has none, and the check names what is missing"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "check_entry"
+form = "get"
+code = "entry.lists.get('from', [])"
+class = "spoken"
+disposition = "keep"
+why = "an entry without the list has none, and the check names what is missing"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "check_entry"
+form = "get"
+code = "entry.lists.get(key, [])"
+count = 2
+class = "spoken"
+disposition = "keep"
+why = "an entry without the list has none, and the check names what is missing"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "check_record"
+form = "get"
+code = "e.lists.get('from', [])"
+class = "spoken"
+disposition = "keep"
+why = "an entry without the list has none, and the check names what is missing"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "check_record"
+form = "get"
+code = "e.lists.get('supersedes', [])"
+class = "spoken"
+disposition = "keep"
+why = "an entry without the list has none, and the check names what is missing"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "claim"
+form = "or"
+code = "git(root, 'rev-parse', '--short', 'HEAD') or 'none'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "git"
+form = "except-returns"
+code = "except (OSError, subprocess.SubprocessError): return None"
+class = "spoken"
+disposition = "keep"
+why = "the absence is in the return type and the docstring, and the caller decides"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "main"
+form = "except-returns"
+code = "except TimeoutError: return 1"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "names"
+form = "get"
+code = "ladder.get(e.level, 9)"
+class = "declared"
+disposition = "keep"
+why = "a level outside the ladder sorts last"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "names"
+form = "if-none"
+code = "sorted(entries.values(), key=lambda e: (ladder.get(e.level, 9), e.key())) if not wanted else []"
+class = "declared"
+disposition = "keep"
+why = "a call naming ids lists those and no other, a choice and no absence"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_entry"
+form = "get"
+code = "fields.get('id', '')"
+class = "spoken"
+disposition = "keep"
+why = "an empty field is what the check reports as a problem"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_entry"
+form = "get"
+code = "fields.get('status', '')"
+class = "spoken"
+disposition = "keep"
+why = "an empty field is what the check reports as a problem"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_entry"
+form = "or"
+code = "m.group(2) or ''"
+class = "spoken"
+disposition = "keep"
+why = "an empty field is what the check reports as a problem"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "get"
+code = "action.fields.get('kind', '')"
+class = "declared"
+disposition = "keep"
+why = "a goal with no objective, an objective with no action, an entry without the list render empty"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "get"
+code = "children.get(goal.id, [])"
+class = "declared"
+disposition = "keep"
+why = "a goal with no objective, an objective with no action, an entry without the list render empty"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "get"
+code = "children.get(objective.id, [])"
+class = "declared"
+disposition = "keep"
+why = "a goal with no objective, an objective with no action, an entry without the list render empty"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "get"
+code = "e.lists.get('from', [])"
+count = 2
+class = "declared"
+disposition = "keep"
+why = "a goal with no objective, an objective with no action, an entry without the list render empty"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "get"
+code = "e.lists.get('supersedes', [])"
+class = "declared"
+disposition = "keep"
+why = "a goal with no objective, an objective with no action, an entry without the list render empty"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "or"
+code = "[line(e) + (' (an objective to approve)' if e.level == 'O' else ' (a constraint to state)' if e.level == 'C' else ' (an…"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "or"
+code = "[line(e) + (', superseded by ' + ', '.join((f'`{s}`' for s in successors[e.id])) if e.id in successors else ', nothing …"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "render_index"
+form = "or"
+code = "[line(e) for e in ordered if e.level == 'C' and (not e.retired)] or ['None.']"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/rulebook/session_rulebook.py"
+where = "shown"
+form = "except-returns"
+code = "except ValueError: pass"
+class = "declared"
+disposition = "keep"
+why = "a path outside the root is shown from home instead, the next statement"
+
+[[fallbacks]]
+site = "plugins/session-kit/suppressions/session_suppressions.py"
+where = "sites_in"
+form = "except-returns"
+code = "except (OSError, UnicodeDecodeError): return []"
+class = "silent"
+disposition = "raised"
+why = "a file that cannot be read is searched for no marker and nothing says so"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/cli.py"
+where = "main"
+form = "except-returns"
+code = "except ValueError: return 2"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/cli.py"
+where = "main"
+form = "except-returns"
+code = "except config_module.ConfigError: return 2"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/cli.py"
+where = "main"
+form = "except-returns"
+code = "except readers.CommandError: return 2"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/config.py"
+where = "load"
+form = "get"
+code = "given.get('commands', [])"
+class = "declared"
+disposition = "keep"
+why = "the documented default of the settings file"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/config.py"
+where = "load"
+form = "get"
+code = "given.get('guide', [])"
+class = "declared"
+disposition = "keep"
+why = "the documented default of the settings file"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/config.py"
+where = "load"
+form = "get"
+code = "given.get('languages', {})"
+class = "declared"
+disposition = "keep"
+why = "the documented default of the settings file"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/config.py"
+where = "load"
+form = "get"
+code = "given.get('readers', [])"
+class = "declared"
+disposition = "keep"
+why = "the documented default of the settings file"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/find.py"
+where = "hits"
+form = "or"
+code = "allowed or {}"
+class = "declared"
+disposition = "keep"
+why = "a keyword default of None read as empty, on the public signature"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/find.py"
+where = "hits"
+form = "or"
+code = "languages or {}"
+class = "declared"
+disposition = "keep"
+why = "a keyword default of None read as empty, on the public signature"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "_added"
+form = "or"
+code = "hunk.get('lines') or []"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "_placed"
+form = "except-returns"
+code = "except OSError: return None"
+class = "spoken"
+disposition = "keep"
+why = "the absence is in the return type and the docstring, and the caller decides"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "_placed"
+form = "if-none"
+code = "text.find(new) if new else -1"
+class = "declared"
+disposition = "keep"
+why = "an empty edit is placed nowhere, and the caller reads the None"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "_told"
+form = "except-returns"
+code = "except (OSError, readers.CommandError): return f'session-tells could not read {rel}: {error}'"
+class = "spoken"
+disposition = "keep"
+why = "the file that could not be read is named in the hook's message"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "edited"
+form = "or"
+code = "diff.get('files') or []"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "edited"
+form = "or"
+code = "one.get('hunks') or []"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "edited"
+form = "or"
+code = "payload.get('tool_input') or {}"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "edited"
+form = "or"
+code = "payload.get('tool_response') or {}"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "edited"
+form = "or"
+code = "response.get('bashEditDiff') or {}"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "edited"
+form = "or"
+code = "response.get('structuredPatch') or []"
+class = "silent"
+disposition = "keep"
+why = "the engine's payload is read as it comes, and a field it lacks is read as empty, which the hook takes as nothing to do"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/hook.py"
+where = "message"
+form = "get"
+code = "fixes.get(hit.rule, '')"
+class = "declared"
+disposition = "keep"
+why = "a rule may carry no fix line"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/readers/comments.py"
+where = "comment_units"
+form = "if-none"
+code = "comment.row if comment.alone else -2"
+class = "declared"
+disposition = "keep"
+why = "a comment's marker and row depend on whether it stands alone, a choice the reader documents"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/readers/comments.py"
+where = "comment_units"
+form = "if-none"
+code = "marker if comment.alone else ''"
+class = "declared"
+disposition = "keep"
+why = "a comment's marker and row depend on whether it stands alone, a choice the reader documents"
+
+[[fallbacks]]
+site = "plugins/session-kit/tells/src/session_tells/readers/comments.py"
+where = "comment_units"
+form = "or"
+code = "node.text or b''"
+class = "declared"
+disposition = "keep"
+why = "a comment's marker and row depend on whether it stands alone, a choice the reader documents"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "day"
+form = "if-none"
+code = "at.date().isoformat() if at else '?'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "hooks_table"
+form = "get"
+code = "chars.get(name, 0)"
+class = "declared"
+disposition = "keep"
+why = "zero is the count for a name seen no times"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "hooks_table"
+form = "get"
+code = "fires.get(name, 0)"
+class = "declared"
+disposition = "keep"
+why = "zero is the count for a name seen no times"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "hooks_table"
+form = "get"
+code = "in_sessions.get(name, 0)"
+class = "declared"
+disposition = "keep"
+why = "zero is the count for a name seen no times"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "hooks_table"
+form = "get"
+code = "s.hook_chars.get(name, 0)"
+class = "declared"
+disposition = "keep"
+why = "zero is the count for a name seen no times"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "note_tool"
+form = "get"
+code = "session.tools.get(name, 0)"
+class = "declared"
+disposition = "keep"
+why = "zero is the count for a name seen no times"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "note_tool"
+form = "if-none"
+code = "inp if isinstance(inp, dict) else {}"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "note_tool"
+form = "or"
+code = "args.get('command') or ''"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "note_tool"
+form = "or"
+code = "args.get('file_path') or ''"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "note_tool"
+form = "or"
+code = "args.get('skill') or ''"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "except-returns"
+code = "except ValueError: continue"
+class = "silent"
+disposition = "raised"
+why = "a line of the transcript that is not JSON is skipped and nothing counts the skips"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "get"
+code = "session.hook_chars.get(name, 0)"
+class = "declared"
+disposition = "keep"
+why = "zero is the count for a name seen no times"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "get"
+code = "session.hooks.get(name, 0)"
+class = "declared"
+disposition = "keep"
+why = "zero is the count for a name seen no times"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "if-none"
+code = "r.get('attachment') if isinstance(r.get('attachment'), dict) else {}"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "if-none"
+code = "r.get('compactMetadata') if isinstance(r.get('compactMetadata'), dict) else {}"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "if-none"
+code = "r.get('message') if isinstance(r.get('message'), dict) else {}"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "b.get('name') or ''"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "message.get('model') or r.get('requestedModel') or ''"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "meta.get('durationMs') or 0"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "meta.get('preTokens') or 0"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "meta.get('trigger') or '?'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "r.get('requestId') or message.get('id') or r.get('uuid') or ''"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "r.get('totalCostUSD') or 0"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "r.get('totalLinesAdded') or 0"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "r.get('totalLinesRemoved') or 0"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "usage.get('cache_creation_input_tokens') or 0"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "usage.get('cache_read_input_tokens') or 0"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "usage.get('input_tokens') or 0"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "read_session"
+form = "or"
+code = "usage.get('output_tokens') or 0"
+class = "silent"
+disposition = "keep"
+why = "a transcript record is read as the engine wrote it, and a field it lacks counts as empty or zero in the tables"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "warnings_summary"
+form = "if-none"
+code = "str(later[len(later) // 2]) if later else 'none'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/session_transcripts.py"
+where = "when"
+form = "except-returns"
+code = "except ValueError: return None"
+class = "spoken"
+disposition = "keep"
+why = "the absence is in the return type and the docstring, and the caller decides"

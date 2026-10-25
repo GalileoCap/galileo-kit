@@ -1,8 +1,11 @@
-#!/bin/bash
-# The package's gate: ruff, the formatter's check and basedpyright, zero warnings.
-cd "$(dirname "$0")/.." || exit 1
+#!/usr/bin/env bash
+# The package's gate: the bar's own legs (ruff, the formatter's check and basedpyright,
+# zero warnings), then the drift check against the template. Every leg runs.
+set -uo pipefail
+cd "$(dirname "$0")/.."
 status=0
-uv run --quiet ruff check . || status=1
-uv run --quiet ruff format --check . || status=1
-uv run --quiet basedpyright --warnings || status=1
+bash scripts/check.base.sh || status=1
+echo "== the bar (session-codeintel template) =="
+uv run --quiet session-codeintel template check . || status=1
+[ "$status" -eq 0 ] && echo "== all clean =="
 exit $status

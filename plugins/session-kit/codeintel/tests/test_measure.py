@@ -14,7 +14,7 @@ from session_codeintel.measure import (
     size_of,
     ts_complexity,
 )
-from tests.tools import run
+from tests.tools import run, tree
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -66,14 +66,6 @@ COMMIT = [
     "commit",
 ]
 TSX = 'export const P = () => <div className="a b"><span className="a b" /></div>\n'
-
-
-def tree(root: Path, files: dict[str, str]) -> None:
-    """Write each file under the root."""
-    for name, text in files.items():
-        path = root / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
 
 
 def test_a_python_file_is_counted_by_its_tokens_and_its_functions_by_ruff(tmp_path: Path) -> None:

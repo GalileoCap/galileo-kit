@@ -1,0 +1,7 @@
+// This project's type checking. The bar is pyright.base.json's. What is checked,
+// and at which Python, is the project's.
+{
+  "extends": "./pyright.base.json",
+  "include": ["src", "tests"],
+  "pythonVersion": "3.12"
+}

@@ -6,6 +6,20 @@ the command line, which is the public surface in [`api.md`](api.md), is
 a major bump, and its entry says what a consumer has to change. Before
 1.0, a minor bump may break.
 
+## 0.6.0, 2026-10-25
+
+- **`quality [ROOT] [--report]`**: the duplicate gate, the fallback
+  ledger and the file-length lint over `quality.areas`, with the ledger
+  in `quality-ledger.toml` ([`api.md`](api.md)). The gates are
+  tagents-quality's, read on the syntax tree, without its code map.
+- **`template new | refresh | check`**: the quality bar as three base
+  files a project's `pyproject.toml`, `pyrightconfig.json` and
+  `scripts/check` extend, with the check that a copy has not drifted
+  ([`api.md`](api.md)). abstract-template's Python kind, without copier.
+  This package and `session-tells` take it.
+- The settings file's JSON guards live in one module, `settings.py`,
+  which the duplicate gate asked for on its first run over the kit.
+
 ## 0.5.0, 2026-10-25
 
 - **`measure [ROOT]`**: size, complexity and repeated looks per area and

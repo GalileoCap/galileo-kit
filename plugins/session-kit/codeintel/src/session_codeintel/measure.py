@@ -26,9 +26,10 @@ import tempfile
 import tokenize
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeGuard
 
 from session_codeintel import looks
+from session_codeintel.settings import block as read_block
+from session_codeintel.settings import is_list, is_record, strings
 
 AST_GREP = Path(sys.executable).parent / "ast-grep"
 RUFF = Path(sys.executable).parent / "ruff"
@@ -143,55 +144,41 @@ class Row:
     repeats: tuple[int, int] | None
 
 
-def _is_record(value: object) -> TypeGuard[dict[str, object]]:
-    return isinstance(value, dict)
-
-
-def _is_list(value: object) -> TypeGuard[list[object]]:
-    return isinstance(value, list)
-
-
 def read_areas(root: Path) -> tuple[Area, ...]:
     """Read ``measure.areas``, or the root as the one area."""
-    try:
-        text = (root / ".claude" / "claude-kit.json").read_text(encoding="utf-8")
-        parsed: object = json.loads(text)
-    except (OSError, ValueError):
-        return (Area(".", "."),)
-    block = parsed.get("measure") if _is_record(parsed) else None
-    entries = block.get("areas") if _is_record(block) else None
-    areas = [a for a in (_area(e) for e in entries) if a] if _is_list(entries) else []
+    block = read_block(root, "measure")
+    entries = block.get("areas") if block is not None else None
+    areas = [a for a in (_area(e) for e in entries) if a] if is_list(entries) else []
     return tuple(areas) or (Area(".", "."),)
 
 
 def _area(entry: object) -> Area | None:
-    if not _is_record(entry):
+    if not is_record(entry):
         return None
     path = entry.get("path")
     if not isinstance(path, str) or not path:
         return None
     name = entry.get("name")
-    skip = entry.get("skip")
-    skips = tuple(s for s in skip if isinstance(s, str)) if _is_list(skip) else ()
-    given = entry.get("extensions")
-    named = tuple(e for e in given if isinstance(e, str)) if _is_list(given) else ()
     label = name if isinstance(name, str) and name else path
+    named = strings(entry.get("extensions"))
+    skips = strings(entry.get("skip"))
     return Area(name=label, path=path.strip("/"), skip=skips, extensions=named or EXTENSIONS)
 
 
 def files_of(root: Path, area: Area) -> list[Path]:
-    """List the area's files by extension, its skip and the dependency directories left out."""
+    """List the area's files by extension, skipping its skip, dependency directories and venvs."""
     base = root / area.path
     if not base.is_dir():
         return []
     skipped = tuple((root / s).resolve() for s in area.skip)
+    venvs = tuple(p.parent.resolve() for p in base.rglob("pyvenv.cfg"))
     found: list[Path] = []
     for path in sorted(base.rglob("*")):
         if not path.is_file() or path.suffix not in area.extensions:
             continue
         if any(part in SKIP_DIRS for part in path.relative_to(root).parts):
             continue
-        if any(path.resolve().is_relative_to(s) for s in skipped):
+        if any(path.resolve().is_relative_to(s) for s in skipped + venvs):
             continue
         found.append(path)
     return found
@@ -281,8 +268,8 @@ def py_complexity(root: Path, files: list[Path], ruff: Path = RUFF) -> Complexit
     )
     values: list[int] = []
     parsed: object = json.loads(done.stdout or b"[]")
-    for item in parsed if _is_list(parsed) else []:
-        message = item.get("message") if _is_record(item) else None
+    for item in parsed if is_list(parsed) else []:
+        message = item.get("message") if is_record(item) else None
         if isinstance(message, str) and "(" in message:
             values.append(int(message.rsplit("(", 1)[1].split(" ")[0]))
     return Complexity.of(values)
@@ -299,7 +286,7 @@ def ts_complexity(root: Path, files: list[Path], ast_grep: Path = AST_GREP) -> C
     spans: dict[str, list[tuple[int, int]]] = {}
     marks: dict[str, list[tuple[str, int]]] = {}
     parsed: object = json.loads(done.stdout or b"[]")
-    for item in parsed if _is_list(parsed) else []:
+    for item in parsed if is_list(parsed) else []:
         match = _match(item)
         if match is None:
             continue
@@ -337,11 +324,11 @@ def _attribute(
 
 
 def _match(item: object) -> tuple[str, str, int, int] | None:
-    if not _is_record(item):
+    if not is_record(item):
         return None
     rule, file, range_ = item.get("ruleId"), item.get("file"), item.get("range")
-    offsets = range_.get("byteOffset") if _is_record(range_) else None
-    if not isinstance(rule, str) or not isinstance(file, str) or not _is_record(offsets):
+    offsets = range_.get("byteOffset") if is_record(range_) else None
+    if not isinstance(rule, str) or not isinstance(file, str) or not is_record(offsets):
         return None
     start, end = offsets.get("start"), offsets.get("end")
     if not isinstance(start, int) or not isinstance(end, int):

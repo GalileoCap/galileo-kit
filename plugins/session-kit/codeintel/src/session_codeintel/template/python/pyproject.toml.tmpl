@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "$name"
+version = "0.1.0a0"
+description = ""
+$readme
+requires-python = ">=$python"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.32.2",
+    "pytest>=9.0.1",
+    "pytest-timeout>=2.4.0",
+    "ruff>=0.15.7",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/$module"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 10
+addopts = "--strict-markers --strict-config"
+filterwarnings = ["error"]
+
+[tool.ruff]
+extend = "ruff.base.toml"
+
+[tool.ruff.lint]
+# This project's own exceptions to the bar, each with its reason. They add to
+# ruff.base.toml's, as `extend-select` and `extend-per-file-ignores` do.
+ignore = []
