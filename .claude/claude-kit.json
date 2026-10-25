@@ -1,5 +1,33 @@
 {
   "rulebook": {
-    "skills_from": ["plugins/*/skills/*/SKILL.md"]
+    "skills_from": [
+      "plugins/*/skills/*/SKILL.md"
+    ]
+  },
+  "measure": {
+    "areas": [
+      {
+        "name": "session-kit, the hooks module",
+        "path": "plugins/session-kit/hooks"
+      },
+      {
+        "name": "session-kit, the Python commands",
+        "path": "plugins/session-kit",
+        "skip": [
+          "plugins/session-kit/hooks",
+          "plugins/session-kit/codeintel",
+          "plugins/session-kit/tells",
+          "plugins/session-kit/skills"
+        ]
+      },
+      {
+        "name": "session-codeintel",
+        "path": "plugins/session-kit/codeintel/src"
+      },
+      {
+        "name": "session-tells",
+        "path": "plugins/session-kit/tells/src"
+      }
+    ]
   }
 }

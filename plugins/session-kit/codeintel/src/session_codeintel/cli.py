@@ -1,4 +1,4 @@
-"""The ``session-codeintel`` command: ``recipes``, ``pyright-env``, ``looks`` and ``layers``."""
+"""The ``session-codeintel`` command: recipes, pyright-env, looks, layers and measure."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from session_codeintel import layers, looks, pyright_env, recipes
+from session_codeintel import layers, looks, measure, pyright_env, recipes
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -24,7 +24,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     ``recipes list`` and ``recipes path`` exit 0, or 2 for an unknown recipe.
     ``pyright-env`` exits 0 when every package was written as it is checked,
     1 when some were left out or have settings the root file overrides, 2
-    when none could be written.
+    when none could be written. ``looks``, ``layers`` and ``measure`` are in
+    ``docs/api.md``.
     """
     args = _parser().parse_args(argv)
     if args.command == "pyright-env":
@@ -33,12 +34,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _looks(Path(args.root).resolve())
     if args.command == "layers":
         return _layers(Path(args.root).resolve())
-    if args.action == "list":
+    if args.command == "measure":
+        return _measure(Path(args.root).resolve(), args.at, args.area, args.skip, args.out)
+    return _recipes(args.action, args.name if args.action == "path" else "")
+
+
+def _recipes(action: str, name: str) -> int:
+    """List the recipes, or print one's path; 2 for an unknown name."""
+    if action == "list":
         for recipe in recipes.bundled():
             _out(f"{recipe.name}\t{recipe.purpose}")
         return 0
     try:
-        _out(str(recipes.find(args.name).path))
+        _out(str(recipes.find(name).path))
     except recipes.UnknownRecipeError as unknown:
         _err(str(unknown))
         return REFUSED
@@ -93,8 +101,36 @@ def _layers(root: Path) -> int:
     return PARTIAL if outcome.refused else 0
 
 
+def _measure(
+    root: Path, refs: list[str], paths: list[str], skip: list[str], out: str | None
+) -> int:
+    """Measure the working tree, or each ref's archive, and print or write the report."""
+    areas = tuple(measure.Area(p, p, tuple(skip)) for p in paths) or measure.read_areas(root)
+    has_settings = (root / ".claude" / "claude-kit.json").is_file()
+    looks_settings = looks.read_settings(root) if has_settings else None
+    rows: list[measure.Row] = []
+    try:
+        if refs:
+            into = measure.scratch()
+            for ref in refs:
+                taken = measure.snapshot_of(root, ref, into)
+                rows += measure.measure(taken, areas, ref, looks_settings)
+        else:
+            rows += measure.measure(root, areas, "working tree", looks_settings)
+    except RuntimeError as failed:
+        _err(str(failed))
+        return REFUSED
+    text = measure.render(rows, root, f"Code measure of {root.name}")
+    if out:
+        Path(out).write_text(text, encoding="utf-8")
+        _out(f"{out}: {len(rows)} row(s)")
+    else:
+        _out(text.rstrip("\n"))
+    return 0
+
+
 def _parser() -> argparse.ArgumentParser:
-    """Build the command's parser: four subcommands, one of them with two actions."""
+    """Build the command's parser: five subcommands, one of them with two actions."""
     parser = argparse.ArgumentParser(prog="session-codeintel")
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -114,6 +150,19 @@ def _parser() -> argparse.ArgumentParser:
 
     pack = commands.add_parser("layers", help="write the pure-core rules from ROOT's settings")
     pack.add_argument("root", nargs="?", default=".", metavar="ROOT")
+
+    sizes = commands.add_parser("measure", help="size, complexity and repetition per area")
+    sizes.add_argument("root", nargs="?", default=".", metavar="ROOT")
+    sizes.add_argument(
+        "--at", action="append", default=[], metavar="REF", help="a git ref to archive"
+    )
+    sizes.add_argument(
+        "--area", action="append", default=[], metavar="PATH", help="an area to measure"
+    )
+    sizes.add_argument(
+        "--skip", action="append", default=[], metavar="PATH", help="left out of each area"
+    )
+    sizes.add_argument("--out", metavar="FILE", help="write the report there")
     return parser
 
 

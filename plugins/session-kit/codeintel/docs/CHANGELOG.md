@@ -6,6 +6,15 @@ the command line, which is the public surface in [`api.md`](api.md), is
 a major bump, and its entry says what a consumer has to change. Before
 1.0, a minor bump may break.
 
+## 0.5.0, 2026-10-25
+
+- **`measure [ROOT]`**: size, complexity and repeated looks per area and
+  per snapshot (`--at REF`, a `git archive` each), the Python complexity
+  from ruff's `C901`, now a runtime dependency pinned like the other
+  tools, and the TypeScript complexity counted with ast-grep
+  ([`api.md`](api.md)). The counts are the ones behind generic-app's
+  impact report, whose scripts are kept under the kit's `docs/analyses/`.
+
 ## 0.4.0, 2026-10-25
 
 - **`layers [ROOT]`**: the pure-core gate written from the `layers`

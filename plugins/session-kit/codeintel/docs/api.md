@@ -1,16 +1,16 @@
 # The surface
 
-**The command line is the public surface**: the five commands below,
+**The command line is the public surface**: the six commands below,
 their output lines and their exit statuses. A repository wires them, and
 this package's version number protects them. The Python
 modules behind it are described after it, for a contributor or a reader
 of the tests, and are **not** public: they may change in any release
 without a major bump.
 
-`ast-grep` and `lint-imports` stay outside this surface: they are the
-pinned tools' own CLIs, documented by their projects, and this package
-fixes only their versions: `ast-grep-cli >=0.45.3,<0.46` and
-`import-linter >=2.15,<3`, locked at 0.45.3 and 2.15.
+`ast-grep`, `ruff` and `lint-imports` stay outside this surface: they are
+the pinned tools' own CLIs, documented by their projects, and this package
+fixes only their versions: `ast-grep-cli >=0.45.3,<0.46`,
+`ruff >=0.15.7,<0.16` and `import-linter >=2.15,<3`.
 
 ## The command line
 
@@ -20,6 +20,7 @@ session-codeintel recipes path <name>
 session-codeintel pyright-env [ROOT]
 session-codeintel looks [ROOT]
 session-codeintel layers [ROOT]
+session-codeintel measure [ROOT] [--at REF]... [--area PATH]... [--skip PATH]... [--out FILE]
 ```
 
 ### `recipes list`
@@ -118,6 +119,40 @@ command. `ast-grep test -c sgconfig.yml` then proves the rules and
 | 0 | every file written or unchanged |
 | 1 | a file was refused, as named on stderr |
 | 2 | no `layers` block, and argparse's own usage errors |
+
+### `measure [ROOT] [--at REF]... [--area PATH]... [--skip PATH]... [--out FILE]`
+
+Measures the areas of `ROOT` and prints a markdown report, or writes it
+to `FILE`. The areas come from `measure.areas` in
+`ROOT/.claude/claude-kit.json` (each with `name`, `path`, `skip`
+directories and `extensions`, by default `.py`, `.ts`, `.tsx`, `.js`,
+`.jsx`, `.mjs`, `.cjs`, `.yml` and `.yaml`), or from `--area`, each a directory with every `--skip`
+left out, or the root alone. Dependency and build directories are always
+left out. Without `--at` the working tree is measured as one snapshot;
+with it, each `REF` is taken as a `git archive` into a directory of the
+run's own and measured as a snapshot of its own, so the rows read against
+each other.
+
+Per area and snapshot: files, lines, code, comment and docstring lines
+(Python through the tokenizer and `ast`, TypeScript and the rest by a
+line scan). Then per language, the functions, their McCabe complexity
+summed, the mean, the functions at 6 or more and the maximum (Python
+from the pinned ruff's `C901` at cap zero, TypeScript from the pinned
+ast-grep counting `if`, `?:`, loops, `case`, `catch`, `&&`, `||` and
+`??` inside the innermost function), with the JSX elements, fragments
+included, and, when
+`ROOT` has a `looks` block, the repeated looks and their places.
+
+| stream | line | when |
+| --- | --- | --- |
+| stdout | the report | no `--out` |
+| stdout | `<FILE>: <n> row(s)` | `--out` |
+| stderr | `git archive <REF>: <stderr>` | git refused a ref |
+
+| exit | meaning |
+| --- | --- |
+| 0 | the report was printed or written |
+| 2 | git refused a ref, and argparse's own usage errors |
 
 ## The modules behind it, which are private
 

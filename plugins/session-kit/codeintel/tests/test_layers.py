@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from session_codeintel.cli import main
 from session_codeintel.layers import HEADER, Settings, read_settings, render, write
+from tests.tools import run
 
 if TYPE_CHECKING:
     import pytest
@@ -58,11 +58,6 @@ def tree(root: Path, files: dict[str, str]) -> None:
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
-
-
-def run(argv: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
-    """Run a pinned tool in the project."""
-    return subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False, timeout=20)  # noqa: S603  (decisions.md, 6)
 
 
 def project(tmp_path: Path) -> Path:

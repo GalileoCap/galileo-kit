@@ -35,6 +35,14 @@ structural search and rewrite, import boundaries as a gate, and complete
   file that unwinds, the core importing only the core), a test per
   rule, and the core's `ruff.toml`. The rules carry the project's paths,
   so they are generated from the settings and never edited.
+- **Measures the code.** `session-codeintel measure` gives, per area
+  and per snapshot, the size (files, lines, code, comment and docstring
+  lines), the complexity (McCabe per function, Python from the pinned
+  ruff's `C901` and TypeScript counted on the syntax tree) and the
+  repeated looks, with `--at` taking a `git archive` of each ref so a
+  change is argued from one row against the next. The numbers generic-app
+  argued its conventions from (2.6% less code, 16.5% less complexity,
+  six defects) came from the same counts.
 - **Writes the `pyrightconfig.json` that makes a language server
   complete.** A server started at the root of a repository of several
   `uv` projects sees one interpreter, and answers "no references" for
@@ -68,8 +76,8 @@ structural search and rewrite, import boundaries as a gate, and complete
 ## What it depends on
 
 - **Python 3.12 or newer**, and [`uv`](https://docs.astral.sh/uv/).
-- **Two binaries, installed as wheels**: `ast-grep-cli` (MIT) and
-  `import-linter` (BSD-2-Clause). Nothing to run as a service.
+- **Three binaries, installed as wheels**: `ast-grep-cli` (MIT), `ruff`
+  (MIT) and `import-linter` (BSD-2-Clause). Nothing to run as a service.
 - **For `pyright-env`**: every package is an immediate subdirectory of
   the repository root, with its own `pyproject.toml` and its venv at
   `<package>/.venv`, which is where `uv sync` puts it. POSIX venv layout
