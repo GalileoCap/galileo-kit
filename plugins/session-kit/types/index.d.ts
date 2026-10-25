@@ -40,6 +40,30 @@ export type NewTaskState = {
   task: string
 }
 
+/**
+ * The session's last test run: the command, when it ended, whether it passed,
+ * and a fingerprint of the working tree's content after it, null when git
+ * could not give one (no repository, a merge under way, too many files).
+ */
+export type TestRun = {
+  command: string
+  at: number
+  passed: boolean
+  tree: string | null
+}
+
+/**
+ * The same test command failing with the same error: the failed runs after
+ * an edit, the second of which names the two-tries rule to the model, and
+ * whether a file was edited since the last failed run.
+ */
+export type TestRetry = {
+  command: string
+  signature: string
+  tries: number
+  edited: boolean
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'session-kit': {
@@ -71,6 +95,10 @@ declare module 'claude-code' {
       rateLimits: UsageWindow[]
       /** Per window kind, the percent used at which the person dismissed its line; dropped when the window resets. */
       limitsDismissed: Record<string, number>
+      /** The last test run, stamped with the tree it ran on; null before any. */
+      lastTest: TestRun | null
+      /** The test command failing the same way, counted across edits; null while none is, and after a pass. */
+      testRetry: TestRetry | null
     }
   }
 }

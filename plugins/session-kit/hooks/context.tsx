@@ -201,7 +201,7 @@ function figureLine(f: ContextFigure, grewBy: number, chainOn: boolean): string 
   return `Context ${f.tokens.toLocaleString('en-US')} tokens (${f.percent}% of ${f.window.toLocaleString('en-US')})${growth}: find a clear point, commit, write the handoff, ${close}`
 }
 
-function clockTime(when: Date): string {
+export function clockTime(when: Date): string {
   return `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`
 }
 

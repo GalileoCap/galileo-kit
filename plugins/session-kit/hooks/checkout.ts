@@ -17,8 +17,8 @@ export const HANDOFF_COMMAND = '/session-kit:handoff'
 
 export type HandoffState = 'missing' | 'stale' | 'current'
 
-// A repository's own config names no command git would run here: a `core.fsmonitor` set in `.git/config` is code.
-const GIT = ['git', '-c', 'core.fsmonitor=false']
+/** Git with the repository's own config unable to run code: a `core.fsmonitor` set in `.git/config` is a command. The test log runs git the same way. */
+export const GIT = ['git', '-c', 'core.fsmonitor=false']
 
 async function lastCommitMs($: EngineInterface, cwd: string): Promise<number | null> {
   const ran = await $.process.run([...GIT, 'log', '-1', '--format=%ct'], { cwd })

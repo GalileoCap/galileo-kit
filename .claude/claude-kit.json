@@ -1,4 +1,7 @@
 {
+  "test_commands": [
+    "plugin test"
+  ],
   "rulebook": {
     "skills_from": [
       "plugins/*/skills/*/SKILL.md"
