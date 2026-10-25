@@ -6,6 +6,16 @@ the command line, which is the public surface in [`api.md`](api.md), is
 a major bump, and its entry says what a consumer has to change. Before
 1.0, a minor bump may break.
 
+## 0.4.0, 2026-10-25
+
+- **`layers [ROOT]`**: the pure-core gate written from the `layers`
+  block of `.claude/claude-kit.json`: seven ast-grep rules with a test
+  each, the core's `ruff.toml` and an `sgconfig.yml`, each file headed
+  by the command and never replacing one it did not write
+  ([`api.md`](api.md)). The rules are generic-app's, with the paths
+  taken from the settings and the TypeScript core's ESLint block
+  rewritten as an ast-grep rule.
+
 ## 0.3.0, 2026-10-25
 
 - **`looks [ROOT]`**: the class strings of two or more classes written in

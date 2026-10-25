@@ -34,7 +34,7 @@ Everything its owner works with agents through: the rules every session follows 
 - `chain` (off) turns on the two tools: `clear_point`, with the handoff, compaction and continue that run when the turn it was called in ends, and `new_task`, with the band's offer of the handoff and a clear. The continue prompt reaches the model as the plugin's, telling it to read again the documents `CLAUDE.local.md` lists and take its next step. An interrupted turn cancels the chain.
 - `docLines` (1500) is the cap past which a `docs/*.md` file an edit touched is named to the model.
 - A project names its suppression ledger in `.claude/claude-kit.json` under `suppressions`: `ledger` (`docs/decisions.md`), `cite` (a pattern whose first group is the row's number, `decisions\.md,?\s*(\d+)`) and `skip` (directories beyond the usual build and dependency ones).
-- A project sets its documents check in `.claude/claude-kit.json` under `docs`: `root` (`docs`) and `indexes`, the files that must each name every document (`CLAUDE.md`). Its looks check goes under `looks`: `src` (`src`), `skip` (`src/components/ui`) and `allowed`, the looks that repeat by coincidence, each with `look`, `files` and `reason`.
+- A project sets its documents check in `.claude/claude-kit.json` under `docs`: `root` (`docs`) and `indexes`, the files that must each name every document (`CLAUDE.md`). Its looks check goes under `looks`: `src` (`src`), `skip` (`src/components/ui`) and `allowed`, the looks that repeat by coincidence, each with `look`, `files` and `reason`. Its layers go under `layers`: `python` (`core`, `shell`, `source`, `unwinds`) and `typescript` (`core`, `effects`, `outside`), with `rules` and `tests` for the ast-grep directories.
 - A project sets its rulebook budgets in `.claude/claude-kit.json` under `rulebook`: `rules` and `skills` in words, and `skills_from`, globs from the root of further skill files (the kit names `plugins/*/skills/*/SKILL.md`).
 - A project names its own test runners in `.claude/claude-kit.json`, so the `-x` and piped-output rules and the test log cover them:
 
@@ -127,7 +127,7 @@ The guard's cases live in a file because the guard matches the text of a command
 
 ## Code intelligence
 
-`plugins/session-kit/codeintel/` is a Python package, `session-codeintel`: pinned `ast-grep` and `import-linter`, tested rewrite recipes, `looks` (a class string written in two places under a frontend's source, with an allowlist that names each coincidence's files), `pyright-env` (a root `pyrightconfig.json` that lets a language server see every package of a multi-package repository), and a shim that starts a project's own language server through direnv. A project runs it from git at a pinned commit through a small wrapper. [Its README](plugins/session-kit/codeintel/docs/README.md) has the wrapper and the rest.
+`plugins/session-kit/codeintel/` is a Python package, `session-codeintel`: pinned `ast-grep` and `import-linter`, tested rewrite recipes, `looks` (a class string written in two places under a frontend's source, with an allowlist that names each coincidence's files), `layers` (the pure-core gate written from the project's settings: seven ast-grep rules with their tests and the core's `ruff.toml`), `pyright-env` (a root `pyrightconfig.json` that lets a language server see every package of a multi-package repository), and a shim that starts a project's own language server through direnv. A project runs it from git at a pinned commit through a small wrapper. [Its README](plugins/session-kit/codeintel/docs/README.md) has the wrapper and the rest.
 
 ```bash
 plugins/session-kit/codeintel/shims/install.sh    # the shim, linked into ~/.local/bin under both servers' names; run it from a checkout, such as ~/.claude/plugins/marketplaces/galileo-kit
@@ -136,6 +136,8 @@ plugins/session-kit/codeintel/scripts/test        # its tests
 ```
 
 ## Global instructions
+
+`global/CODE.md` holds the rules about the shape of code, for a project that takes the pure-core shape: it names the file in its `CLAUDE.md` with an `@` line, and `session-codeintel layers` writes the gate behind the first rule.
 
 A plugin cannot ship a `CLAUDE.md`, so the rules that belong in every project live in `global/CLAUDE.md` and are linked into `~/.claude/CLAUDE.md` by a script:
 

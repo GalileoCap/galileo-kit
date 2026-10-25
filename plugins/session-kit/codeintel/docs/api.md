@@ -1,6 +1,6 @@
 # The surface
 
-**The command line is the public surface**: the four commands below,
+**The command line is the public surface**: the five commands below,
 their output lines and their exit statuses. A repository wires them, and
 this package's version number protects them. The Python
 modules behind it are described after it, for a contributor or a reader
@@ -19,6 +19,7 @@ session-codeintel recipes list
 session-codeintel recipes path <name>
 session-codeintel pyright-env [ROOT]
 session-codeintel looks [ROOT]
+session-codeintel layers [ROOT]
 ```
 
 ### `recipes list`
@@ -84,6 +85,39 @@ in the files its entry lists and no other.
 | 0 | no look repeats and no allowance drifted |
 | 1 | a look repeats, or an allowance drifted, as printed |
 | 2 | ast-grep failed, and argparse's own usage errors |
+
+### `layers [ROOT]`
+
+Reads the `layers` block of `ROOT/.claude/claude-kit.json` and writes
+the gate that holds the pure-core shape. The block names `rules` and
+`tests`, the ast-grep directories (`lint/ast-grep/rules` and
+`lint/ast-grep/tests`), and the layers: under `python`, `core` and
+`shell` (directories), `source` (the tree `raise` is refused in, the
+core's parent by default) and `unwinds` (files that may raise). Under
+`typescript`, it names `core` and `effects` (directories) and `outside` (import
+prefixes the core may not use, beyond `react`, `react-dom` and
+`@tanstack/`). It writes one rule and one test file per rule
+(`py-core-no-io`, `py-core-sync`, `py-shell-declares-effects`,
+`py-no-raise`, `ts-effects-declared`, `ts-core-no-effects`,
+`ts-core-imports-only-core`, each only for the layers named), a
+`ruff.toml` in the Python core banning the effect modules and extending
+the nearest ruff or pyproject config above it, and `sgconfig.yml` at the
+root when there is none. Each file starts with a header naming the
+command. `ast-grep test -c sgconfig.yml` then proves the rules and
+`ast-grep scan -c sgconfig.yml` runs them.
+
+| stream | line | when |
+| --- | --- | --- |
+| stdout | `written <path>` | the file was written or replaced |
+| stdout | `unchanged <path>` | the file already held this text |
+| stderr | `refused <path>: it exists and was not written by session-codeintel layers` | a file without the header is in the way |
+| stderr | `.claude/claude-kit.json: no \`layers\` block, so nothing to write` | no settings |
+
+| exit | meaning |
+| --- | --- |
+| 0 | every file written or unchanged |
+| 1 | a file was refused, as named on stderr |
+| 2 | no `layers` block, and argparse's own usage errors |
 
 ## The modules behind it, which are private
 

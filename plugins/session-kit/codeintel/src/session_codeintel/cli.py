@@ -1,4 +1,4 @@
-"""The ``session-codeintel`` command: ``recipes``, ``pyright-env`` and ``looks``."""
+"""The ``session-codeintel`` command: ``recipes``, ``pyright-env``, ``looks`` and ``layers``."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from session_codeintel import looks, pyright_env, recipes
+from session_codeintel import layers, looks, pyright_env, recipes
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -31,6 +31,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _pyright_env(Path(args.root))
     if args.command == "looks":
         return _looks(Path(args.root).resolve())
+    if args.command == "layers":
+        return _layers(Path(args.root).resolve())
     if args.action == "list":
         for recipe in recipes.bundled():
             _out(f"{recipe.name}\t{recipe.purpose}")
@@ -75,8 +77,24 @@ def _looks(root: Path) -> int:
     return 0 if report.clean else PARTIAL
 
 
+def _layers(root: Path) -> int:
+    """Write the layers pack from the settings; name each file's fate; 1 on a refusal."""
+    settings = layers.read_settings(root)
+    if settings is None:
+        _err(".claude/claude-kit.json: no `layers` block, so nothing to write")
+        return REFUSED
+    outcome = layers.write(root, layers.render(root, settings))
+    for path in outcome.written:
+        _out(f"written {path}")
+    for path in outcome.unchanged:
+        _out(f"unchanged {path}")
+    for path in outcome.refused:
+        _err(f"refused {path}: it exists and was not written by session-codeintel layers")
+    return PARTIAL if outcome.refused else 0
+
+
 def _parser() -> argparse.ArgumentParser:
-    """Build the command's parser: three subcommands, one of them with two actions."""
+    """Build the command's parser: four subcommands, one of them with two actions."""
     parser = argparse.ArgumentParser(prog="session-codeintel")
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -93,6 +111,9 @@ def _parser() -> argparse.ArgumentParser:
         "looks", help="the class strings written in more than one place under ROOT's source"
     )
     repeated.add_argument("root", nargs="?", default=".", metavar="ROOT")
+
+    pack = commands.add_parser("layers", help="write the pure-core rules from ROOT's settings")
+    pack.add_argument("root", nargs="?", default=".", metavar="ROOT")
     return parser
 
 

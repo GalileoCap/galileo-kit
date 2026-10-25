@@ -27,6 +27,14 @@ structural search and rewrite, import boundaries as a gate, and complete
   places under the source. A look that repeats by coincidence is allowed
   in the project's settings with the files it lives in, and the check
   fails again when it spreads or leaves one, so the entry is reviewed.
+- **Holds a pure core.** A project that keeps its pure code in a core
+  and its effects in a shell names the two under `layers` in its
+  settings, and `session-codeintel layers` writes the ast-grep rules
+  that hold the shape (no I/O, clock, randomness or `await` in the
+  core, every shell function naming its effects, no `raise` outside the
+  file that unwinds, the core importing only the core), a test per
+  rule, and the core's `ruff.toml`. The rules carry the project's paths,
+  so they are generated from the settings and never edited.
 - **Writes the `pyrightconfig.json` that makes a language server
   complete.** A server started at the root of a repository of several
   `uv` projects sees one interpreter, and answers "no references" for

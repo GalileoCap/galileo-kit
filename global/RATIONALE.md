@@ -77,3 +77,21 @@
 **Each test proves a sentence nothing else proves.** Every test costs time in every run and friction in every change near it. The first project's suites grew past 1 400 backend tests and 160 console test files, and a review found the same shapes throughout: a whole page mounted to read one string, one rule tested over every member of a table, and one behaviour proved by a unit file and an end-to-end file side by side.
 
 **Done means it was run.** A test proves the code does what the test's author expected of it, and a mock proves the code agrees with the mock. Neither shows that the feature behaves when a person drives it, which is the claim "done" makes.
+
+## The shape of code (`CODE.md`)
+
+These rules were cut from generic-app, a project started in October 2026 around them, and measured there: the backend's code shrank by 2.6% and its complexity by 16.5%, the frontend grew by 2.8% with repeated class strings down from 23 to 1, the gates grew from 5 rules to 27, and six real defects were found by a convention that turned them into type errors, one of them an access-control leak. They are opt-in because they describe a shape, and a repository of shell scripts or documents has none.
+
+**Code is pure by default, and an effect names itself.** A function that reads the clock or the network cannot be tested without faking the world, and a bug in it hides behind the effect. With the effects in one layer and named at each function, the core is tested with values alone, and a reviewer reads the shell's `Effects:` lines to see what a change touches outside the program. The gate holds the layers by path, since a session copies the nearest pattern, and the nearest pattern in a core file is a pure one.
+
+**Failures are values.** An exception crosses every frame between where it is raised and where it is caught, and the type checker sees none of them. A failure in the return type is held by the checker at every caller, and the list of errors a function may fail with is part of its signature. The `raise` that stays is the unwinding of a `fail` to its `attempt`, which is the boundary's own mechanism.
+
+**A check returns a proof, and the write takes it.** A permission check that returns a boolean can be forgotten, and the write runs anyway. A write that takes a proof cannot run without the check, and the type checker refuses the call. The first project kept refusal classes as a rule, generic-app made the rule structural, and the two agreeing is the case for it.
+
+**What leaves the server is a view.** A row returned as it is carries every column, and a column added later leaves with it. A view is written for the viewer, and a secret leaves only through the function that redacts.
+
+**A unit is a type.** A moment, a token and a password are all strings or integers to the runtime, and a function that takes one accepts another. As types they cannot be swapped, and the mistake is a type error.
+
+**A thing shown in two places is a component named for what it shows.** The first project's console reached fifty-three hand-made dialogs and a loading ladder in sixteen files, and generic-app counted twenty-three repeated class strings before the rule. A component changes everywhere at once, and the looks check holds the rule by counting.
+
+**A structural rule is held by a tested gate.** A rule in prose holds until the first session that does not read it, and the first project saw the next twenty-three arrive the same way the first did. A gate with a test holds whether or not anybody read the rule.
