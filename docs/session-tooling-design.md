@@ -1,6 +1,6 @@
 # Tooling over the transcripts and the hooks' effect: the shape, for the owner
 
-The design behind `A22`, from `O17`: the system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. Written 2026-10-25 against Claude Code 2.1.308 and session-kit 0.9.0, before anything is built. The questions at the end are the owner's to answer.
+The design behind `A22`, from `O17`: the system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. Written 2026-10-25 against Claude Code 2.1.308 and session-kit 0.9.0, before anything is built. The questions at the end are the owner's to answer. Answered 2026-10-25: all projects, reports committed, the warning's effect and the cache share first. The reader is built as `session-transcripts`, with `rules` and the module still to come.
 
 ## What there is to read
 
@@ -9,7 +9,7 @@ Every session leaves one JSONL file under `~/.claude/projects/<project>/<session
 | Record | What it holds | What it answers |
 | --- | --- | --- |
 | `assistant` | Each model request's `usage`: input, cache read, cache creation and output tokens, the model, the effort, the thinking duration, and the content blocks (text, thinking, `tool_use`). | The context size at every request (the three input counts summed), the cache share, tokens per turn, which tools were called and how often. |
-| `user` | The person's prompts, and every `tool_result` with its `toolUseResult`; `isCompactSummary` marks the summary a compaction left. | What the model was told, how long each result was, what a summary kept. |
+| `user` | The person's prompts, and every `tool_result` with its `toolUseResult`. `isCompactSummary` marks the summary a compaction left. | What the model was told, how long each result was, what a summary kept. |
 | `attachment` | What the engine attached beside a message. `hook_success`, `hook_additional_context` and `hook_system_message` carry a settings hook's name and its stdout, and `total_tokens_reminder`, `compact_file_reference`, `file` and the rest are the engine's own. | Which settings hook fired on which call and what it said. This session's file holds 18 `hook_success` rows, from the tells hook and the guard. |
 | `system`, `stop_hook_summary` | Each Stop hook's command and `durationMs`. | Hook time, for Stop hooks alone. |
 | `system`, `compact_boundary` | `compactMetadata`: the trigger (`manual`, `auto`), the tokens before, the duration, the messages preserved. | When compactions happen, what they cost and what they keep. |

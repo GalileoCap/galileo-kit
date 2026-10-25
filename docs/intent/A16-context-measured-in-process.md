@@ -23,6 +23,10 @@ The kit's first mod measures the context from `$.session.usage()`, with the engi
 - B. The model signals, the mod acts: `A17`, the next step, on top of A.
 - C. The mod decides alone, by heuristics at `turn.complete`: compacts mid-step whenever the heuristics misread, and continues past a question to the owner. Rejected.
 
+## What the transcripts say (2026-10-25)
+
+`session-transcripts` over 39 sessions: no request has carried more than 515,000 tokens, and every compaction, 145 of them, was manual, at a median of 152,000 tokens. The warning at half the window has never fired, so nothing here is validated by a real session yet, and the threshold is the first thing the report puts in question: a threshold near where the owner compacts by hand, around 150,000 tokens, would have fired in most long sessions. The owner decides.
+
 ## Consequences
 
 Retires one Python start per tool call: 28 ms on this machine, measured by `plugins/session-kit/hooks/time_hooks.py` before and after, a small share of a call that reaches the model. The window is the engine's, so the warning fires on a 200k model where `A4` stayed quiet. The threshold and the step are `userConfig` options in place of the environment variables. Validated when the owner has seen the warning and the band in a few real sessions, on the terminal and in the desktop app. Undone if the mod API moves under it faster than the kit can follow, in which case `A4` returns.

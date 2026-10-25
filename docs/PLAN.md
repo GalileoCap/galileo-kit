@@ -36,6 +36,8 @@
 
 - 2026-10-25: `A22` designed and waiting on the owner, in `docs/session-tooling-design.md`: a reader over the transcripts first and a measuring module after the first real session, with five questions for the owner.
 
+- 2026-10-25: the owner answered (all projects, reports committed, the warning's effect and the cache share first) and the reader is built: `session-transcripts`, 18 cases, with its first report in `docs/measurements/sessions-2026-10-25.md`. The report's finding: the context warning has never fired in 39 sessions, and all 145 compactions were manual at a median of 152,000 tokens, so `A16`'s threshold sits above where the owner compacts. Put to the owner.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
@@ -46,7 +48,7 @@
 
 1. Install 0.7.0 on this machine and watch a real session: `A16`'s warning past half the window and its band on the terminal and in the desktop app, then `A17` with `chain` on, one run end to end, and the summary read back. The marketplace clone pulls from GitHub, so the install needs the owner's push, or a marketplace added from the local path.
 2. The port, in the order `A20` gives: steps 1, 2, 3 and 5 are built, with `A21` beside them. Left: step 4, the guard's mod form, once mod ordering is answered.
-3. `A22`: the owner answers the design's five questions, then the reader is built.
+3. `A16`'s threshold, against the report: half the window has never been reached, and the owner compacts by hand at a median of 152,000 tokens. The owner decides the threshold. Then `A22`'s `rules` command and, after the first real session with the modules, the `measure` module.
 4. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
 
 ## Open questions

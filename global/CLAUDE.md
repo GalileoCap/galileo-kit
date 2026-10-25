@@ -2,7 +2,7 @@
 
 These come from the `session-kit` repository (`global/CLAUDE.md`). A project's own `CLAUDE.md` adds to them and wins where it says otherwise. The rules marked **(refused)** are enforced by the plugin's guard and no longer depend on being read. The reason behind each rule is in `RATIONALE.md` beside this file in that repository (the link at `~/.claude/CLAUDE.md`, or the `@` line that imports this file, names the directory), under the same heading: read it when a rule looks arbitrary or you are about to argue with one.
 
-The plugin's commands, `session-tells`, `session-codeintel` and `session-intent`, are on the Bash tool's PATH while it is enabled. The language-server shims are put on PATH once per machine by `plugins/session-kit/codeintel/shims/install.sh`, run from the marketplace's clone at `~/.claude/plugins/marketplaces/galileo-kit/`: it links to the directory it runs from, and the plugin's own copy moves with every version.
+The plugin's commands, `session-tells`, `session-codeintel`, `session-intent` and `session-transcripts`, are on the Bash tool's PATH while it is enabled. The language-server shims are put on PATH once per machine by `plugins/session-kit/codeintel/shims/install.sh`, run from the marketplace's clone at `~/.claude/plugins/marketplaces/galileo-kit/`: it links to the directory it runs from, and the plugin's own copy moves with every version.
 
 ## How to work
 

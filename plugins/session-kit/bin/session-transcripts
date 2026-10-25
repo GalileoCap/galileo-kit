@@ -1,0 +1,4 @@
+#!/bin/sh
+# The reader over the sessions' transcripts. Claude Code puts bin/ on the
+# Bash tool's PATH while the plugin is enabled. Standard library only.
+exec python3 "$(dirname "$0")/../transcripts/session_transcripts.py" "$@"
