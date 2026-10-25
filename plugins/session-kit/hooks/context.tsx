@@ -12,7 +12,13 @@
 // prompt of the person's between: the third signal is refused, and their next
 // prompt lets one run again. A prompt that is not the person's own words (a
 // notification, a schedule, a peer, a plugin) neither counts as theirs nor is
-// sent again in their place.
+// sent again in their place. With the chain on, a turn that ends past the
+// floor with nobody at the prompt arms the cold-cache timer: a lead before
+// the prompt cache's lifetime runs out, the kit writes the handoff and
+// compacts, and stops there, so the person's next prompt writes a small
+// context to the cache instead of all of it. The lifetime is an option, 60
+// minutes on a subscription, and what the engine states (a subagent's
+// result, a model switch) replaces it; a 5-minute cache arms no timer.
 //
 // The model is the one that knows where a clear point is, so the warning
 // goes to it, on the tool result, while it can still choose where to stop,
@@ -23,7 +29,7 @@
 // fails. The engine's own compaction gets the backstop whatever the option.
 
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, PromptOrigin, Register } from 'claude-code'
+import type { EngineInterface, PromptOrigin, Register, Timer, TurnCompleteInput } from 'claude-code'
 
 import type { ChainState, ContextFigure, NewTaskState } from '../types'
 
@@ -35,12 +41,24 @@ const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
 const freshContext = atom({ plugin: 'session-kit', key: 'freshContext' } as const, false)
 const figureDismissedAt = atom({ plugin: 'session-kit', key: 'contextDismissedAt' } as const, 0)
+const coldTimerAt = atom({ plugin: 'session-kit', key: 'coldTimerAt' } as const, 0)
+const statedCacheMinutes = atom({ plugin: 'session-kit', key: 'cacheMinutes' } as const, 0)
 
 const THRESHOLD_TOKENS = 250000
 const STEP_TOKENS = 25000
 const FIRMER_AT = 2
 const STOP_AT = 3
 const MAX_UNATTENDED = 2
+const CACHE_MINUTES = 60
+const CACHE_LEAD_MINUTES = 5
+const MINUTE_MS = 60000
+
+/** The cold-cache timer's settings: the cache's lifetime and the lead, in minutes, and the floor of context in tokens (0: the warning's trigger). */
+type ColdOptions = {
+  lifetime: number
+  lead: number
+  floor: number
+}
 
 // The kinds of prompt that are not the person's own words. What a plugin's
 // `$.command.run` stamps is `plugin` too. The rest (typed, from the phone, the
@@ -94,6 +112,8 @@ const UNATTENDED_REFUSAL =
   `session-kit has run ${MAX_UNATTENDED} chains since the person's last prompt and ` +
   'runs no more with nobody at the prompt. End this turn now, with nothing more ' +
   'started, and wait for the person: their next prompt lets the chain run again.'
+
+const COLD_NOTE = 'go on from the handoff, written before the cache went cold'
 
 const HANDOFF_FIELDS =
   'Keep the task in the user\'s own words, every decision with who took it and ' +
@@ -357,6 +377,152 @@ async function dismissOffer($: EngineInterface): Promise<void> {
   await update($, newTask, () => null)
 }
 
+// The cold-cache timer under way; a hot reload drops it, and the next
+// session.start sets it again from the deadline kept in `$.state`.
+let coldTimer: Timer | null = null
+
+/** The cache's lifetime a subagent's result states, by the split of its cache writes; null when it wrote none. */
+function lifetimeStated(result: unknown): number | null {
+  if (typeof result !== 'object' || result === null || !('usage' in result)) {
+    return null
+  }
+  const { usage } = result
+  if (typeof usage !== 'object' || usage === null || !('cache_creation' in usage)) {
+    return null
+  }
+  const split = usage.cache_creation
+  if (typeof split !== 'object' || split === null) {
+    return null
+  }
+  const hour = 'ephemeral_1h_input_tokens' in split ? split.ephemeral_1h_input_tokens : 0
+  const minutes = 'ephemeral_5m_input_tokens' in split ? split.ephemeral_5m_input_tokens : 0
+  if (typeof hour === 'number' && hour > 0) {
+    return 60
+  }
+
+  return typeof minutes === 'number' && minutes > 0 ? 5 : null
+}
+
+function coldLine(at: number): string {
+  const when = new Date(at)
+  const clock = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`
+
+  return `Left alone, session-kit writes the handoff and compacts at ${clock}, before the cache goes cold.`
+}
+
+async function disarmCold($: EngineInterface): Promise<void> {
+  coldTimer?.cancel()
+  coldTimer = null
+  if ((await read($, coldTimerAt)) !== 0) {
+    await update($, coldTimerAt, () => 0)
+  }
+}
+
+async function dismissCold($: EngineInterface): Promise<void> {
+  await disarmCold($)
+  stage($, 'the person dismissed the cold-cache timer, so nothing runs before their next turn ends')
+}
+
+/** With nobody at the prompt for the lead, the chain runs from the handoff stage and stops after the compaction. */
+async function runColdChain($: EngineInterface, lead: number): Promise<void> {
+  coldTimer = null
+  await update($, coldTimerAt, () => 0)
+  if ((await read($, chain)) !== null || (await read($, newTask)) !== null) {
+    return
+  }
+  await update($, chain, () => ({ stage: 'handoff', waitsOnOwner: true, note: COLD_NOTE }))
+  stage($, `the cache goes cold in ${lead} minutes with nobody at the prompt: writing the handoff`)
+  await runHandoff($)
+}
+
+function holdColdTimer($: EngineInterface, wait: number, lead: number): void {
+  coldTimer?.cancel()
+  coldTimer = $.clock.after(wait, () => {
+    void runColdChain($, lead)
+  })
+}
+
+/** At a turn's end past the floor, with no chain or offer under way, the timer is set for the lifetime less the lead. */
+async function armCold($: EngineInterface, cold: ColdOptions, trigger: (window: number) => number): Promise<void> {
+  if (cold.lifetime === 0) {
+    return
+  }
+  const stated = await read($, statedCacheMinutes)
+  const wait = ((stated > 0 ? stated : cold.lifetime) - cold.lead) * MINUTE_MS
+  if (wait <= 0 || (await read($, chain)) !== null || (await read($, newTask)) !== null) {
+    return
+  }
+  const now = await read($, figure)
+  if (now === null || now.tokens < (cold.floor > 0 ? cold.floor : trigger(now.window))) {
+    return
+  }
+  const at = (await $.clock.now()) + wait
+  holdColdTimer($, wait, cold.lead)
+  await update($, coldTimerAt, () => at)
+}
+
+/** After a hot reload the deadline outlives the timer: set the timer again, or drop a deadline already past. */
+async function holdColdTimerAgain($: EngineInterface, lead: number): Promise<void> {
+  const at = await read($, coldTimerAt)
+  if (at === 0) {
+    return
+  }
+  const now = await $.clock.now()
+  if (at > now) {
+    holdColdTimer($, at - now, lead)
+  } else {
+    await update($, coldTimerAt, () => 0)
+  }
+}
+
+async function stepOffer($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'>, offered: NewTaskState): Promise<void> {
+  if (e.reason !== 'answer') {
+    await update($, newTask, () => null)
+  } else if (offered.stage === 'handoff') {
+    await update($, newTask, () => ({ ...offered, stage: 'clearing' }))
+    $.clock.after(0, () => {
+      void clearThenResend($)
+    })
+  }
+}
+
+async function stepChain($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'>, state: ChainState, isInteractive: boolean): Promise<void> {
+  if (e.reason !== 'answer') {
+    await update($, chain, () => null)
+    stage($, `the turn ended by ${e.reason} at the ${state.stage} stage, so the chain stops here`)
+
+    return
+  }
+  switch (state.stage) {
+    case 'requested': {
+      await update($, chain, () => ({ ...state, stage: 'handoff' }))
+      stage($, 'the turn ended: writing the handoff')
+      // Outside this dispatch: a command run inside a hook the turn waits on is refused.
+      $.clock.after(0, () => {
+        void runHandoff($)
+      })
+      break
+    }
+    case 'handoff': {
+      await update($, chain, () => ({ ...state, stage: 'compacting' }))
+      stage($, 'the handoff turn ended: compacting')
+      const asOf = chainDismissals
+      $.clock.after(0, () => {
+        void (isInteractive ? compactThenContinue($, state, asOf) : compactByCommand($, state, asOf))
+      })
+      break
+    }
+    case 'compacting':
+      // Where the compaction is a /compact turn, its own end lands here.
+      stage($, 'a turn ended while compacting')
+      break
+    default:
+      // A turn ended with the chain waiting on the owner: the person moved on.
+      await update($, chain, () => null)
+      stage($, `a turn ended at the ${state.stage} stage, so the chain stops here`)
+  }
+}
+
 function newTaskLine(state: NewTaskState): string {
   switch (state.stage) {
     case 'offered':
@@ -421,11 +587,22 @@ export const register: Register = (on, options) => {
   const thresholdPercent = asCount(options.threshold, 0)
   const step = asNumber(options.step, STEP_TOKENS)
   const chainOn = options.chain === true
+  const cold: ColdOptions = {
+    lifetime: asCount(options.cacheMinutes, CACHE_MINUTES),
+    lead: asCount(options.cacheLeadMinutes, CACHE_LEAD_MINUTES),
+    floor: asCount(options.cacheFloorTokens, 0),
+  }
 
   on('tool.call', async ($, e, next) => {
     const ran = await next(e)
     if (ran.deny !== undefined || e.tool === TOOL || e.tool === NEW_TASK_TOOL) {
       return ran
+    }
+    if (chainOn && e.tool === 'Agent') {
+      const stated = lifetimeStated(ran.result)
+      if (stated !== null) {
+        await update($, statedCacheMinutes, () => stated)
+      }
     }
     const { context } = await $.session.usage()
     if (context.tokens === undefined || context.percent === undefined) {
@@ -476,18 +653,19 @@ export const register: Register = (on, options) => {
     const running = await read($, chain)
     const now = await read($, figure)
     const dismissedAt = await read($, figureDismissedAt)
+    const coldAt = await read($, coldTimerAt)
     const past =
       now !== null &&
       now.tokens >= triggerTokens(thresholdTokens, thresholdPercent, now.window) &&
       !withinStep(dismissedAt, now.tokens, step)
-    if (e.props.hasSurvey || (offered === null && running === null && !past)) {
+    if (e.props.hasSurvey || (offered === null && running === null && !past && coldAt === 0)) {
       return below
     }
     const { Box, Button, Text } = $.ui.resolve(e)
-    let line
+    const lines = []
     if (offered !== null) {
-      line = (
-        <Box>
+      lines.push(
+        <Box key="offer">
           <Text dimColor>{newTaskLine(offered)} </Text>
           {offered.stage === 'offered' ? (
             <Button key="new-task-clear" label="Handoff and clear" variant="primary" onPress={() => handoffThenClear($, offered)} />
@@ -496,29 +674,37 @@ export const register: Register = (on, options) => {
             <Button key="new-task-here" label="Keep going here" onPress={() => keepGoing($)} />
           ) : null}
           <Button key="new-task-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissOffer($)} />
-        </Box>
+        </Box>,
       )
     } else if (running !== null) {
-      line = (
-        <Box>
+      lines.push(
+        <Box key="chain">
           <Text dimColor>{stageLine(running)} </Text>
           <Button key="chain-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissChain($)} />
-        </Box>
+        </Box>,
       )
-    } else {
-      line = (
-        <Box>
+    } else if (past) {
+      lines.push(
+        <Box key="figure">
           <Text dimColor>
             Context {now?.tokens.toLocaleString('en-US')} tokens ({now?.percent}% of {now?.window.toLocaleString('en-US')}): find a clear point, commit, write the handoff, {chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'}{' '}
           </Text>
           <Button key="context-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissFigure($)} />
-        </Box>
+        </Box>,
+      )
+    }
+    if (coldAt !== 0) {
+      lines.push(
+        <Box key="cold">
+          <Text dimColor>{coldLine(coldAt)} </Text>
+          <Button key="cold-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissCold($)} />
+        </Box>,
       )
     }
 
     return (
       <Box flexDirection="column">
-        {line}
+        {lines}
         {below}
       </Box>
     )
@@ -573,6 +759,23 @@ export const register: Register = (on, options) => {
       },
       isDeferred: false,
     })
+    await holdColdTimerAgain($, cold.lead)
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  // The engine states the cache's lifetime on a model switch; the timer takes its word over the option.
+  on('classic.PostModelSwitch', async ($, e, next) => {
+    await update($, statedCacheMinutes, () => (e.cache_ttl === '1h' ? 60 : 5))
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  // A turn starting uses the cache again, so the timer counts from its end instead.
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      await disarmCold($)
+    }
 
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -622,53 +825,13 @@ export const register: Register = (on, options) => {
     }
     const offered = await read($, newTask)
     if (offered !== null) {
-      if (e.reason !== 'answer') {
-        await update($, newTask, () => null)
-      } else if (offered.stage === 'handoff') {
-        await update($, newTask, () => ({ ...offered, stage: 'clearing' }))
-        $.clock.after(0, () => {
-          void clearThenResend($)
-        })
-      }
+      await stepOffer($, e, offered)
     }
     const state = await read($, chain)
-    if (state === null) {
-      return next(e)
+    if (state !== null) {
+      await stepChain($, e, state, isInteractive)
     }
-    if (e.reason !== 'answer') {
-      await update($, chain, () => null)
-      stage($, `the turn ended by ${e.reason} at the ${state.stage} stage, so the chain stops here`)
-
-      return next(e)
-    }
-    switch (state.stage) {
-      case 'requested': {
-        await update($, chain, () => ({ ...state, stage: 'handoff' }))
-        stage($, 'the turn ended: writing the handoff')
-        // Outside this dispatch: a command run inside a hook the turn waits on is refused.
-        $.clock.after(0, () => {
-          void runHandoff($)
-        })
-        break
-      }
-      case 'handoff': {
-        await update($, chain, () => ({ ...state, stage: 'compacting' }))
-        stage($, 'the handoff turn ended: compacting')
-        const asOf = chainDismissals
-        $.clock.after(0, () => {
-          void (isInteractive ? compactThenContinue($, state, asOf) : compactByCommand($, state, asOf))
-        })
-        break
-      }
-      case 'compacting':
-        // Where the compaction is a /compact turn, its own end lands here.
-        stage($, 'a turn ended while compacting')
-        break
-      default:
-        // A turn ended with the chain waiting on the owner: the person moved on.
-        await update($, chain, () => null)
-        stage($, `a turn ended at the ${state.stage} stage, so the chain stops here`)
-    }
+    await armCold($, cold, (window) => triggerTokens(thresholdTokens, thresholdPercent, window))
 
     return next(e)
   }).catch(($, e, next) => next(e))

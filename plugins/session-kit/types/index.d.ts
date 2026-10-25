@@ -51,6 +51,10 @@ declare module 'claude-code' {
       lastPrompt: string
       /** True while the prompt under way opened a context that held no task (new or just cleared). */
       freshContext: boolean
+      /** When the cold-cache timer runs the handoff and the compaction, in epoch milliseconds; 0 while none is set. */
+      coldTimerAt: number
+      /** The prompt cache's lifetime in minutes as the engine last stated it; 0 before any statement, when the option holds. */
+      cacheMinutes: number
     }
   }
 }

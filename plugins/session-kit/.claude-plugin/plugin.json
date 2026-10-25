@@ -1,6 +1,6 @@
 {
   "name": "session-kit",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "description": "Hooks, a handoff skill and an iterate skill that every project can use: context-pressure warnings, git and test-run guards, prose-tells warnings, formatting with the project's own tools, a test-run log, a direnv environment, a root pyrightconfig.json for multi-package repositories, the checkout checks (a missing or stale handoff, uncommitted work at the end of a turn), the suppression warning with its reasons and index check, the session-tells, session-codeintel, session-intent (with its id allocator), session-transcripts, session-suppressions, session-rulebook, session-docs, session-watched (a run ended with its diagnostics after five minutes with no progress) and session-owed (what a range of history leaves to do outside the code) commands, and a looks check, a layers pack, a code measure, the quality gates (duplicates, fallbacks, file length) and the project template in session-codeintel, CLAUDE.local.md handoffs, and a fast-working mode for while the owner iterates.",
   "author": {
     "name": "Galileo Cappella"
@@ -28,8 +28,26 @@
     "chain": {
       "title": "Handoff chain",
       "type": "boolean",
-      "description": "The clear_point tool, after which the handoff, the compaction and the continue run when the turn ends, or stop when the next step is the owner's; and the new_task tool, after which the band offers the handoff and a clear, or to keep going here, and sends the prompt again.",
+      "description": "The clear_point tool, after which the handoff, the compaction and the continue run when the turn ends, or stop when the next step is the owner's; the new_task tool, after which the band offers the handoff and a clear, or to keep going here, and sends the prompt again; and the cold-cache timer, which runs the handoff and the compaction when a turn's end is left alone past the floor.",
       "default": true
+    },
+    "cacheMinutes": {
+      "title": "Prompt cache lifetime",
+      "type": "number",
+      "description": "Minutes the prompt cache lives after a request: 60 on a subscription, 5 on an API key. What the engine states (a subagent's result, a model switch) replaces it. 0 turns the cold-cache timer off.",
+      "default": 60
+    },
+    "cacheLeadMinutes": {
+      "title": "Cold-cache lead",
+      "type": "number",
+      "description": "Minutes before the cache's lifetime runs out at which, with nobody at the prompt since the turn ended, session-kit writes the handoff and compacts the context, so the next prompt writes a small context instead of all of it. A 5-minute cache leaves no lead and arms no timer.",
+      "default": 5
+    },
+    "cacheFloorTokens": {
+      "title": "Cold-cache floor",
+      "type": "number",
+      "description": "Tokens of context below which the cold-cache timer does not arm: a small context costs less to write again than to compact. 0 takes the context warning's own trigger.",
+      "default": 0
     },
     "docLines": {
       "title": "Document length cap",
