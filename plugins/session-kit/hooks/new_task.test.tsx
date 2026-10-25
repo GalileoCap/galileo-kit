@@ -119,6 +119,31 @@ test('handoff and clear writes the handoff, clears, and sends the person\'s own 
   await ui.unmount()
 })
 
+test('the prompt is sent again after a clear that starts the session\'s state over', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  // The host after a clear: the session's named values start over.
+  let isCleared = false
+  on('command.run', { command: 'clear' }, (_, e, next) => {
+    isCleared = true
+
+    return next(e)
+  })
+  on('state.get', { plugin: 'session-kit' }, (_, e, next) => (isCleared ? { value: { value: undefined, version: 0 } } : next(e)))
+  const asked = engine(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.prompt.submit({ text: PROMPT, wait: false, origin: { kind: 'composer' } })
+  await $.tool.call({ tool: TOOL, task: 'rewrite the README' })
+  asked.length = 0
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'new-task-clear' })
+  await clock.settle()
+  await ui.unmount()
+  await $.turn.complete(turn('t-handoff'))
+  await clock.settle()
+  expect(asked).toEqual(['command session-kit:handoff', 'command clear', `prompt as user: ${PROMPT}`])
+})
+
 test('a signal without a task is refused and offers nothing', { options: { chain: true } }, async ($, on) => {
   engine(on)
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })

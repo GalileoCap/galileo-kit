@@ -268,16 +268,18 @@ function newTaskLine(state: NewTaskState): string {
   }
 }
 
-async function resend($: EngineInterface): Promise<void> {
-  const text = await read($, lastPrompt)
-  if (text !== '') {
-    await $.prompt.submit({ text, asUser: true })
+async function resend($: EngineInterface, text: string): Promise<void> {
+  if (text === '') {
+    $.ui.toast('session-kit: no prompt of yours was recorded, so none was sent again.')
+
+    return
   }
+  await $.prompt.submit({ text, asUser: true })
 }
 
 async function keepGoing($: EngineInterface): Promise<void> {
   await update($, newTask, () => null)
-  await resend($)
+  await resend($, await read($, lastPrompt))
 }
 
 async function runHandoffBeforeClear($: EngineInterface): Promise<void> {
@@ -298,16 +300,20 @@ async function handoffThenClear($: EngineInterface, state: NewTaskState): Promis
 }
 
 async function clearThenResend($: EngineInterface): Promise<void> {
-  // The clear ends this session's state, so nothing is read from it after.
+  // The clear starts the session's named values over, so the prompt is taken out first.
+  const text = await read($, lastPrompt)
   await update($, newTask, () => null)
+  stage($, 'new task: clearing the context')
   try {
     await $.command.run({ command: CLEAR_COMMAND })
   } catch (error) {
+    stage($, `new task: the clear did not run (${reason(error)})`)
     $.ui.toast(`session-kit: the clear did not run (${reason(error)}).`)
 
     return
   }
-  await resend($)
+  stage($, `new task: the clear returned, sending ${text === '' ? 'no prompt' : 'the prompt'} again`)
+  await resend($, text)
 }
 
 export const register: Register = (on, options) => {
