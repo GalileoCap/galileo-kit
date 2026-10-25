@@ -135,8 +135,13 @@ function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function textResult(text: string, isError = false) {
-  return { result: { content: [{ type: 'text', text }], isError } }
+/** A registered tool answers with its text: the engine's output schema for one takes a string. */
+function answer(text: string) {
+  return { result: text }
+}
+
+function refuse(text: string) {
+  return { deny: text }
 }
 
 function stageLine(state: ChainState): string {
@@ -386,32 +391,32 @@ export const register: Register = (on, options) => {
   on('tool.call', { tool: NEW_TASK_TOOL }, async ($, e) => {
     const task = typeof e.task === 'string' && e.task.trim() !== '' ? e.task.trim() : ''
     if (task === '') {
-      return textResult('task must name the new task in one line.', true)
+      return refuse('task must name the new task in one line.')
     }
     await update($, newTask, () => ({ stage: 'offered', task }))
 
-    return textResult(
+    return answer(
       'New task noted. Start nothing on it. End this turn now, saying in one line ' +
         'that it is a new task: the band offers the handoff and a clear, or to keep ' +
         'going here, and the prompt is sent again after.',
     )
-  }).catch(() => textResult('session-kit could not record the new task.', true))
+  }).catch(() => refuse('session-kit could not record the new task.'))
 
   on('tool.call', { tool: TOOL }, async ($, e) => {
     const nextStep = e.next_step
     const note = typeof e.note === 'string' && e.note.trim() !== '' ? e.note.trim() : ''
     if ((nextStep !== 'session' && nextStep !== 'owner') || note === '') {
-      return textResult('next_step must be "session" or "owner", and note the next step in one line.', true)
+      return refuse('next_step must be "session" or "owner", and note the next step in one line.')
     }
     const waitsOnOwner = nextStep === 'owner'
     await update($, chain, () => ({ stage: 'requested', waitsOnOwner, note }))
 
-    return textResult(
+    return answer(
       'Clear point noted. End this turn now, with nothing more started. When it ' +
         'ends, session-kit writes the handoff and compacts the context, then ' +
         (waitsOnOwner ? 'stops, since the next step is the owner\'s.' : `continues with: ${note}`),
     )
-  }).catch(() => textResult('session-kit could not record the clear point, so the chain did not start.', true))
+  }).catch(() => refuse('session-kit could not record the clear point, so the chain did not start.'))
 
   on('turn.complete', async ($, e, next) => {
     if (e.agentId !== undefined) {

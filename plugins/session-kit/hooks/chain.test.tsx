@@ -95,7 +95,9 @@ test('on: the model signals, the mod writes the handoff, compacts and continues'
 
   const signalled = await $.tool.call({ tool: TOOL, next_step: 'session', note: 'run the checks' })
   expect(signalled.deny).toBeUndefined()
-  expect(JSON.stringify(signalled.result)).toMatch(/End this turn/)
+  // The engine's output schema for a registered tool takes a string: an object is refused at the call.
+  expect(typeof signalled.result).toBe('string')
+  expect(signalled.result).toMatch(/End this turn/)
   // The warning does not ride on the signal itself.
   expect(signalled.context).toBeUndefined()
 
@@ -171,8 +173,8 @@ test('a signal without a next step is refused and starts nothing', { options: { 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
   const answered = await $.tool.call({ tool: TOOL, note: 'next' })
-  expect(answered.deny).toBeUndefined()
-  expect(JSON.stringify(answered.result)).toMatch(/next_step/)
+  expect(answered.deny).toMatch(/next_step/)
+  expect(answered.result).toBeUndefined()
   await $.turn.complete(turn('t1'))
   await clock.settle()
   expect(asked).toEqual(['register clear_point'])

@@ -67,8 +67,8 @@ test('the signal tells the model to stop, and the band offers the handoff and th
 
   const signalled = await $.tool.call({ tool: TOOL, task: 'rewrite the README install section' })
   expect(signalled.deny).toBeUndefined()
-  expect(JSON.stringify(signalled.result)).toMatch(/End this turn/)
-  expect(JSON.stringify(signalled.result)).not.toMatch(/"isError":true/)
+  expect(typeof signalled.result).toBe('string')
+  expect(signalled.result).toMatch(/End this turn/)
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
@@ -123,7 +123,8 @@ test('a signal without a task is refused and offers nothing', { options: { chain
   engine(on)
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const answered = await $.tool.call({ tool: TOOL })
-  expect(JSON.stringify(answered.result)).toMatch(/task/)
+  expect(answered.deny).toMatch(/task/)
+  expect(answered.result).toBeUndefined()
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect(await ui.find({ type: 'Text', text: /New task/ })).toBeUndefined()
   await ui.unmount()
