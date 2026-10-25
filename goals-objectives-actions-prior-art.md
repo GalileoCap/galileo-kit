@@ -1,6 +1,6 @@
 # The ladder against prior art
 
-What `goals-objectives-actions.md` shares with six established ideas, what it borrows from each, and what it leaves. Written 2026-10-24 at the owner's request, for the owner to confirm. It moves beside the process document and is read on demand, the way `RATIONALE.md` is.
+What `goals-objectives-actions.md` shares with six established ideas, what it borrows from each, and what it leaves. Written 2026-10-24 at the owner's request, for the owner to confirm. It moves into `session-kit` beside the process and is read on demand, the way `RATIONALE.md` is. The examples in it (`O1`, `O6`, `O10` and the rest) are entries of `session-kit`'s own ladder, in `session-kit-port.md`, and stand for any project's.
 
 ## In one paragraph
 
@@ -28,13 +28,13 @@ Where it meets the ladder: an action is an ADR, and `RATIONALE.md` is already it
 - A validated action is superseded instead of rewritten: a new id that names the one it replaces. Goals and objectives are the owner's and may be rewritten in place with the change dated, since what matters there is the current text.
 - Forward traceability: every approved objective has at least one action or says "no action yet". Every action names what implements it (a file, a rule, a step of a plan) and what proves it (a test, a run, or "unproven").
 
-Left: a file per record and a traceability matrix. The entries are a few lines each, one table per level in one file is read in a minute, and a matrix is a report derived from the table when anybody wants one.
+*Borrowed* too, on the owner's correction: a file per record. The first draft kept one table per level, which reads in a minute while a project has ten entries and fails at a hundred, where actions, the dominant kind, carry stale paths and nobody re-reads the table. The ADR tools (adr-tools, log4brains) settled the same problem the same way: one numbered file per decision, a header a tool can read, and an index the tool generates. Left: the traceability matrix as a maintained artifact. It is the downward view, and the index derives it from the upward links.
 
 ## Impact Mapping
 
 Impact mapping (Adzic, 2012) draws a goal (why), the actors who can move it or block it (who), the change in each actor's behaviour that would move it (how), and only then the deliverables (what). Every path through the map is a hypothesis: this deliverable will change this actor's behaviour and so move the goal. The map is for choosing the cheapest path and stopping when the goal is met, instead of building every leaf.
 
-Where it meets the ladder: the why is the goal, the what is the action. The ladder's objectives sit at how and say nothing about who. Here the actors are few and distinct: the agent, the owner, the engine, and a third party's code. `O1` and `O2` change the agent's behaviour. `O3` changes the owner's, whose attention goes elsewhere. `O6` changes the engine's, which refuses what prose failed to stop. The port's open question on mod ordering is an actor who can hinder: a third-party mod that approves what the guard denies.
+Where it meets the ladder: the why is the goal, the what is the action. The ladder's objectives sit at how and say nothing about who. Here the actors are few and distinct: the agent, the owner, the work (for `session-kit`, the engine it runs in), and a third party's code. `O1` and `O2` change the agent's behaviour. `O3` changes the owner's, whose attention goes elsewhere. `O6` changes the engine's, which refuses what prose failed to stop. The port's open question on mod ordering is an actor who can hinder: a third-party mod that approves what the guard denies.
 
 *Borrowed*: an objective names whose behaviour it changes. An action is written as the hypothesis it is ("the warning makes the agent ask to compact at a boundary"), with the objective's observation as its test. Where two actions could serve an objective, the cheaper goes first and the second waits on the first's result. Left: the map as a drawing, and actors as a level of their own. A field on the objective carries it.
 
@@ -62,7 +62,7 @@ The direction of dependency is also the ladder's rule in another vocabulary. A g
 
 Where it meets the ladder: the guard, the tells hook, `doc_length.py` and the refused rules are fitness functions on a session's work, each the mechanical form of a rule whose prose failed (`O6`). The ladder's own verification (re-read the actions against their objectives when a piece changes) is a manual, triggered one, and part of it can be automated: ids resolve, every action names an objective, every objective a goal, every approved objective an action or "no action yet", no status without a date.
 
-*Borrowed*: an action is one of two kinds, a behaviour (the kit does something) or a check (the kit tests something and warns or refuses). Checks are where a rule's prose has failed, and they stay few. A temporal re-read joins the verification list: when the engine's API changes, the actions that name a part of it are re-read. A check on the record itself is proposed as an action. Left: the taxonomy beyond those two kinds.
+*Borrowed*: an action is one of two kinds, a behaviour (something the work does, or a rule it follows) or a check (a test, a gate or a hook that fails when the behaviour slips). Checks are where a rule's prose has failed, and they stay few. A temporal re-read joins the verification list: when the engine's API changes, the actions that name a part of it are re-read. A check on the record itself is proposed as an action. Left: the taxonomy beyond those two kinds.
 
 ## Also considered
 
@@ -77,7 +77,7 @@ One slot was missing at every level, and the six fill it from different sides: h
 
 The second addition is memory. ADRs keep every state, and the ladder only kept the current one. Superseding actions instead of rewriting them costs one id per change.
 
-The third is the kit's own split, `CLAUDE.md` loaded and `RATIONALE.md` on demand, applied to the ladder. It answers the open question on loading. The goals, objectives and constraints, one line each, are loaded, since a session decides against them. The record with its questions, consequences and options is read on demand, since a session consults it when it proposes or re-reads an action.
+The third is the kit's own split, `CLAUDE.md` loaded and `RATIONALE.md` on demand, applied inside each project. The active goals, objectives and constraints, one line each, sit in the project's `CLAUDE.md`, since a session decides against them. The record with its questions, consequences and options is the project's `ladder/` directory, read on demand when a session proposes or re-reads an action. Nothing is shared between projects. The first draft had a global file of shared goals, and the owner struck it: the same words mean different things in different work, so a project copies an entry it needs and owns the copy.
 
 What is left of the cost: each objective gains two short fields and each action four. They are a clause each, may say "not yet known", and are required at approval and validation. A proposal carries only the id, the text and what it comes from. That keeps `O5` whole, since a task that never reaches the ladder writes none of them.
 
