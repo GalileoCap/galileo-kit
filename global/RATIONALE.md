@@ -34,6 +34,8 @@
 
 ## Sessions
 
+**One task per context.** A context that carries two tasks pays for both on every turn and keeps less of each through a compaction, and a clear before the new task avoids paying the cache write on a context about to be abandoned. Only the model can tell that a prompt changed subject, so the rule asks it to name the change before starting, and the tool makes the naming mechanical and the clear one press.
+
 **Ask for a compaction at a clear point.** A compaction costs least where nothing is in flight, and a phase boundary is such a place whatever the context's size. A warning that arrives mid-task reads as permission to finish the task: one session reached 70% of its window after seven warnings inside a single turn, and the reply that ended the turn never mentioned compacting. So the rule names the boundaries. Holding the end of every long turn until its reply spoke of compacting was tried, and it put a closing paragraph about the context into each one: the warnings and the named boundaries carry the signal at less cost.
 
 **After a compaction or a clear, read again in full the documents the work rests on.** A summary keeps what a document concluded and drops the conditions it was concluded under. The next decision often turns on those: which option held only if something else was true, or what the failure path was.

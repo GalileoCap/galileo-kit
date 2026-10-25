@@ -42,7 +42,10 @@ function engine(on: On, { percent = 55, refuseCompactions = 0 } = {}) {
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
   on('tool.register', (_, e) => {
-    asked.push(`register ${e.name}`)
+    // new_task is registered beside it, proven in new_task.test.tsx.
+    if (e.name === 'clear_point') {
+      asked.push(`register ${e.name}`)
+    }
 
     return { value: { tool: `mcp__session-kit__${e.name}` } }
   })

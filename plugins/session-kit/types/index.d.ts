@@ -21,6 +21,17 @@ export type ChainState = {
   note: string
 }
 
+/**
+ * A new task the model named: `offered` while the band offers the handoff
+ * and the clear, `handoff` while the handoff is written, `clearing` while
+ * the context is cleared and the prompt sent again.
+ */
+export type NewTaskState = {
+  stage: 'offered' | 'handoff' | 'clearing'
+  /** The new task, in one line, as the model gave it. */
+  task: string
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'session-kit': {
@@ -30,6 +41,10 @@ declare module 'claude-code' {
       contextFigure: ContextFigure | null
       /** The chain under way; null while none is. */
       chain: ChainState | null
+      /** The new task offered to the person; null while none is. */
+      newTask: NewTaskState | null
+      /** The person's last prompt, sent again after a clear or when they keep going. */
+      lastPrompt: string
     }
   }
 }

@@ -32,6 +32,8 @@
 
 - 2026-10-25: step 3 of the port, `A11`, `A8` and `A7` in-process as `hooks/test_log.ts`, `hooks/doc_length.ts` and `hooks/nudge.ts`. The engine loads one hooks module per plugin, so `hooks/kit.tsx` imports and calls each concern's register, which corrects `A20`'s premise. session-kit 0.8.0, 22 engine tests green. A Bash call pays about 32 ms of settings hooks, down from about 100.
 
+- 2026-10-25: the owner held the push and said to go on with `A19`. The rule is in `global/CLAUDE.md` with its reason in `RATIONALE.md`, and the `new_task` tool beside `clear_point`: the band offers the handoff and a clear, or to keep going here, and sends the person's prompt again either way. session-kit 0.9.0, 27 engine tests green.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
@@ -41,7 +43,7 @@
 ## Next
 
 1. Install 0.7.0 on this machine and watch a real session: `A16`'s warning past half the window and its band on the terminal and in the desktop app, then `A17` with `chain` on, one run end to end, and the summary read back. The marketplace clone pulls from GitHub, so the install needs the owner's push, or a marketplace added from the local path.
-2. The port, in the order `A20` gives. `A21`, the index and check tool for `docs/intent/`, beside the steps. Then step 3, `A11`, `A8` and `A7` in-process, the guard's mod form once mod ordering is answered, and `A19`'s rule and tool.
+2. The port, in the order `A20` gives: steps 1, 2, 3 and 5 are built, with `A21` beside them. Left: step 4, the guard's mod form, once mod ordering is answered.
 3. `A22`'s shape, designed and put to the owner before it is built.
 4. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
 

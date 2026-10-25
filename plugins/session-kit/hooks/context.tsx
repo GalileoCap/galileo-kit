@@ -1,8 +1,10 @@
 // Context, in-process: the engine's own figure after every tool call, a
 // warning to the model every `step` tokens past `threshold` percent of the
 // window, a band above the prompt with the figure for the person, and, with
-// the `chain` option on, the chain: the model calls `clear_point`, and when
-// that turn ends the kit writes the handoff, compacts and continues.
+// the `chain` option on, two tools: `clear_point`, after which the kit writes
+// the handoff, compacts and continues when the turn ends, and `new_task`,
+// after which the band offers the handoff and a clear, or to keep going here,
+// and sends the person's prompt again.
 //
 // The model is the one that knows where a clear point is, so the warning
 // goes to it, on the tool result, while it can still choose where to stop,
@@ -15,18 +17,23 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { ChainState, ContextFigure } from '../types'
+import type { ChainState, ContextFigure, NewTaskState } from '../types'
 
 const warnedAt = atom({ plugin: 'session-kit', key: 'contextWarnedAt' } as const, 0)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
 const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
+const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
+const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
 
 const THRESHOLD_PERCENT = 50
 const STEP_TOKENS = 25000
 
 const TOOL_NAME = 'clear_point'
 const TOOL = 'mcp__session-kit__clear_point'
+const NEW_TASK_NAME = 'new_task'
+const NEW_TASK_TOOL = 'mcp__session-kit__new_task'
 const HANDOFF_COMMAND = 'session-kit:handoff'
+const CLEAR_COMMAND = 'clear'
 const COMPACT_TRIES = 6
 const COMPACT_RETRY_MS = 500
 
@@ -36,6 +43,13 @@ const TOOL_DESCRIPTION =
   'the handoff (CLAUDE.local.md), compacts the context, and continues with the ' +
   'next step, or stops when that step waits on the owner. Then end the turn ' +
   'with nothing more started.'
+
+const NEW_TASK_DESCRIPTION =
+  'Call this when the prompt just given is a task unrelated to the one in ' +
+  'CLAUDE.local.md, before starting on it: one task per context. session-kit ' +
+  'then offers the person the handoff and a clear, or to keep going here, and ' +
+  'sends their prompt again after. Then end the turn, saying in one line that ' +
+  'it is a new task, with nothing started.'
 
 const HANDOFF_FIELDS =
   'Keep the task in the user\'s own words, every decision with who took it and ' +
@@ -165,6 +179,59 @@ async function compactThenContinue($: EngineInterface, state: ChainState, tries 
   await $.prompt.submit({ text: continuePrompt(state.note) })
 }
 
+function newTaskLine(state: NewTaskState): string {
+  switch (state.stage) {
+    case 'offered':
+      return `New task: ${state.task}`
+    case 'handoff':
+      return 'session-kit is writing the handoff before the clear.'
+    case 'clearing':
+      return 'Clearing the context, then sending your prompt again.'
+  }
+}
+
+async function resend($: EngineInterface): Promise<void> {
+  const text = await read($, lastPrompt)
+  if (text !== '') {
+    await $.prompt.submit({ text, asUser: true })
+  }
+}
+
+async function keepGoing($: EngineInterface): Promise<void> {
+  await update($, newTask, () => null)
+  await resend($)
+}
+
+async function runHandoffBeforeClear($: EngineInterface): Promise<void> {
+  try {
+    await $.command.run({ command: HANDOFF_COMMAND })
+  } catch (error) {
+    await update($, newTask, () => null)
+    $.ui.toast(`session-kit: the handoff did not run (${reason(error)}), so the context was not cleared.`)
+  }
+}
+
+async function handoffThenClear($: EngineInterface, state: NewTaskState): Promise<void> {
+  await update($, newTask, () => ({ ...state, stage: 'handoff' }))
+  // Outside this dispatch: a command run inside a hook the turn waits on is refused.
+  $.clock.after(0, () => {
+    void runHandoffBeforeClear($)
+  })
+}
+
+async function clearThenResend($: EngineInterface): Promise<void> {
+  // The clear ends this session's state, so nothing is read from it after.
+  await update($, newTask, () => null)
+  try {
+    await $.command.run({ command: CLEAR_COMMAND })
+  } catch (error) {
+    $.ui.toast(`session-kit: the clear did not run (${reason(error)}).`)
+
+    return
+  }
+  await resend($)
+}
+
 export const register: Register = (on, options) => {
   const threshold = asNumber(options.threshold, THRESHOLD_PERCENT)
   const step = asNumber(options.step, STEP_TOKENS)
@@ -218,12 +285,26 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const offered = await read($, newTask)
     const running = await read($, chain)
     const now = await read($, figure)
-    if (e.props.hasSurvey || (running === null && (now === null || now.percent < threshold))) {
+    if (e.props.hasSurvey || (offered === null && running === null && (now === null || now.percent < threshold))) {
       return next(e)
     }
-    const { Box, Text } = $.ui.resolve(e)
+    const { Box, Button, Text } = $.ui.resolve(e)
+    if (offered !== null) {
+      return (
+        <Box>
+          <Text dimColor>{newTaskLine(offered)} </Text>
+          {offered.stage === 'offered' ? (
+            <Button key="new-task-clear" label="Handoff and clear" variant="primary" onPress={() => handoffThenClear($, offered)} />
+          ) : null}
+          {offered.stage === 'offered' ? (
+            <Button key="new-task-here" label="Keep going here" onPress={() => keepGoing($)} />
+          ) : null}
+        </Box>
+      )
+    }
     if (running !== null) {
       return (
         <Box>
@@ -239,6 +320,14 @@ export const register: Register = (on, options) => {
         </Text>
       </Box>
     )
+  }).catch(($, e, next) => next(e))
+
+  on('prompt.submit', async ($, e, next) => {
+    if (e.origin?.kind !== 'plugin' && e.text.trim() !== '') {
+      await update($, lastPrompt, () => e.text)
+    }
+
+    return next(e)
   }).catch(($, e, next) => next(e))
 
   if (!chainOn) {
@@ -263,9 +352,33 @@ export const register: Register = (on, options) => {
       },
       isDeferred: false,
     })
+    await $.tool.register({
+      name: NEW_TASK_NAME,
+      description: NEW_TASK_DESCRIPTION,
+      inputSchema: {
+        type: 'object',
+        properties: { task: { type: 'string', description: 'The new task, in one line.' } },
+        required: ['task'],
+      },
+      isDeferred: false,
+    })
 
     return next(e)
   }).catch(($, e, next) => next(e))
+
+  on('tool.call', { tool: NEW_TASK_TOOL }, async ($, e) => {
+    const task = typeof e.task === 'string' && e.task.trim() !== '' ? e.task.trim() : ''
+    if (task === '') {
+      return textResult('task must name the new task in one line.', true)
+    }
+    await update($, newTask, () => ({ stage: 'offered', task }))
+
+    return textResult(
+      'New task noted. Start nothing on it. End this turn now, saying in one line ' +
+        'that it is a new task: the band offers the handoff and a clear, or to keep ' +
+        'going here, and the prompt is sent again after.',
+    )
+  }).catch(() => textResult('session-kit could not record the new task.', true))
 
   on('tool.call', { tool: TOOL }, async ($, e) => {
     const nextStep = e.next_step
@@ -286,6 +399,17 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId !== undefined) {
       return next(e)
+    }
+    const offered = await read($, newTask)
+    if (offered !== null) {
+      if (e.reason !== 'answer') {
+        await update($, newTask, () => null)
+      } else if (offered.stage === 'handoff') {
+        await update($, newTask, () => ({ ...offered, stage: 'clearing' }))
+        $.clock.after(0, () => {
+          void clearThenResend($)
+        })
+      }
     }
     const state = await read($, chain)
     if (state === null) {
