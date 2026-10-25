@@ -56,7 +56,7 @@ A refused tool call returns its reason to the model as the denial.
 - `git commit --amend` on a published commit: refused with its reason in `guard.py`.
 - The Artifact tool: "A deliverable is a file in the project, never a published page. Write it as markdown or a plain .html beside the work, or in the scratchpad, and answer with its path."
 
-## Tools the model is given, with the `chain` option on
+## Tools the model is given, with the `chain` option on (the default)
 
 `clear_point`, with `next_step` ("session" or "owner") and `note`: "Call this at a clear point: the tree is committed and green, nothing is in flight, and the next step is known. When this turn ends, session-kit writes the handoff (CLAUDE.local.md), compacts the context, and continues with the next step, or stops when that step waits on the owner. Then end the turn with nothing more started." Its result: "Clear point noted. End this turn now, with nothing more started. When it ends, session-kit writes the handoff and compacts the context, then" either "stops, since the next step is the owner's." or "continues with: <note>".
 
@@ -76,4 +76,4 @@ To the chain's compaction: "CLAUDE.local.md holds the handoff written for this c
 
 ## What the person sees and the model does not
 
-The band above the prompt past the threshold: "Context <tokens> tokens (<percent>% of <window>): find a clear point, commit, write the handoff, ask to compact." The chain's stage line and the `new_task` offer with its two buttons. The toasts when a chain step did not run. At the end of a main-loop turn, one dim line from `hooks/checkout.ts` when the tree holds uncommitted changes or the handoff is missing or stale: "session-kit: <n> uncommitted changes at the end of the turn. CLAUDE.local.md predates the last commit (/session-kit:handoff)."
+The band above the prompt past the threshold: "Context <tokens> tokens (<percent>% of <window>): find a clear point, commit, write the handoff, ask to compact.", ending "call clear_point." with the `chain` option on. The chain's stage line and the `new_task` offer with its two buttons. The toasts when a chain step did not run. At the end of a main-loop turn, one dim line from `hooks/checkout.ts` when the tree holds uncommitted changes or the handoff is missing or stale: "session-kit: <n> uncommitted changes at the end of the turn. CLAUDE.local.md predates the last commit (/session-kit:handoff)."

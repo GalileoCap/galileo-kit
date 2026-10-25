@@ -74,7 +74,7 @@ function engine(on: On, { percent = 55, refuseCompactions = 0 } = {}) {
   return asked
 }
 
-test('off by default: no tool is registered and the warning names none', async ($, on) => {
+test('off: no tool is registered and the warning names none', { options: { chain: false } }, async ($, on) => {
   const asked = engine(on)
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   expect(asked).toEqual([])
