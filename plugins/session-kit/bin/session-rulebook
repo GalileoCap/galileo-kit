@@ -1,0 +1,4 @@
+#!/bin/sh
+# The rulebook's word count against its budget. Claude Code puts bin/ on the
+# Bash tool's PATH while the plugin is enabled. Standard library only.
+exec python3 "$(dirname "$0")/../rulebook/session_rulebook.py" "$@"

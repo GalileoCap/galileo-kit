@@ -1,4 +1,4 @@
 #!/bin/sh
-# The index and check over a project's docs/intent. Claude Code puts bin/ on
+# The index, check, names and next id over a project's docs/intent. Claude Code puts bin/ on
 # the Bash tool's PATH while the plugin is enabled. Standard library only.
 exec python3 "$(dirname "$0")/../intent/session_intent.py" "$@"

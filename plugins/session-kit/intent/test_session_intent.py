@@ -176,6 +176,34 @@ case("names prints only the ids asked for", code == 0 and out.strip().splitlines
 code, out = run(root, "names", "A9")
 case("names fails on an unknown id", code == 1 and "A9: no such entry" in out, out)
 
+# next claims the following id of a level under the lock, from the record's highest or the last claim, and never twice.
+root = project(CLEAN)
+state = tempfile.mkdtemp(prefix="session-intent-state-")
+code, out = run(root, "next", "A", "--state", state, "--title", "The first claim")
+case("next A gives the id after the record's highest action", code == 0 and out.strip() == "A4", out)
+code, out = run(root, "next", "A", "--state", state)
+case("a second claim moves on although no file was written", code == 0 and out.strip() == "A5", out)
+log = Path(state, "claims.log").read_text(encoding="utf-8").splitlines()
+case("the claims log names each id with its checkout and title",
+     len(log) == 2 and log[0].startswith("A4 ") and log[0].endswith(" The first claim") and Path(root).name in log[0], "\n".join(log))
+code, out = run(root, "next", "objective", "--state", state)
+case("a level may be named by its word", code == 0 and out.strip() == "O3", out)
+code, out = run(root, "next", "X", "--state", state)
+case("an unknown level is refused", code == 2 and "no such level" in out, out)
+Path(state, "G.next").write_text("1\n", encoding="utf-8")
+code, out = run(root, "next", "G", "--state", state)
+case("a counter below the record's highest is raised to it", code == 0 and out.strip() == "G2", out)
+Path(state, ".lock").mkdir()
+dead = subprocess.run([sys.executable, "-c", "import os; print(os.getpid())"], capture_output=True, text=True, timeout=30).stdout.strip()
+Path(state, ".lock", "pid").write_text(dead, encoding="utf-8")
+code, out = run(root, "next", "C", "--state", state)
+case("a lock left by a dead process is reclaimed", code == 0 and out.strip() == "C2" and not Path(state, ".lock").exists(), out)
+import concurrent.futures
+with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+    results = list(pool.map(lambda _: run(root, "next", "A", "--state", state), range(8)))
+ids = {out.strip() for _, out in results}
+case("eight claims at once get eight distinct ids", all(code == 0 for code, _ in results) and ids == {f"A{n}" for n in range(6, 14)}, str(sorted(ids)))
+
 if failures:
     print(f"\n{len(failures)} failed")
     for f in failures:

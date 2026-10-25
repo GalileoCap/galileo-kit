@@ -21,7 +21,8 @@ Everything its owner works with agents through: the rules every session follows 
 | `direnv_env.sh` | SessionStart, CwdChanged, FileChanged | Puts the project's direnv environment in front of every Bash command, with the plugin's `bin/` kept at the end of PATH. A project with no `.envrc` is left alone. |
 | `pyright_env.py` | SessionStart | For a project whose `.claude/claude-kit.json` sets `"pyright_env": true`, writes the root `pyrightconfig.json` with `session-codeintel pyright-env`, one execution environment per uv package, and names any package it left out. Off by default, because it would replace a root config kept by hand. |
 | `bin/session-tells`, `bin/session-codeintel` | Bash tool's PATH | The two packages below as commands, while the plugin is enabled. Each runs in the environment its hook uses, in `CLAUDE_PLUGIN_DATA`. |
-| `bin/session-intent` | Bash tool's PATH | `session-intent index` writes `docs/intent/INDEX.md`, the entries waiting on the owner first, `session-intent check` reads the record and the `CLAUDE.md` Intent block, one line per problem, and `session-intent names` prints each entry's id and name. Standard library Python. |
+| `bin/session-intent` | Bash tool's PATH | `session-intent index` writes `docs/intent/INDEX.md`, the entries waiting on the owner first, `session-intent check` reads the record and the `CLAUDE.md` Intent block, one line per problem, `session-intent names` prints each entry's id and name, and `session-intent next <level>` claims the next id of a level under a lock, from a counter kept outside every checkout under `~/.claude/session-kit/intent/`, one per clone, so an id is never given twice. Standard library Python. |
+| `bin/session-rulebook` | Bash tool's PATH | Counts the words of what every turn loads (the user's `~/.claude/CLAUDE.md` and the project's `CLAUDE.md` with their `@path` imports, `.claude/rules/`, `CLAUDE.local.md`) and, apart, of the skills, each file listed, and fails when a group is over its budget: 5,000 and 16,000 words, or the project's own under `rulebook` in `.claude/claude-kit.json`. Standard library Python. |
 | `bin/session-suppressions` | Bash tool's PATH | `session-suppressions list` prints every suppression in the tree's source files with the ledger row it cites, and `check` fails on a marker that cites no row (on its line or the line above) or a row the ledger lacks. The ledger is `docs/decisions.md`, the citation `decisions.md, <n>`, both settable under `suppressions` in `.claude/claude-kit.json`. Standard library Python. |
 | `bin/session-transcripts` | Bash tool's PATH | Reads the sessions' transcripts under `~/.claude/projects/` and prints tables: `list`, `session <id>`, `warnings` (each context warning and what followed), `cache` (the share read from the prompt cache, the cold sends), `compactions`, `hooks`, and `report`, which writes them under `docs/measurements/`. `--archive <dir>` reads a backup beside them, one `<project>/<id>.tar.xz` per session, in a stream. Counts and sizes, with no prompt and no answer in its output. Standard library Python. |
 | `handoff` skill | `/session-kit:handoff` | Writes `CLAUDE.local.md`, the working state a session reads first after a compaction. |
@@ -32,6 +33,7 @@ Everything its owner works with agents through: the rules every session follows 
 - `chain` (off) turns on the two tools: `clear_point`, with the handoff, compaction and continue that run when the turn it was called in ends, and `new_task`, with the band's offer of the handoff and a clear. The continue prompt reaches the model as the plugin's, telling it to read again the documents `CLAUDE.local.md` lists and take its next step. An interrupted turn cancels the chain.
 - `docLines` (1500) is the cap past which a `docs/*.md` file an edit touched is named to the model.
 - A project names its suppression ledger in `.claude/claude-kit.json` under `suppressions`: `ledger` (`docs/decisions.md`), `cite` (a pattern whose first group is the row's number, `decisions\.md,?\s*(\d+)`) and `skip` (directories beyond the usual build and dependency ones).
+- A project sets its rulebook budgets in `.claude/claude-kit.json` under `rulebook`: `rules` and `skills` in words, and `skills_from`, globs from the root of further skill files (the kit names `plugins/*/skills/*/SKILL.md`).
 - A project names its own test runners in `.claude/claude-kit.json`, so the `-x` and piped-output rules and the test log cover them:
 
   ```json
@@ -102,8 +104,10 @@ claude plugin validate . && claude plugin validate plugins/session-kit --strict
 claude plugin test plugins/session-kit            # the hooks module's tests, against the engine itself
 python3 plugins/session-kit/intent/test_session_intent.py
 python3 plugins/session-kit/transcripts/test_session_transcripts.py
+python3 plugins/session-kit/rulebook/test_session_rulebook.py
 plugins/session-kit/bin/session-intent check      # the record under docs/intent, and INDEX.md current
 plugins/session-kit/bin/session-suppressions check   # every suppression in the kit's code cites a row of docs/decisions.md
+plugins/session-kit/bin/session-rulebook             # the rules and the skills under their word budgets
 python3 plugins/session-kit/hooks/time_hooks.py   # what the settings hooks add to a tool call, see docs/measurements/hook-times.md
 ```
 
