@@ -39,6 +39,8 @@ With the module:
 
 7. Each hooks module's effect and cost. When the warning, the nudge, the document cap and the test log fired, what they added, and the time each took around `next`. The chain: each run, its stages, whether the continue landed, and the summary's size.
 8. The hooks' time per call, live, where `time_hooks.py` measures it on a bench.
+9. What a compaction or a clear is worth (`O12`, `G4`), the owner's question of 2026-10-25: after each one, the tokens spent reading again documents already read before it, the cache created again on the next request, and the turns before the work resumed, against the tokens the context lost. The warning's tiers rest on this number and have none yet.
+10. The sessions the reader cannot see. A cleared or deleted session leaves no transcript, so every count above is over the sessions kept, and the long sessions cleared along the way are the ones missing. The `measure` module records a session's figures as they happen, into the plugin's store, so a deleted transcript loses nothing after it ships. The sessions before it stay unmeasured.
 
 ## The shape
 

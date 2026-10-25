@@ -8,7 +8,7 @@ Everything the owner works with agents through: the rules every session follows,
 - `docs/PLAN.md`: the order of work, candidates, decisions, open questions and deferred work.
 - `docs/claude-code-mods-research.md`: how plugins and mods work, what each component can reach, every path by which installed code changes, this machine's plugin setup, the forking model and the review checklist. Read it before reviewing a mod.
 - `docs/session-kit-port.md`: the analysis behind the port of `session-kit`'s hooks to a mod: the API, the context chain, one task per context, the order. Its entries are under `docs/intent/`.
-- `docs/BRIEFING.md`: where the work stands, in plain words, rewritten whole when the owner asks.
+- `docs/BRIEFING.md`: where the work stands, in plain words, rewritten whole when the owner asks. `docs/what-reaches-the-model.md`: every text the kit puts in front of a session, for review.
 - `docs/session-tooling-design.md`: the shape of `A22`, the tooling over the transcripts and the hooks' effect. `docs/measurements/`: the hook times and the reports `session-transcripts report` writes, one per date, versioned so a change can be argued from one against the next.
 - `docs/reviews/<name>.md`: one review per candidate.
 

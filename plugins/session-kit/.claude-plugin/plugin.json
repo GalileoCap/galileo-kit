@@ -1,6 +1,6 @@
 {
   "name": "session-kit",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Hooks and a handoff skill that every project can use: context-pressure warnings, git and test-run guards, prose-tells warnings, formatting with the project's own tools, a test-run log, a direnv environment, a root pyrightconfig.json for multi-package repositories, the session-tells and session-codeintel commands, and CLAUDE.local.md handoffs.",
   "author": {
     "name": "Galileo Cappella"
@@ -11,7 +11,7 @@
       "title": "Context warning from",
       "type": "number",
       "description": "Tokens of context past which the model is warned to find a clear point, firmer at one and a half times and at twice that; 0 turns the count off.",
-      "default": 150000
+      "default": 250000
     },
     "threshold": {
       "title": "Context warning percent",

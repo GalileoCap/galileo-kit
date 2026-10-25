@@ -18,7 +18,7 @@ Three things, in the order you gave them.
 
 All of it committed on `main`, none of it pushed. You asked to hold the push.
 
-- The context warning is in-process (`A16`). The engine's own token figure is read after each tool call. From 150,000 tokens the model is told to find a clear point, every 25,000 tokens, firmer at 225,000 and at 300,000. A band above the prompt shows you the count. You set the threshold as a token count after the first transcript report. The percent of the window is still there as an alternative.
+- The context warning is in-process (`A16`). The engine's own token figure is read after each tool call. From 250,000 tokens the model is told to find a clear point, every 25,000 tokens, firmer at 500,000 and at 750,000. A band above the prompt shows you the count. You set the threshold as a token count after the first transcript report. The percent of the window is still there as an alternative.
 - The clear-point chain (`A17`), off by default. With the `chain` option on, the model calls a `clear_point` tool when it reaches one, and the plugin runs the handoff, the compaction and the "continue" prompt without you. **The backstop** (`A18`) gives the engine's own automatic compaction the handoff's fields, so an unplanned compaction loses less.
 - One task per context (`A19`). The rule is in the global rules. With `chain` on, the model calls a `new_task` tool when a prompt changes subject, and the band offers you the handoff and a clear, or to keep going, and sends your prompt again either way.
 - The test log, the document-length cap and the single-edit nudge moved in-process (`A11`, `A8`, `A7`). A Bash call now pays about 32 ms of hooks instead of about 100.
@@ -35,10 +35,10 @@ No mod has run in a real session yet. Everything above is proven by the engine's
 
 - The push. It unblocks the real-session run of every module.
 - Mod ordering. Whether a mod's refusal runs before another installed mod's approval. The last piece of the port, the guard as a mod, waits on the answer.
-- **Three objectives to approve or cut**, inferred by a session from your earlier rules: commands run with the project's own tools (`O14`), routine work takes the cheaper path (`O15`), a document the work rests on is read whole (`O16`).
-- **One constraint to state or strike**: the kit is never the reason a session fails, the guard excepted (`C1`).
-- **A number I changed**: the global rule's "skip the ask" line moved from 30% of the window to 100,000 tokens when the threshold became a token count.
-- **Twenty-one actions to validate**, listed first in `docs/intent/INDEX.md`. You validate in batches at a clear point, and nothing waits on it.
+- Three objectives to approve or cut, inferred by a session from your earlier rules: commands run with the project's own tools (`O14`), routine work takes the cheaper path (`O15`), a document the work rests on is read whole (`O16`).
+- One constraint to state or strike: the kit is never the reason a session fails, the guard excepted (`C1`).
+- Two numbers I chose: the firmest warning tier at 750,000 tokens, and the global rule's "skip the ask" line at 150,000 tokens, both unmeasured.
+- Twenty-one actions to validate, listed first in `docs/intent/INDEX.md`. You validate in batches at a clear point, and nothing waits on it.
 
 ## What is next, in order
 

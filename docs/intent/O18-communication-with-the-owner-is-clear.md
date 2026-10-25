@@ -7,11 +7,13 @@ status: approved 2026-10-25
 
 # O18 Communication with the owner is clear
 
-Agent-human communication is clear. A reference to an entry of the intent carries its name and never the id alone, because the owner cannot keep track of the numbers as they accumulate: "Approve O14?" means nothing on its own.
+Agent-human communication is clear. A reference by id, to an entry of the intent, an issue, a ticket or a planned chunk of work, carries its name and never the id alone, because the owner cannot keep track of the numbers as they accumulate: "Approve O14?" means nothing on its own.
 
 In the owner's words, 2026-10-25:
 
 > Agent-human communication should be clear. Specifically we need to reduce the plain references like "A20" or "O14" without a title or a name. Because I cannot keep track of all the numbers as they accumulate.
+
+> The IDs rule should impact not only to our goals, but to all IDs in the project (eg: issues, tickets, planned chunks of work, ...).
 
 ## Changes
 

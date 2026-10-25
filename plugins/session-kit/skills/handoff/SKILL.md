@@ -44,7 +44,7 @@ for this file, keep them too.
 - Rewrite the file whole. It is a snapshot of now and keeps no history.
 - Never commit it, and never paste it into `CLAUDE.md`.
 - No secrets.
-- An id of the intent carries its name at its first mention in each section
+- An id carries its name at its first mention in each section
   (`A20`, one module per concern). `session-intent names` prints them.
 - Under about eighty lines. Detail that needs more belongs in a document or
   a commit message.

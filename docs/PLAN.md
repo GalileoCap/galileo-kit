@@ -42,6 +42,8 @@
 
 - 2026-10-25: the owner said the ids had stopped meaning anything and made clear communication an objective, `O18`. The rule that an id carries its name is in the global rules (`A23`), `session-intent names` prints them, and the reference mod that draws the name beside each id in a reply is shaped as `A24`, to be built after the first real-session run. `docs/BRIEFING.md` holds the state in plain words.
 
+- 2026-10-25: the owner raised the warning to 250,000 tokens, firmer at 500,000, since the median of 152,000 counted only the sessions kept and a compaction after two small tasks would cost more than it saves. session-kit 0.11.0. The id rule widened to every kind of id a project uses, and the reference mod (`A24`) to a `references` list in `.claude/claude-kit.json`. `docs/what-reaches-the-model.md` lists every text the kit puts in front of a session, for the owner's review.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
@@ -59,6 +61,7 @@
 ## Open questions
 
 - Mod ordering: does a mod's `tool.call` or `tool.check` deny run before or after another user-installed mod's approval? This decides whether a mod port of the `session-kit` guard can hold against a third-party mod. Source: the "React to events" page, https://code.claude.com/docs/en/plugins/mods/events.md, and the mods admin page on seats (`prepend`, `append`).
+- What a compaction or a clear is worth, and how much the reader's sample is biased by the sessions cleared or deleted (questions 9 and 10 of `docs/session-tooling-design.md`). The warning's tiers at 250,000, 500,000 and 750,000 tokens are set on the owner's experience, and the measure module records live so the next report sees every session.
 - Login type: is this machine's session credential a personal or a Team/Enterprise login? On a personal login without managed settings, an installed mod can approve a tool call that the `session-kit` `PreToolUse` guard blocks.
 
 ## Deferred

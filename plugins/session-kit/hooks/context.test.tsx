@@ -30,7 +30,7 @@ function engine(on: On, state: { percent: number }, deny = false) {
   on('tool.call', () => (deny ? { deny: 'no' } : { result: {} }))
 }
 
-test('the model is warned from 150,000 tokens, every 25k, firmer at one and a half and at twice that, and afresh after a compaction', async ($, on) => {
+test('the model is warned from 250,000 tokens, every 25k, firmer at twice and at three times that, and afresh after a compaction', async ($, on) => {
   const state = { percent: 10 }
   engine(on, state)
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
@@ -42,15 +42,15 @@ test('the model is warned from 150,000 tokens, every 25k, firmer at one and a ha
     return ran.context ?? []
   }
 
-  expect(await contextAt(10)).toEqual([])
-  expect((await contextAt(15))[0]).toMatch(/^Context at 150,000 tokens \(15% of 1,000,000\)\. Aim for a safe point/)
-  expect(await contextAt(16)).toEqual([])
-  expect((await contextAt(18))[0]).toMatch(/180,000 tokens/)
-  expect((await contextAt(23))[0]).toMatch(/End this turn at the next green commit/)
-  expect((await contextAt(31))[0]).toMatch(/Stop starting anything new/)
+  expect(await contextAt(20)).toEqual([])
+  expect((await contextAt(25))[0]).toMatch(/^Context at 250,000 tokens \(25% of 1,000,000\)\. Aim for a safe point/)
+  expect(await contextAt(26)).toEqual([])
+  expect((await contextAt(28))[0]).toMatch(/280,000 tokens/)
+  expect((await contextAt(51))[0]).toMatch(/End this turn at the next green commit/)
+  expect((await contextAt(76))[0]).toMatch(/Stop starting anything new/)
   // Compacted: the figure fell below the last warning.
   expect(await contextAt(5)).toEqual([])
-  expect((await contextAt(16))[0]).toMatch(/160,000 tokens/)
+  expect((await contextAt(26))[0]).toMatch(/260,000 tokens/)
 })
 
 test('a percent of the window is the alternative, with the token count off', { options: { thresholdTokens: 0, threshold: 60, step: 100000 } }, async ($, on) => {
@@ -106,10 +106,10 @@ test('the band shows the count past the threshold and leaves the engine below it
     expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
     await ui.unmount()
 
-    state.percent = 20
+    state.percent = 30
     await $.tool.call({ tool: 'Bash', command: 'ls' })
     ui = await $.ui.mount({ ...BAND, surface })
-    expect((await ui.find({ type: 'Text', text: /Context 200,000/ }))?.text).toMatch(/Context 200,000 tokens \(20% of 1,000,000\)/)
+    expect((await ui.find({ type: 'Text', text: /Context 300,000/ }))?.text).toMatch(/Context 300,000 tokens \(30% of 1,000,000\)/)
     await ui.unmount()
   }
 })

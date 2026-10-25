@@ -11,7 +11,7 @@ supersedes: []
 
 # A23 An id carries its name
 
-A rule in the global rules: an entry of the intent is written as its id and its name together, `A20`, one module per concern, in every reply and in every document the owner decides from, and never as the id alone. `session-intent names` prints the name of every entry, or of the ids given, so a session that has lost the names to a compaction gets them back in one call.
+A rule in the global rules: an id of any kind the project uses, an intent entry, an issue, a ticket, a planned chunk of work, is written with its name, `A20`, one module per concern, in every reply and in every document the owner decides from, and never as the id alone. `session-intent names` prints the name of every entry, or of the ids given, so a session that has lost the names to a compaction gets them back in one call.
 
 ## Context
 

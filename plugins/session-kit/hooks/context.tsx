@@ -25,10 +25,10 @@ const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
 
-const THRESHOLD_TOKENS = 150000
+const THRESHOLD_TOKENS = 250000
 const STEP_TOKENS = 25000
-const FIRMER_AT = 1.5
-const STOP_AT = 2
+const FIRMER_AT = 2
+const STOP_AT = 3
 
 const TOOL_NAME = 'clear_point'
 const TOOL = 'mcp__session-kit__clear_point'
