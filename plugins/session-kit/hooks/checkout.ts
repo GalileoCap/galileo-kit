@@ -17,8 +17,19 @@ export const HANDOFF_COMMAND = '/session-kit:handoff'
 
 export type HandoffState = 'missing' | 'stale' | 'current'
 
-/** Git with the repository's own config unable to run code: a `core.fsmonitor` set in `.git/config` is a command. The test log runs git the same way. */
+/** Git with the repository's own config unable to run code: a `core.fsmonitor` set in `.git/config` is a command. */
 export const GIT = ['git', '-c', 'core.fsmonitor=false']
+
+/** Git's output, run as GIT runs it, or null on a non-zero exit, an output cut short, or a run that did not start. */
+export async function gitOutput($: EngineInterface, cwd: string, args: string[], stdin?: string): Promise<string | null> {
+  try {
+    const ran = await $.process.run([...GIT, ...args], stdin === undefined ? { cwd } : { cwd, stdin })
+
+    return ran.exitCode === 0 && !ran.isStdoutTruncated ? ran.stdout : null
+  } catch {
+    return null
+  }
+}
 
 async function lastCommitMs($: EngineInterface, cwd: string): Promise<number | null> {
   const ran = await $.process.run([...GIT, 'log', '-1', '--format=%ct'], { cwd })

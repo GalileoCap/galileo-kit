@@ -25,7 +25,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, ToolCallResult } from 'claude-code'
 
 import type { TestRetry, TestRun } from '../types'
-import { GIT } from './checkout'
+import { gitOutput } from './checkout'
 import { clockTime } from './context'
 
 export const BUILTIN_TEST_COMMANDS = [
@@ -147,16 +147,6 @@ export function twoTriesContext(command: string): string {
   )
 }
 
-async function git($: EngineInterface, cwd: string, args: string[], stdin?: string): Promise<string | null> {
-  try {
-    const ran = await $.process.run([...GIT, ...args], stdin === undefined ? { cwd } : { cwd, stdin })
-
-    return ran.exitCode === 0 && !ran.isStdoutTruncated ? ran.stdout : null
-  } catch {
-    return null
-  }
-}
-
 /**
  * A fingerprint of the working tree's content: the index's blob hashes, with
  * the files changed since hashed afresh, the deleted ones out and the
@@ -165,9 +155,9 @@ async function git($: EngineInterface, cwd: string, args: string[], stdin?: stri
  * is no file, or too many files to hash.
  */
 export async function treeFingerprint($: EngineInterface, cwd: string): Promise<string | null> {
-  const index = await git($, cwd, ['ls-files', '-s', '-z'])
-  const changed = await git($, cwd, ['diff-files', '-z'])
-  const others = await git($, cwd, ['ls-files', '--others', '--exclude-standard', '-z'])
+  const index = await gitOutput($, cwd, ['ls-files', '-s', '-z'])
+  const changed = await gitOutput($, cwd, ['diff-files', '-z'])
+  const others = await gitOutput($, cwd, ['ls-files', '--others', '--exclude-standard', '-z'])
   if (index === null || changed === null || others === null) {
     return null
   }
@@ -203,7 +193,7 @@ export async function treeFingerprint($: EngineInterface, cwd: string): Promise<
     return null
   }
   if (toHash.length > 0) {
-    const hashed = await git($, cwd, ['hash-object', '--no-filters', '--stdin-paths'], `${toHash.join('\n')}\n`)
+    const hashed = await gitOutput($, cwd, ['hash-object', '--no-filters', '--stdin-paths'], `${toHash.join('\n')}\n`)
     const hashes = hashed?.split('\n').filter((line) => line !== '') ?? []
     if (hashes.length !== toHash.length) {
       return null

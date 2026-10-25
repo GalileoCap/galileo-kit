@@ -42,7 +42,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PromptOrigin, Register, RenderSurface, SessionRateLimit, Timer, TurnCompleteInput } from 'claude-code'
 
 import type { ChainState, ChainStep, ContextFigure, NewTaskState } from '../types'
-import { GIT } from './checkout'
+import { gitOutput } from './checkout'
 
 const NO_WINDOWS: SessionRateLimit[] = []
 const NO_MARKS: Record<string, number> = {}
@@ -474,15 +474,10 @@ function stage($: EngineInterface, text: string): void {
     .catch(() => undefined)
 }
 
-// The engine's loader takes `$` only into a function of this file, so the test log keeps a git helper of its own.
 async function gitLines($: EngineInterface, args: string[]): Promise<string[] | null> {
-  try {
-    const ran = await $.process.run([...GIT, ...args], { cwd: await $.session.cwd() })
+  const out = await gitOutput($, await $.session.cwd(), args)
 
-    return ran.exitCode === 0 ? ran.stdout.split('\n').filter((line) => line.trim() !== '') : null
-  } catch {
-    return null
-  }
+  return out === null ? null : out.split('\n').filter((line) => line.trim() !== '')
 }
 
 async function headOf($: EngineInterface): Promise<string | null> {
