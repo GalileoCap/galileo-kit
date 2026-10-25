@@ -69,14 +69,16 @@
 - 2026-10-25: the owner asked for the bands to be dismissable (`A43`, the bands are dismissable). Each band above the prompt has a Dismiss button: the figure's stays away for a step, the chain's stops the chain where it stands, the offer's drops the offer and sends nothing. session-kit 0.22.0, 43 engine tests.
 - 2026-10-25: the owner asked for an analysis of effortless, replay-theater and agent-profiler, and of more mods to learn from. The three are reviewed into `reviews/effortless.md`, `reviews/replay-theater.md` and `reviews/agent-profiler.md`, each with the verdict reject: nothing malicious in any, and each is a poor fit beside the kit. effortless updates itself on one press and checks GitHub at every load, and replay-theater and effortless both hide the kit's bands. Eleven more were read for their patterns, chosen from the community catalogue of 6,097 mods, into `analyses/mods-for-the-kit.md`: 25 candidates, M1 to M25. The first of them are defects in what the kit has: its band hides every band beneath it, the chain has no loop guard, any prompt but a plugin's counts as the person's, and the guard refused two calls of this session for text they only quoted.
 
+- 2026-10-25: the owner read the mod analysis and answered. The three rejections stand and nothing is forked, since what is worth having is re-implemented in the kit. M8 was wrong (a lapsed cache has already lost its value), and the pattern to build is the owner's own, M26, a timer that runs the handoff and the compaction before the cache goes cold. The order holds, the defects first. The owner also asked whether a session should get a tool to change its own effort, answered under Open questions.
+
 ## Candidates
 
 | Mod | Source | Review | Verdict | Owner's decision |
 | --- | --- | --- | --- | --- |
-| `cache-tax` | `karanb192/cache-tax`, served by `karanb192/claude-code-mods` | `docs/reviews/cache-tax.md` | Fork | Waits for the `session-kit` port |
-| `effortless` | `HeyCubit/effortless`, its own marketplace | `docs/reviews/effortless.md` | Reject | Waits on the owner |
-| `replay-theater` | `anthropics/claude-code-playground`, folder marketplace `claude-code-playground-mods` | `docs/reviews/replay-theater.md` | Reject | Waits on the owner |
-| `agent-profiler` | `YeonwooSung/my-claude-code-mods` | `docs/reviews/agent-profiler.md` | Reject, or one session as is for a live figure | Waits on the owner |
+| `cache-tax` | `karanb192/cache-tax`, served by `karanb192/claude-code-mods` | `docs/reviews/cache-tax.md` | Fork | Waits for M26, the cold-cache timer, which takes its ground |
+| `effortless` | `HeyCubit/effortless`, its own marketplace | `docs/reviews/effortless.md` | Reject | Reject, 2026-10-25. Its patterns re-implemented, no fork |
+| `replay-theater` | `anthropics/claude-code-playground`, folder marketplace `claude-code-playground-mods` | `docs/reviews/replay-theater.md` | Reject | Reject, 2026-10-25. No fork |
+| `agent-profiler` | `YeonwooSung/my-claude-code-mods` | `docs/reviews/agent-profiler.md` | Reject, or one session as is for a live figure | Reject, 2026-10-25. No fork and no one-session install. The timeline is re-implemented as M17 |
 
 ## Next
 
@@ -86,7 +88,7 @@
 4. The transcript tooling (`A22`): its `rules` command and, after the first real session with the modules, the `measure` module.
 5. The reference mod (`A24`), after the first real-session run: the name drawn beside each id in a reply.
 6. Once the port has its context mod: decide `cache-tax` (fold in, fork beside, or install as is) against it, then the next candidate. The same marketplace also serves `image-peek`, `mod-builder` and `fable-pin`.
-7. The mod analysis (`docs/analyses/mods-for-the-kit.md`): the owner's choice of patterns, by its last section. The defects (M1 a band that composes, M2 a loop guard on the chain, M3 prompt origins as a closed set, M25 the guard's false refusals) come first, each with the test that fails before it.
+7. The mod analysis (`docs/analyses/mods-for-the-kit.md`), in the order the owner confirmed on 2026-10-25. The defects first (M1 a band that composes, M2 a loop guard on the chain, M3 prompt origins as a closed set, M25 the guard's false refusals, M24 git without fsmonitor), each with the test that failed before it, and M4 (lazy registration) once a real session shows the tools missing after a reload. Then M26, the cold-cache timer, with M7 (the lifetime from the response) as its clock, and M9 and M5 beside it. Then proof (M14, M15), observation with `A22` (M17, M13, M18, M19, M20), and the rest each on its own decision.
 
 ## Open questions
 
@@ -94,8 +96,10 @@
 - What a compaction or a clear is worth, and how much the reader's sample is biased by the sessions cleared or deleted (questions 9 and 10 of `docs/session-tooling-design.md`). The warning's tiers at 250,000, 500,000 and 750,000 tokens are set on the owner's experience, and the measure module records live so the next report sees every session.
 - The analysis of the two projects: the order of the tool candidates, whether code-shape rules go in `global/CLAUDE.md` or an opt-in `global/CODE.md`, the rule-ownership conflict with tagents, whether the projects' records converge on the ladder (`docs/analyses/tagents-and-generic-app.md`, last section).
 - Login type: is this machine's session credential a personal or a Team/Enterprise login? On a personal login without managed settings, an installed mod can approve a tool call that the `session-kit` `PreToolUse` guard blocks.
+- Should a session get a tool to change its own effort, before a new task (the owner, 2026-10-25, from effortless)? The session's answer: not on its own judgement mid-task, and yes at a context boundary with the person choosing. A mod can rewrite `effort` on every request (`turn.step`, the 2.1.308 types line 14362), so the mechanism exists. Against a tool the model calls when it sees fit: the desktop app refuses `set_session_effort` for the calling session, since a session must not re-price its own turns with nobody seeing it, and the Agent tool's own `effort` field says never on the model's judgement. The API also documents that a top-level effort change invalidates the cached messages (the bundled `claude-api` skill, `shared/prompt-caching.md`, Invalidation hierarchy), which effortless's author measured as a 56 to 100% rewrite on Fable 5.1 (`hooks/register.tsx:23-25`), the owner's model, so a change mid-context costs a write of all the context. A change at a clear costs nothing, which is where the owner's "before a new task" lands: the `new_task` offer could carry an effort for the new task, proposed by the model with its reason and set by the person's press through `/effort` after the clear (unverified that `$.command.run` takes it), with a default per task kind in `.claude/claude-kit.json`. That would be the first action under `O15` (routine work takes the cheaper path), still proposed. The cheaper path that needs no effort change at all is a subagent at `low` for the routine turns (a reread after a compaction, a mechanical sweep, the checks), whose cache is its own.
+- M26, the cold-cache timer: the floor of context below which it does not arm (a compaction of a small context costs more than its cold cache), and the lead (55 minutes of 60). Proposed: the warning's own trigger as the floor, and the lead as an option.
 
 ## Deferred
 
-- A cold-send guard (the cache signal from `cache-tax`). It joins the port's context mod, or comes from `cache-tax` itself, decided at step 4 above. Details in `docs/reviews/cache-tax.md`, under "What could move into `session-kit`".
+- A cold-send guard (the cache signal from `cache-tax`), now M26 in `docs/analyses/mods-for-the-kit.md`: the kit's own timer, which runs the chain before the cache goes cold. `cache-tax`'s fork is decided against it once it is built. Details in `docs/reviews/cache-tax.md`, under "What could move into `session-kit`".
 - Turn on auto-update for `galileo-kit` once every plugin in it is ours.
