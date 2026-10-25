@@ -128,8 +128,8 @@ to `FILE`. The areas come from `measure.areas` in
 directories and `extensions`, by default `.py`, `.ts`, `.tsx`, `.js`,
 `.jsx`, `.mjs`, `.cjs`, `.yml` and `.yaml`), or from `--area`, each a directory with every `--skip`
 left out, or the root alone. Dependency and build directories are always
-left out. Without `--at` the working tree is measured as one snapshot;
-with it, each `REF` is taken as a `git archive` into a directory of the
+left out. Without `--at` the working tree is measured as one snapshot.
+With it, each `REF` is taken as a `git archive` into a directory of the
 run's own and measured as a snapshot of its own, so the rows read against
 each other.
 
