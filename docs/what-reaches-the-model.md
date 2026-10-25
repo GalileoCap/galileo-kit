@@ -24,6 +24,13 @@ The document cap, after an Edit or Write of a markdown file under `docs/` past 1
 
 The single-edit nudge, after a Bash call that is a Python heredoc doing one file edit: "This Bash call is a Python heredoc doing one file edit: a read, one replace, a write. The Edit tool makes the same change for about a third fewer tokens and shows it as a diff."
 
+## Added beside a prompt, by the in-process module (`hooks/checkout.ts`)
+
+On the first prompt of a context (a new conversation, or one just compacted or cleared), when the handoff is not current, one of:
+
+- "session-kit: CLAUDE.local.md is missing: run /session-kit:handoff init before working, so the next context starts from the files."
+- "session-kit: CLAUDE.local.md predates the last commit: read it knowing that, and run /session-kit:handoff at the next clear point."
+
 ## Added to a tool result, by the settings hooks (`hooks/hooks.json`)
 
 The formatter, after an Edit, Write or Bash edit, when a formatter or linter left something: "<tool> left this in <path>:" and up to a few lines of the tool's output, or "<tool> on <path> did not run: <error>".
@@ -69,4 +76,4 @@ To the chain's compaction: "CLAUDE.local.md holds the handoff written for this c
 
 ## What the person sees and the model does not
 
-The band above the prompt past the threshold: "Context <tokens> tokens (<percent>% of <window>): find a clear point, commit, write the handoff, ask to compact." The chain's stage line and the `new_task` offer with its two buttons. The toasts when a chain step did not run.
+The band above the prompt past the threshold: "Context <tokens> tokens (<percent>% of <window>): find a clear point, commit, write the handoff, ask to compact." The chain's stage line and the `new_task` offer with its two buttons. The toasts when a chain step did not run. At the end of a main-loop turn, one dim line from `hooks/checkout.ts` when the tree holds uncommitted changes or the handoff is missing or stale: "session-kit: <n> uncommitted changes at the end of the turn. CLAUDE.local.md predates the last commit (/session-kit:handoff)."

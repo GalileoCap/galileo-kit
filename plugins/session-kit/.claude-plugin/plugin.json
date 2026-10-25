@@ -1,6 +1,6 @@
 {
   "name": "session-kit",
-  "version": "0.20.4",
+  "version": "0.20.5",
   "description": "Hooks, a handoff skill and an iterate skill that every project can use: context-pressure warnings, git and test-run guards, prose-tells warnings, formatting with the project's own tools, a test-run log, a direnv environment, a root pyrightconfig.json for multi-package repositories, the checkout checks (a missing or stale handoff, uncommitted work at the end of a turn), the suppression warning with its reasons and index check, the session-tells, session-codeintel, session-intent (with its id allocator), session-transcripts, session-suppressions, session-rulebook, session-docs, session-watched (a run ended with its diagnostics after five minutes with no progress) and session-owed (what a range of history leaves to do outside the code) commands, and a looks check, a layers pack, a code measure, the quality gates (duplicates, fallbacks, file length) and the project template in session-codeintel, CLAUDE.local.md handoffs, and a fast-working mode for while the owner iterates.",
   "author": {
     "name": "Galileo Cappella"

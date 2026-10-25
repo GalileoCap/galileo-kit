@@ -1,16 +1,19 @@
-// The checkout checks, in-process: at the start of a conversation and after
-// a compaction, the model is told when `CLAUDE.local.md` is missing or older
-// than the last commit, through a context block beside the instruction files.
-// At the end of a turn of the main loop, the person sees one dim line when
-// the tree holds uncommitted changes or the handoff predates the last commit.
-// Outside a git repository both stay silent. A hook that fails leaves the
-// conversation and the turn as they were.
+// The checkout checks, in-process: on the first prompt of a context (a new
+// conversation, or one just compacted or cleared), the model is told when
+// `CLAUDE.local.md` is missing or older than the last commit, as context
+// beside that prompt. At the end of a turn of the main loop, the person sees
+// one dim line when the tree holds uncommitted changes or the handoff
+// predates the last commit. Outside a git repository both stay silent. A hook
+// that fails leaves the prompt and the turn as they were.
+//
+// The advice rides on `prompt.submit` and not on `prompt.context`, since a
+// mod seated ahead of the kit by an organisation's policy answers
+// `prompt.context` without passing it on, and lets `prompt.submit` through.
 
 import type { EngineInterface, Register } from 'claude-code'
 
 export const HANDOFF = 'CLAUDE.local.md'
 export const HANDOFF_COMMAND = '/session-kit:handoff'
-const BLOCK = 'session-kit:handoff'
 
 export type HandoffState = 'missing' | 'stale' | 'current'
 
@@ -48,9 +51,9 @@ export async function uncommitted($: EngineInterface, cwd: string): Promise<stri
 export function handoffAdvice(state: HandoffState): string | null {
   switch (state) {
     case 'missing':
-      return `${HANDOFF} is missing: run ${HANDOFF_COMMAND} init before working, so the next context starts from the files.`
+      return `session-kit: ${HANDOFF} is missing: run ${HANDOFF_COMMAND} init before working, so the next context starts from the files.`
     case 'stale':
-      return `${HANDOFF} predates the last commit: read it knowing that, and run ${HANDOFF_COMMAND} at the next clear point.`
+      return `session-kit: ${HANDOFF} predates the last commit: read it knowing that, and run ${HANDOFF_COMMAND} at the next clear point.`
     case 'current':
       return null
   }
@@ -71,14 +74,18 @@ export function turnEndLine(changes: number, state: HandoffState): string | null
 }
 
 export const register: Register = (on) => {
-  on('prompt.context', async ($, e, next) => {
-    const composed = await next(e)
+  // A prompt with words, a matcher since the engine takes one unmatched `prompt.submit` hook per module (context.tsx's).
+  on('prompt.submit', { text: /\S/ }, async ($, e, next) => {
+    // The engine has no figure for the window until its first response in it.
+    if (e.command !== undefined || (await $.session.usage()).context.tokens !== undefined) {
+      return next(e)
+    }
     const advice = handoffAdvice(await handoffState($, await $.session.cwd()))
     if (advice === null) {
-      return composed
+      return next(e)
     }
 
-    return { ...composed, blocks: [...composed.blocks, { name: BLOCK, text: advice }] }
+    return next({ ...e, context: [...(e.context ?? []), advice] })
   }).catch(($, e, next) => next(e))
 
   on('turn.complete', { reason: 'answer' }, async ($, e, next) => {

@@ -6,8 +6,10 @@ import { world } from './world.test-helper'
 
 type Repo = { commitSeconds: number | null; status: string }
 
-function git(on: On, repo: Repo): string[] {
+// The engine beneath: git, the dim lines it draws, and the context each prompt reached it with.
+function git(on: On, repo: Repo): { logged: string[]; sent: (readonly string[] | undefined)[] } {
   const logged: string[] = []
+  const sent: (readonly string[] | undefined)[] = []
   on('process.run', (_, e) => {
     if (repo.commitSeconds === null) {
       return { value: { exitCode: 128, stdout: '', stderr: 'fatal: not a git repository', isStdoutTruncated: false, isStderrTruncated: false } }
@@ -21,10 +23,15 @@ function git(on: On, repo: Repo): string[] {
 
     return { value: undefined }
   })
+  on('prompt.submit', (_, e) => {
+    sent.push(e.context)
+
+    return { text: e.text, context: e.context }
+  })
   on('prompt.context', (_, e) => ({ blocks: e.blocks }))
   on('turn.complete', () => ({ text: '' }))
 
-  return logged
+  return { logged, sent }
 }
 
 function handoffWrittenAt(on: On, mtimeMs: number) {
@@ -32,42 +39,60 @@ function handoffWrittenAt(on: On, mtimeMs: number) {
 }
 
 const turn = { answer: '', durationMs: 0, isAborted: false, turnId: 't1', reason: 'answer' as const }
+const FRESH = { window: 1_000_000 }
 
-test('a missing handoff is named in the context at the start, with the init command', async ($, on) => {
-  world(on, { files: {} })
-  git(on, { commitSeconds: 1_700_000_000, status: '' })
+function typed(text: string) {
+  return { text, wait: false, origin: { kind: 'composer' as const } }
+}
+
+test('the first prompt of a fresh window carries the missing handoff\'s advice, with no prompt.context hook to reach', async ($, on) => {
+  const w = world(on, { files: {} })
+  w.context = FRESH
+  const { sent } = git(on, { commitSeconds: 1_700_000_000, status: '' })
   await $.session.start({ cwd: '/proj', surface: 'terminal', isInteractive: true })
 
-  const context = await $.prompt.context({ blocks: [{ name: 'claudeMd', text: 'rules' }] })
-  expect(context.blocks.length).toBe(2)
-  expect(context.blocks[1]?.name).toBe('session-kit:handoff')
-  expect(context.blocks[1]?.text).toMatch(/CLAUDE\.local\.md is missing/)
-  expect(context.blocks[1]?.text).toMatch(/\/session-kit:handoff init/)
+  await $.prompt.submit(typed('hello'))
+  expect(sent.length).toBe(1)
+  expect(sent[0]?.length).toBe(1)
+  expect(sent[0]?.[0]).toMatch(/CLAUDE\.local\.md is missing/)
+  expect(sent[0]?.[0]).toMatch(/\/session-kit:handoff init/)
+  // A mod seated ahead answers prompt.context without passing it on: the kit adds nothing there.
+  expect((await $.prompt.context({ blocks: [] })).blocks).toEqual([])
 })
 
-test('a handoff older than the last commit is named as stale, and a current one adds nothing', async ($, on) => {
-  world(on, { files: { '/proj/CLAUDE.local.md': 'state' } })
-  git(on, { commitSeconds: 1_700_000_000, status: '' })
+test('a stale handoff is named on the first prompt of a window, and a prompt after its first response carries nothing', async ($, on) => {
+  const w = world(on, { files: { '/proj/CLAUDE.local.md': 'state' } })
+  w.context = FRESH
+  const { sent } = git(on, { commitSeconds: 1_700_000_000, status: '' })
   handoffWrittenAt(on, 1_699_999_000_000)
   await $.session.start({ cwd: '/proj', surface: 'terminal', isInteractive: true })
 
-  const stale = await $.prompt.context({ blocks: [] })
-  expect(stale.blocks[0]?.text).toMatch(/predates the last commit/)
+  await $.prompt.submit(typed('first'))
+  expect(sent[0]?.[0]).toMatch(/predates the last commit/)
+
+  w.context = { tokens: 30_000, window: 1_000_000, percent: 3 }
+  await $.prompt.submit(typed('second'))
+  expect(sent[1]).toBeUndefined()
 })
 
-test('a current handoff adds no block', async ($, on) => {
-  world(on, { files: { '/proj/CLAUDE.local.md': 'state' } })
-  git(on, { commitSeconds: 1_700_000_000, status: '' })
-  handoffWrittenAt(on, 1_700_000_500_000)
+test('a current handoff, and a slash command in a fresh window, carry nothing', async ($, on) => {
+  const w = world(on, { files: { '/proj/CLAUDE.local.md': 'state' } })
+  w.context = FRESH
+  const { sent } = git(on, { commitSeconds: 1_700_000_000, status: '' })
+  const writtenAt = { mtimeMs: 1_700_000_500_000 }
+  on('fs.stat', () => ({ value: { kind: 'file' as const, size: 1, mtimeMs: writtenAt.mtimeMs, isLink: false } }))
   await $.session.start({ cwd: '/proj', surface: 'terminal', isInteractive: true })
 
-  expect((await $.prompt.context({ blocks: [] })).blocks).toEqual([])
+  await $.prompt.submit(typed('hello'))
+  writtenAt.mtimeMs = 1_699_999_000_000
+  await $.prompt.submit({ ...typed('/session-kit:handoff'), command: { name: 'session-kit:handoff', args: '' } })
+  expect(sent).toEqual([undefined, undefined])
 })
 
 test('the end of a turn names the uncommitted changes and the stale handoff in one dim line, and says nothing when clean', async ($, on) => {
   world(on, { files: { '/proj/CLAUDE.local.md': 'state' } })
   const repo: Repo = { commitSeconds: 1_700_000_000, status: ' M a.py\n?? b.py\n' }
-  const logged = git(on, repo)
+  const { logged } = git(on, repo)
   handoffWrittenAt(on, 1_699_999_000_000)
   await $.session.start({ cwd: '/proj', surface: 'terminal', isInteractive: true })
 
@@ -82,9 +107,9 @@ test('the end of a turn names the uncommitted changes and the stale handoff in o
 })
 
 test('a clean tree with a current handoff, and a directory that is no repository, log nothing', async ($, on) => {
-  world(on, { files: { '/proj/CLAUDE.local.md': 'state' } })
+  const w = world(on, { files: { '/proj/CLAUDE.local.md': 'state' } })
   const repo: Repo = { commitSeconds: 1_700_000_000, status: '' }
-  const logged = git(on, repo)
+  const { logged, sent } = git(on, repo)
   handoffWrittenAt(on, 1_700_000_500_000)
   await $.session.start({ cwd: '/proj', surface: 'terminal', isInteractive: true })
 
@@ -95,5 +120,7 @@ test('a clean tree with a current handoff, and a directory that is no repository
   repo.status = ' M a.py\n'
   await $.turn.complete(turn)
   expect(logged).toEqual([])
-  expect((await $.prompt.context({ blocks: [] })).blocks).toEqual([])
+  w.context = FRESH
+  await $.prompt.submit(typed('hello'))
+  expect(sent).toEqual([undefined])
 })

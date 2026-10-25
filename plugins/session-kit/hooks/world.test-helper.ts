@@ -1,18 +1,21 @@
 // The engine beneath the step 3 modules, for their tests: a session with a
-// working directory and an id, an environment, and a file system in memory.
+// working directory, an id and a context window, an environment, and a file
+// system in memory. A test changes `context` to stand for a fresh window.
 
 import { mock } from 'claude-code/testing'
 
-import type { On } from 'claude-code'
+import type { On, SessionContextUsage } from 'claude-code'
 
 export type World = {
   files: Record<string, string>
+  context: SessionContextUsage
 }
 
 export function world(on: On, options: { tmpdir?: string; cwd?: string; files?: Record<string, string> } = {}): World {
   const files = options.files ?? {}
+  const made: World = { files, context: { tokens: 100_000, window: 1_000_000, percent: 10 } }
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('session.usage', () => ({ value: { startedAt: 0, context: { tokens: 100_000, window: 1_000_000, percent: 10 }, rateLimits: [] } }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: made.context, rateLimits: [] } }))
   on('session.cwd', () => ({ value: options.cwd ?? '/proj' }))
   on('session.id', () => ({ value: 'sess-1' }))
   mock.clock(on, { now: 1_700_000_000_000 })
@@ -32,5 +35,5 @@ export function world(on: On, options: { tmpdir?: string; cwd?: string; files?: 
   })
   on('fs.exists', (_, e) => ({ value: e.path in files }))
 
-  return { files }
+  return made
 }
