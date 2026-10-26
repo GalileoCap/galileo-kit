@@ -38,10 +38,8 @@ engine = "2.1.308"
 "./kit.tsx env writes" = [
 ]
 "./kit.tsx gating hook with .catch" = [
-  "classic.PostModelSwitch",
   "prompt.submit",
   "prompt.submit{text=/\"\\\\S\"/}",
-  "session.compact{trigger=auto}",
   "tool.call",
   "tool.call{tool=/\".\"/}",
   "tool.call{tool=/\".\"/}",
@@ -60,10 +58,8 @@ engine = "2.1.308"
   "tool.call{tool=mcp__session-kit__new_task}",
 ]
 "./kit.tsx hooks" = [
-  "classic.PostModelSwitch",
   "prompt.submit",
   "prompt.submit{text=/\"\\\\S\"/}",
-  "session.compact{trigger=auto}",
   "session.end",
   "session.measure",
   "session.start",
@@ -181,9 +177,7 @@ engine = "2.1.308"
 "$.ui.log" = "One dim transcript line per chain stage, the uncommitted-work line, the failed or stale test run at a turn's end, and facts that could not be added to the handoff."
 "$.ui.resolve" = "The components the band above the prompt is drawn with."
 "$.ui.toast" = "A failure of the chain or the offer, and a moment where no band is drawn."
-"classic.PostModelSwitch" = "A model switch states the cache's lifetime, which the cold-cache timer takes over the option."
 "prompt.submit" = "Records the person's own prompt and its time, for the new-task resend and the handoff's facts, starts the chain's steps over, and gives the first prompt of a context the checkout's handoff advice."
-"session.compact" = "Gives the engine's own compaction the handoff's instructions, as a backstop."
 "session.end" = "Writes the timeline's last lines when the session ends."
 "session.measure" = "The engine's context figure and the plan's usage windows, for the band and the warning."
 "session.start" = "Registers the two tools, and sets the cold-cache timer again from its deadline."

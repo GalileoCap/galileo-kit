@@ -21,17 +21,6 @@ const BAND = {
   props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
-const SWITCH = {
-  from_model: 'a',
-  to_model: 'b',
-  requested_model: null,
-  source: 'command',
-  context_tokens: 300_000,
-  prompt_cache_warm: true,
-  estimated_cache_write_usd: 1,
-  pricing: 'catalog',
-} as const
-
 // The engine beneath the plugin, recording what the chain asked of it, with the context at `state.percent`.
 function engine(on: On, state: { percent: number }) {
   const asked: string[] = []
@@ -59,7 +48,6 @@ function engine(on: On, state: { percent: number }) {
   on('tool.call', () => ({ result: {} }))
   // The checkout checks run git at each turn end: no repository here.
   on('process.run', () => ({ value: { exitCode: 128, stdout: '', stderr: 'fatal: not a git repository', isStdoutTruncated: false, isStderrTruncated: false } }))
-  on('classic.PostModelSwitch', () => ({}))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
 
@@ -70,6 +58,35 @@ function engine(on: On, state: { percent: number }) {
 }
 
 // A turn of the person's: it starts, reads the context once, and ends.
+// A subagent's result, its cache writes split by lifetime.
+function subagent(lifetime: '5m' | '1h') {
+  return {
+    result: {
+      agentId: 'a1',
+      content: [],
+      totalToolUseCount: 0,
+      totalDurationMs: 1,
+      totalTokens: 100,
+      usage: {
+        input_tokens: 1,
+        output_tokens: 1,
+        cache_creation_input_tokens: 100,
+        cache_read_input_tokens: 0,
+        server_tool_use: null,
+        service_tier: null,
+        cache_creation: { ephemeral_1h_input_tokens: lifetime === '1h' ? 100 : 0, ephemeral_5m_input_tokens: lifetime === '5m' ? 100 : 0 },
+      },
+    },
+  }
+}
+
+async function delegatingTurn($: EngineInterface, clock: MockClock, id: string): Promise<void> {
+  await $.turn.start({ text: 'delegate', turnId: id })
+  await $.tool.call({ tool: 'Agent', prompt: 'look around' })
+  await $.turn.complete(turn(id))
+  await clock.settle()
+}
+
 async function personsTurn($: EngineInterface, clock: MockClock, id: string): Promise<void> {
   await $.turn.start({ text: 'go on', turnId: id })
   await $.tool.call({ tool: 'Bash', command: 'ls' })
@@ -156,8 +173,9 @@ test('by default the floor is the warning\'s own trigger', { options: { chain: t
   expect(asked).toEqual(['command session-kit:handoff'])
 })
 
-test('a 5-minute cache arms no timer, until the engine says the cache is an hour\'s', { options: { chain: true, cacheMinutes: 5 } }, async ($, on) => {
+test('a 5-minute cache arms no timer, until a subagent\'s result says the cache is an hour\'s', { options: { chain: true, cacheMinutes: 5 } }, async ($, on) => {
   const clock = mock.clock(on)
+  on('tool.call', { tool: 'Agent' }, () => subagent('1h'))
   const asked = engine(on, { percent: 30 })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
@@ -165,59 +183,31 @@ test('a 5-minute cache arms no timer, until the engine says the cache is an hour
   await clock.advance(180 * MINUTE)
   expect(asked).toEqual([])
 
-  await $.classic.PostModelSwitch({ ...SWITCH, cache_ttl: '1h' })
-  await personsTurn($, clock, 't2')
+  await delegatingTurn($, clock, 't2')
   await clock.advance(55 * MINUTE)
   expect(asked).toEqual(['command session-kit:handoff'])
 })
 
 test('with the lifetime option at 0 the timer is off, whatever the engine says', { options: { chain: true, cacheMinutes: 0 } }, async ($, on) => {
   const clock = mock.clock(on)
+  on('tool.call', { tool: 'Agent' }, () => subagent('1h'))
   const asked = engine(on, { percent: 30 })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
-  await $.classic.PostModelSwitch({ ...SWITCH, cache_ttl: '1h' })
-  await personsTurn($, clock, 't1')
+  await delegatingTurn($, clock, 't1')
   await clock.advance(180 * MINUTE)
   expect(asked).toEqual([])
 })
 
-test('the engine\'s own word on the lifetime replaces the option: a subagent\'s result, then a model switch', { options: { chain: true } }, async ($, on) => {
+test('a subagent\'s result that wrote a 5-minute cache replaces the hour the option gives', { options: { chain: true } }, async ($, on) => {
   const clock = mock.clock(on)
-  // A subagent's result splits its cache writes by lifetime: this one wrote a 5-minute cache.
-  on('tool.call', { tool: 'Agent' }, () => ({
-    result: {
-      agentId: 'a1',
-      content: [],
-      totalToolUseCount: 0,
-      totalDurationMs: 1,
-      totalTokens: 100,
-      usage: {
-        input_tokens: 1,
-        output_tokens: 1,
-        cache_creation_input_tokens: 100,
-        cache_read_input_tokens: 0,
-        server_tool_use: null,
-        service_tier: null,
-        cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 100 },
-      },
-    },
-  }))
+  on('tool.call', { tool: 'Agent' }, () => subagent('5m'))
   const asked = engine(on, { percent: 30 })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
-  await $.turn.start({ text: 'delegate', turnId: 't1' })
-  await $.tool.call({ tool: 'Agent', prompt: 'look around' })
-  await $.turn.complete(turn('t1'))
-  await clock.settle()
+  await delegatingTurn($, clock, 't1')
   await clock.advance(180 * MINUTE)
   expect(asked).toEqual([])
-
-  // A model switch says the cache is an hour's.
-  await $.classic.PostModelSwitch({ ...SWITCH, cache_ttl: '1h' })
-  await personsTurn($, clock, 't2')
-  await clock.advance(55 * MINUTE)
-  expect(asked).toEqual(['command session-kit:handoff'])
 })
 
 test('the band names when the chain runs, above the band beneath it, and Dismiss stops it until the next turn ends', { options: { chain: true } }, async ($, on) => {

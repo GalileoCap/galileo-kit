@@ -1,6 +1,6 @@
 ---
 id: A49
-from: [O9, O10, O12]
+from: [O9, O10, O12, C2]
 source: owner
 status: decided 2026-10-25
 kind: behaviour
@@ -11,13 +11,13 @@ supersedes: []
 
 # A49 The cold-cache timer runs the chain before the cache goes cold
 
-With the chain on, a main-loop turn that ends with the context past the floor, and no chain or `new_task` offer under way, sets a timer for the prompt cache's lifetime less a lead. A turn starting before then clears it. When it fires, the kit runs the chain of `A17` (the model signals a clear point, the mod runs the chain) from the handoff stage with the next step the owner's: the handoff command, then the compaction, and it stops there. The lifetime is the `cacheMinutes` option, 60 by default as a subscription's and 5 on an API key, and 0 turns the timer off. What the engine states replaces it: the split of a subagent's cache writes on the Agent tool's result, and `cache_ttl` on a model switch. The lead is `cacheLeadMinutes` (5), so a 5-minute cache leaves none and arms nothing. The floor is `cacheFloorTokens`, and at 0 the context warning's own trigger (`A16`, context measured in-process). The band draws the time the chain runs, with a Dismiss button that clears the timer until the next turn ends (`A43`, the bands are dismissable).
+With the chain on, a main-loop turn that ends with the context past the floor, and no chain or `new_task` offer under way, sets a timer for the prompt cache's lifetime less a lead. A turn starting before then clears it. When it fires, the kit runs the chain of `A17` (the model signals a clear point, the mod runs the chain) from the handoff stage with the next step the owner's: the handoff command, then the compaction, and it stops there. The lifetime is the `cacheMinutes` option, 60 by default as a subscription's and 5 on an API key, and 0 turns the timer off. What the engine states replaces it: the split of a subagent's cache writes on the Agent tool's result. The `cache_ttl` a model switch states never reaches the kit, since the organization's security default (`C2`) sends `classic.PostModelSwitch` past it. The lead is `cacheLeadMinutes` (5), so a 5-minute cache leaves none and arms nothing. The floor is `cacheFloorTokens`, and at 0 the context warning's own trigger (`A16`, context measured in-process). The band draws the time the chain runs, with a Dismiss button that clears the timer until the next turn ends (`A43`, the bands are dismissable).
 
 ## Context
 
 The owner, on 2026-10-25, correcting M8 of `docs/analyses/mods-for-the-kit.md`: a cache that has lapsed has already lost its value, and what makes sense is "a timer that detects when the cache is going cold (eg: 55m) and auto-handoffs+compacts, to give me time to come back". While the cache is warm the handoff turn and the compaction read the context at cache-read prices, and the person's next prompt writes the compacted context to the cache instead of all of it. This is the cold-send guard `PLAN.md` deferred from the cache-tax review, at the right moment.
 
-The 2.1.308 types give no lifetime per response on the main loop: `TurnUsage` carries the four counts and the model. The split by lifetime (`ephemeral_1h_input_tokens`, `ephemeral_5m_input_tokens`) is on the Agent tool's result, and `cache_ttl` on the model-switch hooks. The analysis's M7 read the split as every response's. It is a subagent's, which runs on the same account.
+The 2.1.308 types give no lifetime per response on the main loop: `TurnUsage` carries the four counts and the model. The split by lifetime (`ephemeral_1h_input_tokens`, `ephemeral_5m_input_tokens`) is on the Agent tool's result, and `cache_ttl` on the model-switch hooks, which the kit cannot hook here (`C2`). The analysis's M7 read the split as every response's. It is a subagent's, which runs on the same account.
 
 ## Options
 
@@ -33,4 +33,4 @@ The timer's chain ends with the band saying the next step is the owner's, with t
 
 ## Proof
 
-Eight engine tests in `cold_cache.test.tsx`. The chain runs at 55 minutes and not at 54, and stops after the compaction. A turn starting disarms it and the next end arms it afresh. The floor and the lead are options, and the floor's default is the warning's trigger. A 5-minute cache and 0 arm nothing. The engine's word comes from a subagent's result and from a model switch. The band's line draws beside the figure's, and Dismiss stops it. Six failed on 0.23.0 with nothing armed. The second half of the 5-minute test was added after that run, and the off test is a negative case alone.
+Eight engine tests in `cold_cache.test.tsx`. The chain runs at 55 minutes and not at 54, and stops after the compaction. A turn starting disarms it and the next end arms it afresh. The floor and the lead are options, and the floor's default is the warning's trigger. A 5-minute cache and 0 arm nothing. A subagent's result that states an hour arms a 5-minute option's timer, and one that states five minutes holds an hour's off. The band's line draws beside the figure's, and Dismiss stops it. Six failed on 0.23.0 with nothing armed. The second half of the 5-minute test was added after that run, and the off test is a negative case alone. The tests that drove a model switch were rewritten on subagent results in 0.35.2.

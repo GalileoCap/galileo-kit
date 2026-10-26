@@ -80,9 +80,7 @@ The chain's judge (`A54`), Haiku through `$.model.complete`, with the system pro
 
 ## Instructions given to a compaction
 
-To the engine's own compaction, the one it starts at its threshold, appended to whatever instructions it had: "This compaction comes without a handoff, so the summary stands in for CLAUDE.local.md. Keep the task in the user's own words, every decision with who took it and why, where the work stands (done, in progress, not started), the last check that ran and its result, the open questions for the user, and the next step as one line. Name by path every document the work rests on, so the next turn reads each again in full."
-
-To the chain's compaction: "CLAUDE.local.md holds the handoff written for this compaction: keep the task, the decisions, where the work stands, the last proof and the next step as it states them, and the paths of the documents it lists." followed by the same fields.
+To the chain's compaction: "CLAUDE.local.md holds the handoff written for this compaction: keep the task, the decisions, where the work stands, the last proof and the next step as it states them, and the paths of the documents it lists." followed by the handoff's fields: "Keep the task in the user's own words, every decision with who took it and why, where the work stands (done, in progress, not started), the last check that ran and its result, the open questions for the user, and the next step as one line. Name by path every document the work rests on, so the next turn reads each again in full." The engine's own compaction, the one it starts at its threshold, gets nothing from the kit (`C2`).
 
 ## What the person sees and the model does not
 

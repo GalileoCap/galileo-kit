@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 
 import type { On, SessionUsage, TurnCompleteInput } from 'claude-code'
 
-import { backstop, journalPath } from './context'
+import { journalPath } from './context'
 
 const WINDOW = 1_000_000
 const TOOL = 'mcp__session-kit__clear_point'
@@ -425,15 +425,6 @@ test('every stage of a chain leaves a line in the session\'s chain file, which a
     expect(at).toBeGreaterThanOrEqual(0)
     from += at + 1
   }
-})
-
-test('the backstop tells the engine\'s own compaction what a handoff keeps', async () => {
-  const added = backstop(undefined)
-  expect(added).toMatch(/CLAUDE\.local\.md/)
-  expect(added).toMatch(/next step/)
-  expect(added).toMatch(/decision/)
-  expect(backstop('keep the plan')).toMatch(/^keep the plan\n/)
-  expect(backstop('keep the plan')).toMatch(/next step/)
 })
 
 test('dismissing the band stops the chain where it stands, before the handoff or during the compaction', { options: { chain: true } }, async ($, on) => {

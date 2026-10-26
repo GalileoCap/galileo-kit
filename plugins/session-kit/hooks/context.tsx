@@ -37,7 +37,7 @@
 // The end of a turn is left alone: a held stop costs every long turn a
 // closing paragraph. Nothing here blocks a tool call. A hook that fails is
 // replaced by what ran beneath it, so the kit is never the reason a call
-// fails. The engine's own compaction gets the backstop whatever the option.
+// fails.
 
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PromptOrigin, Register, RenderSurface, SessionContextUsage, SessionRateLimit, Timer, TurnCompleteInput } from 'claude-code'
@@ -171,15 +171,6 @@ const COMPACT_INSTRUCTIONS =
   'task, the decisions, where the work stands, the last proof and the next ' +
   'step as it states them, and the paths of the documents it lists. ' +
   HANDOFF_FIELDS
-
-export function backstop(instructions: string | undefined): string {
-  const added =
-    'This compaction comes without a handoff, so the summary stands in for ' +
-    'CLAUDE.local.md. ' +
-    HANDOFF_FIELDS
-
-  return instructions === undefined || instructions === '' ? added : `${instructions}\n${added}`
-}
 
 export function continuePrompt(note: string): string {
   return (
@@ -979,14 +970,6 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  on('session.compact', { trigger: 'auto' }, ($, e, next) => {
-    if (e.agentId !== undefined) {
-      return next(e)
-    }
-
-    return next({ ...e, instructions: backstop(e.instructions) })
-  }).catch(($, e, next) => next(e))
-
   // The kit's line draws above whatever the plugins beneath drew, so no band of theirs is hidden.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const below = await next(e)
@@ -1149,13 +1132,6 @@ export const register: Register = (on, options) => {
       isDeferred: false,
     })
     await holdColdTimerAgain($, cold.lead)
-
-    return next(e)
-  }).catch(($, e, next) => next(e))
-
-  // The engine states the cache's lifetime on a model switch; the timer takes its word over the option.
-  on('classic.PostModelSwitch', async ($, e, next) => {
-    await update($, statedCacheMinutes, () => (e.cache_ttl === '1h' ? 60 : 5))
 
     return next(e)
   }).catch(($, e, next) => next(e))

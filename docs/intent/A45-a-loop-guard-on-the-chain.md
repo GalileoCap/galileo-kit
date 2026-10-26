@@ -25,7 +25,7 @@ The chain of `A17` (the model signals a clear point, the mod runs the chain) ran
 
 ## Consequences
 
-After two chains the model keeps working under the warning until the person returns. The engine's own compaction (`A18`, a backstop for the engine's own compaction) stands against overflow. A chain whose next step is the owner's sends no continue, so it counts nothing: it stops by itself. The refusal's text is in `docs/what-reaches-the-model.md`.
+After two chains the model keeps working under the warning until the person returns. The engine's own compaction stands against overflow. A chain whose next step is the owner's sends no continue, so it counts nothing: it stops by itself. The refusal's text is in `docs/what-reaches-the-model.md`.
 
 ## Proof
 

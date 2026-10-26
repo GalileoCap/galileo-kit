@@ -43,6 +43,6 @@ Each of these ran in the engine's tests alone: the facts section after a handoff
 
 ## At the install of session-kit 0.35.2
 
-### main, C2: the timeline's classic hooks removed
+### main, C2 and A67: the hooks the security default skips removed
 
-`measure.ts` hooks neither `classic.PostToolUse` nor `classic.PostToolUseFailure`, events the organization's security default sends past the kit (`C2`). It reaches a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.1. Until then every session on 0.35.1 shows the two skip notices once each.
+The kit hooks neither `classic.PostToolUse`, `classic.PostToolUseFailure`, `classic.PostModelSwitch` nor `session.compact`, events the organization's security default sends past it (`C2`, `A67` the kit hooks no event the security default sends past it). It reaches a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.1. Until then every session on 0.35.1 shows a skip notice once for each of those events it meets.
