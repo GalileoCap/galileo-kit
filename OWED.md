@@ -46,3 +46,9 @@ Each of these ran in the engine's tests alone: the facts section after a handoff
 ### main, C2 and A67: the hooks the security default skips removed
 
 The kit hooks neither `classic.PostToolUse`, `classic.PostToolUseFailure`, `classic.PostModelSwitch` nor `session.compact`, events the organization's security default sends past it (`C2`, `A67` the kit hooks no event the security default sends past it). It reaches a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.1. Until then every session on 0.35.1 shows a skip notice once for each of those events it meets.
+
+## At the install of session-kit 0.35.3
+
+### main, A68: the warning firms at 300,000 tokens
+
+The context warning's second tier moves from 500,000 to 300,000 tokens and its third from 750,000 to 400,000, and a tier that rises is said at once (`A68`, the warning firms at 300,000 tokens and stops at 400,000). It reaches a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.2. `global/CLAUDE.md` says "firmer from 300,000", so the link at `~/.claude/CLAUDE.md` carries the sentence at once and the sessions on 0.35.2 warn later than it says until they update. Only a real session proves the second tier: the check is a long run that crosses 300,000 tokens.

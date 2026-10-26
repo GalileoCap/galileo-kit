@@ -85,7 +85,7 @@ test('off: no tool is registered and the warning names none', { options: { chain
   expect(asked).toEqual([])
 
   const ran = await $.tool.call({ tool: 'Bash', command: 'ls' })
-  expect(ran.context?.[0]).toMatch(/safe to compact/)
+  expect(ran.context?.[0]).toMatch(/to compact/)
   expect(ran.context?.[0]).not.toMatch(/clear_point/)
 })
 

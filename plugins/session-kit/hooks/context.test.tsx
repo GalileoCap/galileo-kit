@@ -30,7 +30,7 @@ function engine(on: On, state: { percent: number }, deny = false) {
   on('tool.call', () => (deny ? { deny: 'no' } : { result: {} }))
 }
 
-test('the model is warned from 250,000 tokens, every 25k, firmer at twice and at three times that, and afresh after a compaction', async ($, on) => {
+test('the model is warned from 250,000 tokens, every 25k, firmer from 300,000 and told to stop from 400,000, each tier at once, and afresh after a compaction', async ($, on) => {
   const state = { percent: 10 }
   engine(on, state)
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
@@ -46,7 +46,14 @@ test('the model is warned from 250,000 tokens, every 25k, firmer at twice and at
   expect((await contextAt(25))[0]).toMatch(/^Context at 250,000 tokens \(25% of 1,000,000\)\. Aim for a safe point/)
   expect(await contextAt(26)).toEqual([])
   expect((await contextAt(28))[0]).toMatch(/280,000 tokens/)
-  expect((await contextAt(51))[0]).toMatch(/End this turn at the next green commit/)
+  // Inside the 25k step after the warning at 280,000, a tier that rises still warns.
+  expect(await contextAt(29)).toEqual([])
+  expect((await contextAt(30))[0]).toMatch(/300,000 tokens.*End this turn at the next green commit/)
+  expect(await contextAt(31)).toEqual([])
+  expect((await contextAt(33))[0]).toMatch(/End this turn at the next green commit/)
+  expect((await contextAt(39))[0]).toMatch(/End this turn at the next green commit/)
+  expect((await contextAt(40))[0]).toMatch(/400,000 tokens.*Stop starting anything new/)
+  expect(await contextAt(41)).toEqual([])
   expect((await contextAt(76))[0]).toMatch(/Stop starting anything new/)
   // Compacted: the figure fell below the last warning.
   expect(await contextAt(5)).toEqual([])
@@ -188,7 +195,7 @@ test('between the engine\'s measurements the warning fires on the last request\'
 
   // One step of parallel reads, with no request between them: the engine's figure stays at 100,000.
   expect(await warned($, '/a')).toBeUndefined()
-  expect(await warned($, '/b')).toMatch(/^Context at 301,000 tokens \(30% of 1,000,000\)\. Aim for a safe point/)
+  expect(await warned($, '/b')).toMatch(/^Context at 301,000 tokens \(30% of 1,000,000\)\. End this turn at the next green commit/)
   expect(await warned($, '/c')).toBeUndefined()
   expect(await warned($, '/d')).toMatch(/^Context at 331,000 tokens \(33% of 1,000,000\)/)
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })

@@ -71,8 +71,9 @@ const LIMIT_WARN = 80
 const LIMIT_FIRM = 95
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const STEP_TOKENS = 25000
-const FIRMER_AT = 2
-const STOP_AT = 3
+// The second and third tier, as multiples of the trigger: 300,000 and 400,000 tokens at 250,000.
+const FIRMER_AT = 1.2
+const STOP_AT = 1.6
 const JUDGE_MODEL = 'haiku'
 const JUDGE_MAX_TOKENS = 200
 const JUDGE_TIMEOUT_MS = 30000
@@ -179,11 +180,21 @@ export function continuePrompt(note: string): string {
   )
 }
 
+/** 0 from the trigger, 1 once the model is to end the turn at the next green commit, 2 once it is to stop starting anything. */
+export function adviceTier(tokens: number, trigger: number): number {
+  if (tokens >= Math.round(trigger * STOP_AT)) {
+    return 2
+  }
+
+  return tokens >= Math.round(trigger * FIRMER_AT) ? 1 : 0
+}
+
 export function advice(tokens: number, trigger: number, chainOn = false): string {
   const close = chainOn
     ? `then call the ${TOOL_NAME} tool.`
     : 'then tell the user it is safe to compact.'
-  if (tokens >= trigger * STOP_AT) {
+  const tier = adviceTier(tokens, trigger)
+  if (tier === 2) {
     return (
       'Stop starting anything new. Commit or discard what is in the tree, ' +
       (chainOn
@@ -191,7 +202,7 @@ export function advice(tokens: number, trigger: number, chainOn = false): string
         : 'write CLAUDE.local.md now, and end this turn saying you are ready to compact.')
     )
   }
-  if (tokens >= trigger * FIRMER_AT) {
+  if (tier === 1) {
     return (
       'End this turn at the next green commit, even with the task unfinished: ' +
       (chainOn
@@ -909,7 +920,8 @@ export const register: Register = (on, options) => {
     }
     const warned = await read($, warnedAt)
     // A context smaller than the last warning has been compacted: warn afresh.
-    if (withinStep(warned, now.tokens, step)) {
+    // A tier that rose since the last warning is said at once, inside the step too.
+    if (withinStep(warned, now.tokens, step) && adviceTier(now.tokens, trigger) <= adviceTier(warned, trigger)) {
       return ran
     }
     await update($, warnedAt, () => now.tokens)
