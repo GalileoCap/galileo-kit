@@ -55,7 +55,8 @@
   },
   "footprint": {
     "plugins": [
-      "plugins/session-kit"
+      "plugins/session-kit",
+      "plugins/read-aloud"
     ]
   }
 }

@@ -1,6 +1,6 @@
 # galileo-kit
 
-Everything its owner works with agents through: the rules every session follows (`global/`), the tools and plugins sessions use, and the vetting of each third-party piece before it is installed. It is a plugin marketplace of the same name holding one plugin, `session-kit`, which keeps its name: the plugin is one piece of the kit.
+Everything its owner works with agents through: the rules every session follows (`global/`), the tools and plugins sessions use, and the vetting of each third-party piece before it is installed. It is a plugin marketplace of the same name holding two plugins: `session-kit`, which keeps its name since the plugin is one piece of the kit, and `read-aloud`.
 
 `CLAUDE.md` at the root holds the repository's intent and rules of engagement, and `docs/` the record behind them: `docs/intent/` (goals, objectives, constraints and actions, one file each), `docs/PLAN.md`, the research on plugins and mods, the reviews of candidates and the analysis behind the port of the hooks to a mod.
 
@@ -76,11 +76,16 @@ In a session the plugin's `bin/` puts the command on PATH. Elsewhere it is `uv r
 
 The hook runs it with `uv` (silent without it), its environment kept in `CLAUDE_PLUGIN_DATA`. TypeScript and Rust are read through tree-sitter, so no Node or Rust toolchain is needed.
 
+## What `read-aloud` does
+
+It reads the final answer of the last turn aloud with the system's voice (`say` on macOS): the text after the last tool call, where the desktop app's own read-aloud starts from the message's first text block (`A69`, the final answer read aloud by its own plugin). Once a turn has ended with an answer, a row above the prompt carries a read button, a stop button while it reads, and an auto-read switch. `/read-aloud` reads or stops, `/read-aloud stop` stops, and `/read-aloud auto [on|off]` reads each answer as its turn ends. Prose only: a code block or a table is named and skipped, a link is read as its label. A stop takes effect after the paragraph being spoken. Its options are `auto` (read each answer from the session's start, off by default) and `voice` (a system voice's exact name, empty for the default).
+
 ## Install
 
 ```bash
 claude plugin marketplace add https://github.com/GalileoCap/galileo-kit.git
 claude plugin install session-kit@galileo-kit
+claude plugin install read-aloud@galileo-kit
 ```
 
 Both default to user scope, so every project gets it. The install copies the plugin into `~/.claude/plugins/cache`, so a change reaches a machine only after a version bump in `plugin.json` and `claude plugin update session-kit@galileo-kit`, then the next session start or `/reload-plugins`.
@@ -108,6 +113,7 @@ plugins/session-kit/tells/scripts/check     # ruff ALL, basedpyright strict, zer
 plugins/session-kit/tells/scripts/test
 claude plugin validate . && claude plugin validate plugins/session-kit --strict
 claude plugin test plugins/session-kit            # the hooks module's tests, against the engine itself
+claude plugin validate plugins/read-aloud --strict
 python3 plugins/session-kit/intent/test_session_intent.py
 python3 plugins/session-kit/transcripts/test_session_transcripts.py
 python3 plugins/session-kit/rulebook/test_session_rulebook.py

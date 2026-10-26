@@ -58,3 +58,9 @@ The context warning's second tier moves from 500,000 to 300,000 tokens and its t
 ### ~/.config/nix-darwin, the deny rules for Artifact and the iOS simulator
 
 `claude/settings.json` in the configuration now denies the `Artifact` tool and the `mcp__Claude_Code_iOS_Simulator` server (`docs/analyses/restart-size.md`). `~/.claude/settings.json` is a link into the nix store, so the rules reach a session only after the owner runs the configuration's rebuild, and the file holds the owner's other uncommitted change (the `chain` option) beside them. The check after the rebuild: the next desktop session's `api-request-shape` record, which should hold no `Artifact` tool and no `mcp__Claude_Code_iOS_Simulator__control` (about 14.5k tokens fewer in the prefix). Only the Artifact rule was shown to work, in a terminal session. The simulator rule is unproven on the app's own server.
+
+## At the install of read-aloud 0.1.0
+
+### main, A69: the final answer read aloud
+
+A new plugin of the marketplace (`A69`, the final answer read aloud by its own plugin). It reaches a session only after `main` is pushed on the owner's word and `claude plugin install read-aloud@galileo-kit` is run, at user scope for every project. A session that also loads it from the mods folder for the live check would draw its row twice: remove the link `~/.claude/dev-mods/<session id>/read-aloud` before the install. The check: in the desktop app, an answer read from its first sentence after the tool calls, the stop button ending it after the paragraph, and `/read-aloud auto` reading the next answer as its turn ends.

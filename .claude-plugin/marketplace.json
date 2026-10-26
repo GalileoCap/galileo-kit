@@ -7,6 +7,11 @@
       "name": "session-kit",
       "source": "./plugins/session-kit",
       "description": "Context-pressure hooks, git and test-run guards, a direnv environment and a handoff skill."
+    },
+    {
+      "name": "read-aloud",
+      "source": "./plugins/read-aloud",
+      "description": "Reads the last turn's final answer aloud with the system's voice, on a button press, a command or every turn."
     }
   ]
 }
