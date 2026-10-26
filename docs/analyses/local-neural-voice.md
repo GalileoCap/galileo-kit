@@ -8,7 +8,7 @@ An Apple M4 with 16 GB of memory on macOS 27.0.1. `uv` and `ffmpeg` are installe
 
 ## What the engine allows
 
-`$.audio.speak` reaches only the system synthesizer. A neural voice runs as a process the plugin starts: `$.process.run` runs a command to its end (30 seconds by default, ten minutes at most), and `$.process.spawn` streams one and kills it when the plugin leaves its loop. So the shape is a synthesis command that writes a WAV per paragraph, and `afplay` spawned to play it. Leaving the `afplay` loop ends the sound at once, which the system voice cannot do: today's stop waits for the paragraph to end. The next paragraph can be synthesized while the current one plays, so only the first waits.
+`$.audio.speak` reaches only the system synthesizer. A neural voice runs as a process the plugin starts: `$.process.run` runs a command to its end (30 seconds by default, ten minutes at most), and `$.process.spawn` streams one and kills it when the plugin leaves its loop. So the shape is a synthesis command that writes a WAV per paragraph, and `afplay` spawned to play it. Leaving the `afplay` loop ends the sound at once, as closing the `say` read-aloud 0.2.0 spawns for the system voice does. The next paragraph can be synthesized while the current one plays, so only the first waits.
 
 Two ways to run the model, each to be measured:
 

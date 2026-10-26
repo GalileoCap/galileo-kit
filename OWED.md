@@ -64,3 +64,9 @@ The context warning's second tier moves from 500,000 to 300,000 tokens and its t
 ### main, A69: the final answer read aloud
 
 A new plugin of the marketplace (`A69`, the final answer read aloud by its own plugin). It reaches a session only after `main` is pushed on the owner's word and `claude plugin install read-aloud@galileo-kit` is run, at user scope for every project. A session that also loads it from the mods folder for the live check would draw its row twice: remove the link `~/.claude/dev-mods/<session id>/read-aloud` before the install. The check: in the desktop app, an answer read from its first sentence after the tool calls, the stop button ending it after the paragraph, and `/read-aloud auto` reading the next answer as its turn ends.
+
+## At the install of read-aloud 0.2.0
+
+### main, A69: the stop is immediate
+
+read-aloud speaks each paragraph through a `/usr/bin/say` it spawns, and a stop kills it (`A69`, the final answer read aloud by its own plugin), by the owner's ask. It replaces the 0.1.0 install above, which never ran: the same command and the same removal of the mods-folder link, and in the check the stop button ends the voice at once, mid-sentence.

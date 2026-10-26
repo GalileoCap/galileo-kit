@@ -1,9 +1,11 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, HookStream, ProcessSpawnChunk, ProcessSpawnResult, Register } from 'claude-code'
 
 import { utterances } from './speech'
 
 const PLUGIN = 'read-aloud'
+const SAY = '/usr/bin/say'
+const KILLED: ProcessSpawnResult = { code: null, signal: 'SIGTERM' }
 const USAGE = 'Usage: /read-aloud reads the last answer or stops the reading, /read-aloud stop, /read-aloud auto [on|off].'
 
 const answer = atom({ plugin: 'read-aloud', key: 'answer' } as const, null)
@@ -15,17 +17,46 @@ let voice: string | undefined
 let autoByDefault = false
 // Each reading takes the next number; a reading whose number is no longer the last stops before its next utterance.
 let reading = 0
+// The `say` speaking now. Closing its stream kills it, so a stop silences the voice at once.
+let speaker: HookStream<ProcessSpawnChunk, ProcessSpawnResult> | undefined
+
+function silence(): void {
+  const child = speaker
+  speaker = undefined
+  void child?.return(KILLED)
+}
+
+// One utterance through `say`, which reads it from its input; resolves when it ends or is silenced.
+async function say($: EngineInterface, text: string): Promise<void> {
+  const child = $.process.spawn({ argv: voice === undefined ? [SAY] : [SAY, '-v', voice], input: text })
+  speaker = child
+  let stderr = ''
+  for await (const chunk of child) {
+    if (chunk.stream === 'stderr') {
+      stderr += chunk.text
+    }
+  }
+  if (speaker !== child) {
+    return
+  }
+  speaker = undefined
+  const { code, signal } = await child.result
+  if (code !== 0) {
+    throw new Error(stderr.trim() || `say ended with ${code ?? signal}`)
+  }
+}
 
 async function readAloud($: EngineInterface, text: string): Promise<void> {
   reading += 1
   const mine = reading
+  silence()
   await update($, isSpeaking, () => true)
   try {
     for (const piece of utterances(text)) {
       if (mine !== reading) {
         return
       }
-      await $.audio.speak(piece, voice === undefined ? undefined : { voice })
+      await say($, piece)
     }
   } catch (error) {
     if (mine === reading) {
@@ -47,6 +78,7 @@ function startReading($: EngineInterface, text: string): void {
 
 async function stopReading($: EngineInterface): Promise<void> {
   reading += 1
+  silence()
   await update($, isSpeaking, () => false)
 }
 

@@ -78,7 +78,7 @@ The hook runs it with `uv` (silent without it), its environment kept in `CLAUDE_
 
 ## What `read-aloud` does
 
-It reads the final answer of the last turn aloud with the system's voice (`say` on macOS): the text after the last tool call, where the desktop app's own read-aloud starts from the message's first text block (`A69`, the final answer read aloud by its own plugin). Once a turn has ended with an answer, a row above the prompt carries a read button, a stop button while it reads, and an auto-read switch. `/read-aloud` reads or stops, `/read-aloud stop` stops, and `/read-aloud auto [on|off]` reads each answer as its turn ends. Prose only: a code block or a table is named and skipped, a link is read as its label. A stop takes effect after the paragraph being spoken. Its options are `auto` (read each answer from the session's start, off by default) and `voice` (a system voice's exact name, empty for the default).
+It reads the final answer of the last turn aloud with the system's voice (`say` on macOS): the text after the last tool call, where the desktop app's own read-aloud starts from the message's first text block (`A69`, the final answer read aloud by its own plugin). Once a turn has ended with an answer, a row above the prompt carries a read button, a stop button while it reads, and an auto-read switch. `/read-aloud` reads or stops, `/read-aloud stop` stops, and `/read-aloud auto [on|off]` reads each answer as its turn ends. Prose only: a code block or a table is named and skipped, a link is read as its label. A stop ends the voice at once. Its options are `auto` (read each answer from the session's start, off by default) and `voice` (a system voice's exact name, empty for the default).
 
 ## Install
 

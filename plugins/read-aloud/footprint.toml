@@ -7,9 +7,9 @@ engine = "2.1.308"
 
 [validator]
 "./read_aloud.tsx calls" = [
-  "$.audio.speak (via readAloud)",
   "$.clock.after (via startReading)",
   "$.command.register",
+  "$.process.spawn (via say)",
   "$.state.get",
   "$.state.set",
   "$.ui.resolve",
@@ -43,9 +43,9 @@ engine = "2.1.308"
 ]
 
 [why]
-"$.audio.speak" = "Speaks the answer with the system's voice (say on macOS), one paragraph per call, in the voice the option names."
 "$.clock.after" = "Starts a reading once the hook or press that asked for it has returned, so no turn's end waits on the voice."
 "$.command.register" = "The /read-aloud command."
+"$.process.spawn" = "Runs /usr/bin/say for each paragraph, the text on its input, in the voice the option names; closing the stream kills it, so a stop is immediate."
 "$.state.get" = "The plugin's own state under read-aloud.*, declared in types/index.d.ts."
 "$.state.set" = "The plugin's own state under read-aloud.*, declared in types/index.d.ts."
 "$.ui.resolve" = "The components the row above the prompt is drawn with."

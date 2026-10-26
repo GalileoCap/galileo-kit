@@ -1,7 +1,7 @@
 {
   "name": "read-aloud",
-  "version": "0.1.0",
-  "description": "Reads the final answer of the last turn aloud with the system's voice: a button above the prompt and /read-aloud read it or stop it, and /read-aloud auto reads each answer as its turn ends. Prose only: code blocks and tables are named, not read.",
+  "version": "0.2.0",
+  "description": "Reads the final answer of the last turn aloud with the system's voice: a button above the prompt and /read-aloud read it or stop it at once, and /read-aloud auto reads each answer as its turn ends. Prose only: code blocks and tables are named, not read.",
   "author": {
     "name": "Galileo Cappella"
   },

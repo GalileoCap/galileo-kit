@@ -1,10 +1,6 @@
 // An answer's markdown turned into what the voice says: one utterance per
 // paragraph, heading or list item, code blocks and tables named instead of
-// read, links read as their label, and no utterance longer than the engine
-// speaks.
-
-/** The engine speaks a text up to its first 4,096 characters. */
-export const UTTERANCE_LIMIT = 4096
+// read, and links read as their label.
 
 const FENCE = /^\s*(```|~~~)/
 const TABLE_ROW = /^\s*\|/
@@ -15,10 +11,6 @@ const QUOTE = /^\s*>\s?/
 
 /** The utterances an answer's markdown is read as, in order. */
 export function utterances(markdown: string): string[] {
-  return paragraphs(markdown).flatMap(text => pieces(text, UTTERANCE_LIMIT))
-}
-
-function paragraphs(markdown: string): string[] {
   const out: string[] = []
   let current: string[] = []
   const flush = () => {
@@ -101,42 +93,4 @@ function unemphasized(text: string): string {
     .replace(/~~(.+?)~~/g, '$1')
     .replace(/\*(\S(?:.*?\S)?)\*/g, '$1')
     .replace(/(^|[^\w])_(\S(?:.*?\S)?)_(?=[^\w]|$)/g, '$1$2')
-}
-
-// A paragraph cut at sentence ends into pieces of at most `limit` characters, a sentence longer than that at its last space.
-function pieces(text: string, limit: number): string[] {
-  if (text.length <= limit) {
-    return [text]
-  }
-  const out: string[] = []
-  let current = ''
-  for (const sentence of text.split(/(?<=[.!?])\s+/).flatMap(one => hardCut(one, limit))) {
-    if (current === '') {
-      current = sentence
-    } else if (current.length + 1 + sentence.length <= limit) {
-      current = `${current} ${sentence}`
-    } else {
-      out.push(current)
-      current = sentence
-    }
-  }
-  if (current !== '') {
-    out.push(current)
-  }
-
-  return out
-}
-
-function hardCut(sentence: string, limit: number): string[] {
-  const out: string[] = []
-  let rest = sentence
-  while (rest.length > limit) {
-    const space = rest.lastIndexOf(' ', limit)
-    const at = space > 0 ? space : limit
-    out.push(rest.slice(0, at))
-    rest = rest.slice(at).trimStart()
-  }
-  out.push(rest)
-
-  return out
 }

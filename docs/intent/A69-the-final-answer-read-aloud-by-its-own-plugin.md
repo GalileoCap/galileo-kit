@@ -15,7 +15,7 @@ The `read-aloud` plugin reads the final answer of the last main-session turn alo
 
 ## Context
 
-The owner asked for it: the desktop app's read-aloud button starts from the first text block of a message, and the part they want to hear is the final answer, which comes after the tool calls. The engine's `turn.complete` carries that answer alone, and `$.audio.speak` speaks plain text through `say` on macOS, up to 4,096 characters a call, queued, with no way to stop an utterance once begun.
+The owner asked for it: the desktop app's read-aloud button starts from the first text block of a message, and the part they want to hear is the final answer, which comes after the tool calls. The engine's `turn.complete` carries that answer alone. `$.audio.speak` speaks plain text through `say` on macOS but cannot stop an utterance once begun, and the owner asked on 2026-10-26 that a stop be immediate, so each paragraph is a `/usr/bin/say` the plugin starts with `$.process.spawn`, which kills the child when its stream is closed.
 
 ## Options
 
@@ -27,8 +27,8 @@ The owner chose among these on 2026-10-26.
 
 ## Consequences
 
-A stop takes effect after the paragraph being spoken, since an utterance cannot be cut short: each paragraph is one `$.audio.speak` call, and a reading checks before each call that no stop or newer reading came after it. A paragraph longer than 4,096 characters is cut at sentence ends. A subagent's report, an interrupted turn and an empty answer are neither kept nor read. The speech runs after the hook returns, so a turn's end never waits on the voice, and a failure (a voice not installed) is said in a toast. Every hook has a `.catch` that hands on to the engine, so the plugin is never the reason a session fails (`C1`).
+A stop silences the voice at once: it closes the stream of the `say` speaking, which kills it, and the reading checks before each paragraph that no stop or newer reading came after it. A new reading silences the one before it the same way. `say` reads a paragraph whole from its input, so no paragraph is cut. A subagent's report, an interrupted turn and an empty answer are neither kept nor read. The speech runs after the hook returns, so a turn's end never waits on the voice, and a failure (a voice not installed) is said in a toast. Every hook has a `.catch` that hands on to the engine, so the plugin is never the reason a session fails (`C1`).
 
 The row above the prompt shows once a turn has ended with an answer, and stays: a person who never reads aloud sees it in every session where the plugin is installed. The plugin's reach is held by `plugins/read-aloud/footprint.toml` (`A60`, the kit's reach held to a reviewed footprint).
 
-The blind tests drove all of this through the engine's test host on the terminal and the desktop, eight cases, and were removed as scaffolding. Two headless runs could not reach the API from the session's shell, so no real speech ran in a session before the commit. Not validated until the owner has heard an answer read in the desktop app, pressed stop, and turned auto-read on. read-aloud 0.1.0.
+The blind tests drove all of this through the engine's test host on the terminal and the desktop, seven cases at 0.2.0, and were removed as scaffolding. In a headless session a `say` killed through its stream 800 ms in was gone 13 ms later. Not validated until the owner has heard an answer read in the desktop app, pressed stop and heard it end at once, and turned auto-read on. read-aloud 0.2.0.
