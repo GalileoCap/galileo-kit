@@ -1,8 +1,10 @@
 // The test log, in-process: after a Bash call that ran tests, the run's whole
 // output is written to `<tempdir>/claude-kit-last-test-<session id>.log`,
 // replaced each run, and a failed run tells the model in one line where it
-// is. A command is a test run when it holds one of the builtin runners or a
-// `test_commands` entry of the project's `.claude/claude-kit.json`.
+// is. A command is a test run when one of the builtin runners or a
+// `test_commands` entry of the project's `.claude/claude-kit.json` starts a
+// command segment, read as the guard reads it: quoted text and heredoc bodies
+// do not count. A call a command hook refused never ran, and is no run.
 //
 // Each run is stamped with the working tree it ran on: a fingerprint of the
 // content of every tracked and untracked file, read through git, which a
@@ -10,8 +12,9 @@
 // PASS, FAIL (it failed, and none has passed since), STALE (it passed, and
 // files have changed since) or UNKNOWN (no run, or no fingerprint). At a
 // `git commit` the model is told of a FAIL or a STALE, and at the end of a
-// main-loop turn the person sees one dim line for either, so "never deliver
-// red" rests on a record a program wrote.
+// main-loop turn the person sees one dim line for either, a STALE once until
+// the tree comes back to the run's, so "never deliver red" rests on a record
+// a program wrote.
 //
 // The same test command failing with the same error after an edit is a try
 // at a fix, and the second failed try names the two-tries rule to the model.
@@ -47,8 +50,37 @@ function escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+// The guard's reading of a command (hooks/guard.py), so the two agree on what a test run is.
+const START = '(?:^|[;&|(`])\\s*'
+const LAUNCHER = '(?:uv\\s+run|poetry\\s+run|pipenv\\s+run|npx|pnpm\\s+exec|yarn\\s+run|python3?\\s+-m|env|time|nice|session-watched)'
+const HEREDOC = /<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2\s*(?=\n|$)/g
+const SINGLE_QUOTED = /'[^']*'/g
+const DOUBLE_QUOTED = /"(?:[^"\\]|\\.)*"/g
+const RUNS = /\$\(|`/
+
+/** The command as the shell runs it: heredoc bodies and quoted text blanked, except one holding a substitution. */
+export function bare(command: string): string {
+  const unlessItRuns = (blank: string) => (text: string) => (RUNS.test(text) ? text : blank)
+
+  return command
+    .replace(HEREDOC, unlessItRuns(' '))
+    .replace(SINGLE_QUOTED, "''")
+    .replace(DOUBLE_QUOTED, unlessItRuns('""'))
+}
+
+/** A runner where a command segment starts, behind a launcher and its words, or a path, or neither. */
 export function isTestRun(command: string, runners: readonly string[]): boolean {
-  return runners.some((name) => new RegExp(`(?<![\\w/.-])${escape(name)}(?![\\w-])`).test(command))
+  const names = runners.map(escape).join('|')
+  const start = new RegExp(`${START}(?:${LAUNCHER}(?:\\s+\\S+)*?\\s+)?(?:\\S*/)?(?:${names})(?![\\w.-])`)
+
+  return runners.length > 0 && start.test(bare(command))
+}
+
+/** The engine's words for a call a command hook refused before it ran. */
+function refusedByHook(ran: ToolCallResult): boolean {
+  const text = ran.text ?? (typeof ran.result === 'string' ? ran.result : '')
+
+  return ran.isError === true && /^PreToolUse(?::\w+)? hook error: /.test(text)
 }
 
 /** A `git commit` where a command segment starts, behind git's own `-c` pairs and flags. */
@@ -271,7 +303,7 @@ async function projectRunners($: EngineInterface, cwd: string): Promise<string[]
 export const register: Register = (on) => {
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const ran = await next(e)
-    if (ran.deny !== undefined) {
+    if (ran.deny !== undefined || refusedByHook(ran)) {
       return ran
     }
     const cwd = await $.session.cwd()
@@ -338,9 +370,14 @@ export const register: Register = (on) => {
     if (last === null) {
       return done
     }
-    const line = verdictLine(await verdictOf($, await $.session.cwd(), last), last)
-    if (line !== null) {
+    // A stale run is said once, and again only after the tree has come back to the run's.
+    const v = await verdictOf($, await $.session.cwd(), last)
+    const line = verdictLine(v, last)
+    if (line !== null && !(v === 'STALE' && last.staleShown === true)) {
       $.ui.log(line)
+    }
+    if ((v === 'STALE') !== (last.staleShown === true)) {
+      await update($, lastTest, (run) => (run === null ? null : { ...run, staleShown: v === 'STALE' }))
     }
 
     return done

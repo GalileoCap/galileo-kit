@@ -1,6 +1,6 @@
 {
   "test_commands": [
-    "plugin test"
+    "claude plugin test"
   ],
   "rulebook": {
     "skills_from": [

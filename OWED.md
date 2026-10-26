@@ -34,3 +34,9 @@ Then from each project that records a project-scope install, `command claude plu
 ### main, b9b49e7: what only a real session proves
 
 Each of these ran in the engine's tests alone: the facts section after a handoff (`A63`), the projected context figure (`A62`), a chain in a terminal session, the cold-cache timer (`A49`), the Haiku judge's verdicts (`A54`), and `/effort` run by the new-task offer's press in the desktop app (`A65`). `docs/PLAN.md`, Next item 8, holds the owner's two reviews: the usage-window line (`A50`) and facts on the UI.
+
+## At the install of session-kit 0.35.1
+
+### main, A66: the test log's fix pushed and updated
+
+`A66` (a test run is what the guard calls one, and a stale run is said once) reaches a session only through the marketplace: `main` pushed on the owner's word, then the marketplace and the plugin updated as for 0.35.0. This repository's runner entry is now `claude plugin test`, so its engine tests are logged once the terminal's `claude` is 2.1.308.

@@ -14,7 +14,7 @@ Two versions at once. The command hooks and the skills came from the 0.21.1 copy
 | The context warning | 11, from 250k tokens | All 11 were followed by a handoff, but late: the first came at 251k and the compaction nine turns later, at 439k. About two hours of requests carried 250k to 439k tokens of context. |
 | The guard: test output piped to `grep` or `head` | 11 refusals | All 11 were false. Each was a `grep` or `wc` over a file whose name or pattern held a runner (`scripts/test`, `playwright`, `pytest.mark`, `vitest`). Each cost a retry. Run against these 11 commands, 0.21.1's guard refuses 6 by a replay of its rules, and the guard on `main` refuses none: fixed since, and lane1 never got the fix. |
 | The test log: "the test run failed" | 7 | 6 of the 7 fell in the same second as a guard refusal: the in-process log counts a call the guard refused as a failed test run and points the model at a log holding the refusal. The seventh is unpaired. |
-| The test log: stale run | 3 to the model at a commit, plus the dim line at every turn's end | All three were false: a `sed -i 's/def te…'`, a `python3 -I` heredoc and a `grep -n "scripts/test…"`, each counted as a test run since the command mentions a runner. The owner saw the dim line, which repeats until a real test run. |
+| The test log: stale run | 3 to the model at a commit, plus the dim line at every turn's end | Two were false: a `python3 -I` heredoc and a `grep -n "scripts/test…"`, each counted as a test run since the command mentions a runner. The third was real: its `sed -i` went on to run `scripts/test unit`. The owner saw the dim line, which repeats until a real test run. |
 | The tells hook | 30 | Two commits that only rewrite prose in the files the lane touched (`079acf613`, 6 files, and `8c3d46178`, 2 files). The rule asks for that cost. |
 | The suppression reason nudge | 4 | Each `noqa` written got its reason. tagents' own guard fired beside it on the same edits. |
 | The heredoc nudge | 4 | A Python heredoc doing one edit, pointed at the Edit tool. |
@@ -35,3 +35,5 @@ The lane measured the kit's own cost in run 7 (`docs/quality/full-suite-timing-2
 ## Outside the kit, seen in passing
 
 tagents' own `PreToolUse` hook on Edit and Write printed `jq: parse error: Invalid string: control characters` on 85 of 90 edits, so its code map reached the model once. Its `SessionStart` hook failed with a non-blocking error after 6 of 6 compactions. Its Stop hook repeats the kit's stale-handoff advice ("CLAUDE.local.md predates the last commit", 65 times).
+
+The three test-log defects are fixed in 0.35.1 (`A66`, a test run is what the guard calls one, and a stale run is said once).

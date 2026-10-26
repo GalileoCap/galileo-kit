@@ -65,6 +65,8 @@ export type TestRun = {
   at: number
   passed: boolean
   tree: string | null
+  /** The person was told at a turn's end that the run is stale, and the tree has not come back to it since. */
+  staleShown?: boolean
 }
 
 /**

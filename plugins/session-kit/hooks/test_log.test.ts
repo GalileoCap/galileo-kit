@@ -58,6 +58,38 @@ test('each run replaces the log whole, and the log goes to /tmp without TMPDIR',
   expect(log).not.toMatch(/the-old-failure/)
 })
 
+test('a runner named only in quoted text, a heredoc or an argument is no test run, and one a launcher starts is', async ($, on) => {
+  const { files } = world(on, { tmpdir: '/var/tmp/t', files: { '/proj/.claude/claude-kit.json': '{"test_commands": ["scripts/test", "scripts/check"]}' } })
+  on('tool.call', () => ({ result: { stdout: '', stderr: '', interrupted: false } }))
+
+  // Three of lane1's reads, each once logged as a passing run.
+  for (const command of [
+    'cd /proj/tagents-platform; grep -n "^def test\\|^async def test\\|^FORMS\\|^    pytest.param\\|id=" tests/test_knowledge_wording.py | head -40',
+    "cd /proj && python3 -I - <<'EOF'\nfrom pathlib import Path\nprint('scripts/test all' in Path('docs/timing.md').read_text())\nEOF",
+    "cd /proj/tagents-platform && wc -l scripts/test && grep -n -E '^\\s*(all|unit|landing)' scripts/test",
+  ]) {
+    await $.tool.call({ tool: 'Bash', command })
+  }
+  expect(files[LOG]).toBeUndefined()
+
+  await $.tool.call({ tool: 'Bash', command: 'cd /proj/tagents-platform && session-watched -- scripts/test stack > "$TMPDIR/stack.log" 2>&1' })
+  expect(files[LOG]).toMatch(/Command: cd \/proj\/tagents-platform && session-watched -- scripts\/test stack/)
+})
+
+test('a call a command hook refused is no test run, and the run before it stays the last', async ($, on) => {
+  const { files } = world(on, { tmpdir: '/var/tmp/t' })
+  const refusal = 'PreToolUse:Bash hook error: Write test output to a file (`&> log`) and search the file. Piping it inline throws the rest away and forces a rerun.'
+  let answer: { result: { stdout: string; stderr: string; interrupted: boolean } } | { isError: true; result: string; text: string } = { result: { stdout: '4 passed', stderr: '', interrupted: false } }
+  on('tool.call', () => answer)
+
+  await $.tool.call({ tool: 'Bash', command: 'uv run pytest -q' })
+  answer = { isError: true, result: refusal, text: refusal }
+  const refused = await $.tool.call({ tool: 'Bash', command: 'uv run pytest -q | tail -5' })
+  expect(refused.context).toBeUndefined()
+  expect(files[LOG]).toMatch(/Command: uv run pytest -q\n/)
+  expect(files[LOG]).toMatch(/Result: passed/)
+})
+
 test('a denied call writes no log', async ($, on) => {
   const { files } = world(on, { tmpdir: '/var/tmp/t' })
   on('tool.call', () => ({ deny: 'no' }))
@@ -168,12 +200,14 @@ test('a test run is stamped with the tree it ran on, and a commit or a turn\'s e
   tree.worktree['a.py'] = 'h1x'
   expect(await turnEnd()).toEqual([])
 
-  // An untracked file's content and a deletion count as changes too.
+  // An untracked file, its content and a deletion count as changes too.
   tree.worktree['d.py'] = 'h4'
   expect((await turnEnd()).length).toBe(1)
+  expect(await pytest()).toBeUndefined()
   tree.worktree['d.py'] = 'h4b'
   expect((await turnEnd()).length).toBe(1)
-  delete tree.worktree['d.py']
+  tree.worktree['d.py'] = 'h4'
+  expect(await turnEnd()).toEqual([])
   delete tree.worktree['b.py']
   expect((await turnEnd()).length).toBe(1)
   tree.worktree['b.py'] = 'h2'
@@ -253,4 +287,32 @@ test('the same test command failing with the same error after two edits names th
   expect((await pytest()).length).toBe(1)
   await edit()
   expect((await pytest()).length).toBe(2)
+})
+
+test('the stale line is said once while the run stays stale, and again once the tree has come back and left', async ($, on) => {
+  world(on, { tmpdir: '/var/tmp/t', files: { '/proj/CLAUDE.local.md': 'state', '/proj/.claude/claude-kit.json': '{"test_commands": ["scripts/test"]}' } })
+  const tree: Tree = { inRepo: true, index: { 'a.py': 'h1', 'b.py': 'h2' }, worktree: { 'a.py': 'h1', 'b.py': 'h2' } }
+  const { logged } = git(on, tree)
+  on('tool.call', () => PASSED)
+  const turnEnd = async () => {
+    const before = logged.length
+    await $.turn.complete(TURN)
+
+    return logged.slice(before)
+  }
+
+  // lane1's run, then edit after edit with a turn's end between: one line, where it said one at every turn.
+  await $.tool.call({ tool: 'Bash', command: 'cd /proj && scripts/test unit tests/test_surface.py > /var/tmp/t/surface.log 2>&1' })
+  tree.worktree['a.py'] = 'h1y'
+  expect((await turnEnd()).length).toBe(1)
+  expect(await turnEnd()).toEqual([])
+  tree.worktree['b.py'] = 'h2y'
+  expect(await turnEnd()).toEqual([])
+
+  // Back to the tree the run passed on, and away again: said again.
+  tree.worktree = { 'a.py': 'h1', 'b.py': 'h2' }
+  expect(await turnEnd()).toEqual([])
+  tree.worktree['a.py'] = 'h1z'
+  expect((await turnEnd()).length).toBe(1)
+  expect(await turnEnd()).toEqual([])
 })
