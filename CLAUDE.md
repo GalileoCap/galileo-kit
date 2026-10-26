@@ -41,6 +41,7 @@ Goals in the owner's words, the objectives the owner approved under them, and th
 - `O17` The system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. From `G1`, `G4`.
 - `O18` Communication with the owner is clear: an id of the intent is never written without its name. From `G1`, `G3`.
 - `C1` The kit is never the reason a session fails, the guard excepted. Proposed.
+- `C2` The organization's security default sits outermost: no hook of the kit relies on an event it sends past the plugins a person installs.
 
 ## Rules of engagement
 

@@ -39,8 +39,6 @@ engine = "2.1.308"
 ]
 "./kit.tsx gating hook with .catch" = [
   "classic.PostModelSwitch",
-  "classic.PostToolUse",
-  "classic.PostToolUseFailure",
   "prompt.submit",
   "prompt.submit{text=/\"\\\\S\"/}",
   "session.compact{trigger=auto}",
@@ -63,8 +61,6 @@ engine = "2.1.308"
 ]
 "./kit.tsx hooks" = [
   "classic.PostModelSwitch",
-  "classic.PostToolUse",
-  "classic.PostToolUseFailure",
   "prompt.submit",
   "prompt.submit{text=/\"\\\\S\"/}",
   "session.compact{trigger=auto}",
@@ -186,8 +182,6 @@ engine = "2.1.308"
 "$.ui.resolve" = "The components the band above the prompt is drawn with."
 "$.ui.toast" = "A failure of the chain or the offer, and a moment where no band is drawn."
 "classic.PostModelSwitch" = "A model switch states the cache's lifetime, which the cold-cache timer takes over the option."
-"classic.PostToolUse" = "The tool's own execution time, for the timeline."
-"classic.PostToolUseFailure" = "The execution time of a call that failed, for the timeline."
 "prompt.submit" = "Records the person's own prompt and its time, for the new-task resend and the handoff's facts, starts the chain's steps over, and gives the first prompt of a context the checkout's handoff advice."
 "session.compact" = "Gives the engine's own compaction the handoff's instructions, as a backstop."
 "session.end" = "Writes the timeline's last lines when the session ends."

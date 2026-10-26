@@ -40,3 +40,9 @@ Each of these ran in the engine's tests alone: the facts section after a handoff
 ### main, A66: the test log's fix pushed and updated
 
 `A66` (a test run is what the guard calls one, and a stale run is said once) reaches a session only through the marketplace: `main` pushed on the owner's word, then the marketplace and the plugin updated as for 0.35.0. This repository's runner entry is now `claude plugin test`, so its engine tests are logged once the terminal's `claude` is 2.1.308.
+
+## At the install of session-kit 0.35.2
+
+### main, C2: the timeline's classic hooks removed
+
+`measure.ts` no longer hooks `classic.PostToolUse` or `classic.PostToolUseFailure`, which the organization's security default sends past the kit (`C2`). It reaches a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.1. Until then every session on 0.35.1 shows the two skip notices once each.

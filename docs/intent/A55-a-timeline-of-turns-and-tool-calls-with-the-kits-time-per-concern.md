@@ -1,6 +1,6 @@
 ---
 id: A55
-from: [O17, O9]
+from: [O17, O9, C2]
 source: session
 status: decided 2026-10-25
 kind: check
@@ -11,7 +11,7 @@ supersedes: []
 
 # A55 A timeline of turns and tool calls with the kit's time per concern
 
-The `measure` module of `A22` (tooling over the sessions' transcripts and the hooks' effect). It writes one JSON line per turn start and end, tool call, tool execution and session end, buffered in memory and written at each main-loop turn end and at the session's end as a new file, `~/.claude/session-kit/measure/<session id>/<epoch ms>.jsonl`. `kit.tsx` registers the module's hooks first and a stopwatch before each concern and after the last, so each tool call's line carries every concern's own time by name (`context`, `test_log`, `doc_length`, `nudge`, `checkout`, `suppressions`), the context each added, and the time beneath the kit. `classic.PostToolUse` gives the tool's own execution on a line of its own. A turn end on the main loop carries the context figure and the session's cost. A clear or a resume in the same process starts the next session's first file with a line naming the session it came from. The `measure` option, on by default, turns it off. The line shapes are written at the head of `measure.ts`, the contract the readers hold to.
+The `measure` module of `A22` (tooling over the sessions' transcripts and the hooks' effect). It writes one JSON line per turn start and end, tool call and session end, buffered in memory and written at each main-loop turn end and at the session's end as a new file, `~/.claude/session-kit/measure/<session id>/<epoch ms>.jsonl`. `kit.tsx` registers the module's hooks first and a stopwatch before each concern and after the last, so each tool call's line carries every concern's own time by name (`context`, `test_log`, `doc_length`, `nudge`, `checkout`, `suppressions`), the context each added, and the time beneath the kit. A turn end on the main loop carries the context figure and the session's cost. A clear or a resume in the same process starts the next session's first file with a line naming the session it came from. The `measure` option, on by default, turns it off. The line shapes are written at the head of `measure.ts`, the contract the readers hold to.
 
 ## Context
 

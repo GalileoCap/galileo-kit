@@ -78,7 +78,6 @@ function engine(on: On) {
 
     return { result: {} }
   })
-  on('classic.PostToolUse', () => ({}))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('turn.complete', (_, e) => ({ text: e.answer }))
   on('session.end', (_, e) => ({ sessionId: e.sessionId }))
@@ -114,7 +113,6 @@ test('a main-loop turn end writes the lines since the last as a new file of the 
   await $.tool.call({ tool: 'Bash', command: 'ls' })
   const failed = await $.tool.call({ tool: 'Bash', command: 'uv run pytest' })
   expect(failed.context?.length).toBe(1)
-  await $.classic.PostToolUse({ tool_name: 'Bash', tool_input: { command: 'ls' }, tool_response: {}, tool_use_id: 'toolu_x', duration_ms: 42 })
   await $.tool.call({ tool: 'Read', file_path: '/proj/a.md', agentId: 'agent-1' })
   // A subagent's turn end is a line, and writes nothing yet.
   await $.turn.complete(turn('a1', { agentId: 'agent-1' }))
@@ -124,10 +122,10 @@ test('a main-loop turn end writes the lines since the last as a new file of the 
   const written = timeline(files, 'sess-1')
   expect(written.length).toBe(1)
   const lines = written[0] ?? []
-  expect(lines.map((l) => l.ev)).toEqual(['turn.start', 'tool', 'tool', 'tool.exec', 'tool', 'turn.end', 'turn.end', 'memory'])
+  expect(lines.map((l) => l.ev)).toEqual(['turn.start', 'tool', 'tool', 'tool', 'turn.end', 'turn.end', 'memory'])
   expect(lines.every((l) => typeof l.at === 'number')).toBe(true)
 
-  const [start, ls, pytest, exec, read, subagentEnd, end, memory] = lines
+  const [start, ls, pytest, read, subagentEnd, end, memory] = lines
   expect(start).toMatchObject({ turn: 't1' })
   expect(ls).toMatchObject({ tool: 'Bash', turn: 't1' })
   expect(typeof ls?.id).toBe('string')
@@ -139,7 +137,6 @@ test('a main-loop turn end writes the lines since the last as a new file of the 
   // The failed run's context is the test log's, one entry, counted with its length.
   expect(pytest).toMatchObject({ tool: 'Bash', turn: 't1', error: true, added: { test_log: { entries: 1 } } })
   expect(Object.keys(pytest?.added ?? {})).toEqual(['test_log'])
-  expect(exec).toMatchObject({ id: 'toolu_x', tool: 'Bash', ms: 42 })
   expect(read).toMatchObject({ tool: 'Read', agent: 'agent-1' })
   expect(read?.turn).toBeUndefined()
   expect(subagentEnd).toMatchObject({ turn: 'a1', agent: 'agent-1', reason: 'answer' })
@@ -152,7 +149,7 @@ test('a main-loop turn end writes the lines since the last as a new file of the 
   await $.turn.start({ text: 'more', turnId: 't2' })
   await $.turn.complete(turn('t2'))
   expect(timeline(files, 'sess-1').map((file) => file.map((l) => l.ev))).toEqual([
-    ['turn.start', 'tool', 'tool', 'tool.exec', 'tool', 'turn.end', 'turn.end', 'memory'],
+    ['turn.start', 'tool', 'tool', 'tool', 'turn.end', 'turn.end', 'memory'],
     ['turn.start', 'turn.end'],
   ])
 })

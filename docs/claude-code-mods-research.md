@@ -81,6 +81,7 @@ An author who sets `"version": "1.0.0"` and never bumps it ships nothing to exis
 - Installed: `session-kit@galileo-kit` 0.5.1 (user scope plus project installs), and `pyright-lsp` and `typescript-lsp` 1.0.0 from the official marketplace (project scope, 26 installs each). The cache still holds `session-kit` 0.1.0 to 0.5.0.
 - Synced from claude.ai: two copies of `cowork-plugin-management`.
 - `session-kit` pins `"version"`, so a commit reaches you only after the version string is bumped and you update.
+- The account's organization seats the engine's built-in `cc-plugin-sec-default@builtin` outermost, since engine 2.1.308 on 2026-10-25. It sends `classic.*`, `prompt.*`, `session.compact` and other events past every plugin you install, and the engine names each hook it skipped in the session once. `C2` lists the events and what the kit does about them.
 
 ## Installing third-party mods
 

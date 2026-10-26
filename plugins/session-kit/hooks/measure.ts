@@ -1,5 +1,5 @@
-// The timeline, in-process: one JSON line per turn start and end, tool call,
-// tool execution and session end, buffered in memory and written
+// The timeline, in-process: one JSON line per turn start and end, tool call
+// and session end, buffered in memory and written
 // at each main-loop turn end and at the session's end as a new file,
 // `~/.claude/session-kit/measure/<session id>/<epoch ms>.jsonl`, since the
 // engine's file system has no append. The kit's Python readers join the files
@@ -10,15 +10,13 @@
 // module nest in the order they are registered, so each stopwatch times its
 // concern and everything beneath it. The difference between two adjacent
 // stopwatches is one concern's own time and the context it added, the last is
-// the time beneath the kit (other plugins, the permission prompt, the tool),
-// and `classic.PostToolUse` gives the tool's own execution apart.
+// the time beneath the kit (other plugins, the permission prompt, the tool).
 //
 // The lines:
 //   turn.start  turn, agent
 //   tool        id, tool, agent, turn (the loop's, from its turn.start), ms
 //               (around the call), kitMs (per concern), beneathMs, added
 //               (per concern: entries and chars of context), error, denied
-//   tool.exec   id, tool, ms (the tool's execution), failed
 //   turn.end    turn, agent, reason, durationMs, usage, ms, kitMs, beneathMs,
 //               and on the main loop the context figure and costUsd
 //   memory      files (path, type, tokens): the engine's estimate of each
@@ -218,22 +216,6 @@ export const register: Register = (on, options) => {
     }
 
     return ran
-  }).catch(($, e, next) => next(e))
-
-  on('classic.PostToolUse', async ($, e, next) => {
-    if (e.duration_ms !== undefined) {
-      lines.push({ at: Date.now(), ev: 'tool.exec', id: e.tool_use_id, tool: e.tool_name, ms: e.duration_ms })
-    }
-
-    return next(e)
-  }).catch(($, e, next) => next(e))
-
-  on('classic.PostToolUseFailure', async ($, e, next) => {
-    if (e.duration_ms !== undefined) {
-      lines.push({ at: Date.now(), ev: 'tool.exec', id: e.tool_use_id, tool: e.tool_name, ms: e.duration_ms, failed: true })
-    }
-
-    return next(e)
   }).catch(($, e, next) => next(e))
 
   on('turn.complete', { turnId: /./ }, async ($, e, next) => {
