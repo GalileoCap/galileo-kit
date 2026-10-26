@@ -55,6 +55,7 @@ const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const chainSteps = atom({ plugin: 'session-kit', key: 'chainSteps' } as const, NO_STEPS)
 const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
+const lastPromptAt = atom({ plugin: 'session-kit', key: 'lastPromptAt' } as const, 0)
 const freshContext = atom({ plugin: 'session-kit', key: 'freshContext' } as const, false)
 const figureDismissedAt = atom({ plugin: 'session-kit', key: 'contextDismissedAt' } as const, 0)
 const coldTimerAt = atom({ plugin: 'session-kit', key: 'coldTimerAt' } as const, 0)
@@ -408,7 +409,7 @@ function sentence(text: string): string {
   return `${text.trim().replace(/[\s.:;,!]+$/, '')}.`
 }
 
-function clip(text: string, max: number): string {
+export function clip(text: string, max: number): string {
   const flat = text.trim()
 
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat
@@ -1029,6 +1030,8 @@ export const register: Register = (on, options) => {
   on('prompt.submit', async ($, e, next) => {
     if (e.command === undefined && e.text.trim() !== '' && isThePersons(e.origin)) {
       await update($, lastPrompt, () => e.text)
+      const at = await $.clock.now()
+      await update($, lastPromptAt, () => at)
       if (chainOn) {
         await update($, chainSteps, () => NO_STEPS)
       }

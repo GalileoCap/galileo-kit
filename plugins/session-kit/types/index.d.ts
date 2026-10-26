@@ -89,6 +89,8 @@ declare module 'claude-code' {
       newTask: NewTaskState | null
       /** The person's last prompt, sent again after a clear or when they keep going. */
       lastPrompt: string
+      /** When the person's last prompt was submitted, in epoch milliseconds; 0 before any. The handoff's facts count the commits since. */
+      lastPromptAt: number
       /** True while the prompt under way opened a context that held no task (new or just cleared). */
       freshContext: boolean
       /** When the cold-cache timer runs the handoff and the compaction, in epoch milliseconds; 0 while none is set. */

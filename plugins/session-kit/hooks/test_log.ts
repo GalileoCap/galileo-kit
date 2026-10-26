@@ -206,7 +206,7 @@ export async function treeFingerprint($: EngineInterface, cwd: string): Promise<
 }
 
 /** The last run's verdict now: a failure needs no git, and a run with no stamp stays unknown. */
-async function verdictOf($: EngineInterface, cwd: string, last: TestRun): Promise<Verdict> {
+export async function verdictOf($: EngineInterface, cwd: string, last: TestRun): Promise<Verdict> {
   if (!last.passed || last.tree === null) {
     return verdict(last, null)
   }

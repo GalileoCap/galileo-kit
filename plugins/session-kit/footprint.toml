@@ -12,7 +12,7 @@ engine = "2.1.308"
   "$.command.run (via clearThenResend, compactByCommand, runHandoff, runHandoffBeforeClear)",
   "$.env.get",
   "$.fs.exists (via handoffState)",
-  "$.fs.read (via indexOf, journalLine, ownerTask, past, projectRunners)",
+  "$.fs.read (via indexOf, journalLine, ownerTask, past, projectRunners, writeFacts)",
   "$.fs.stat (via handoffState)",
   "$.fs.write",
   "$.model.complete (via judgeChain)",
@@ -52,7 +52,9 @@ engine = "2.1.308"
   "tool.call{tool=Edit}",
   "tool.call{tool=Edit}",
   "tool.call{tool=Edit}",
+  "tool.call{tool=Edit}",
   "tool.call{tool=NotebookEdit}",
+  "tool.call{tool=Write}",
   "tool.call{tool=Write}",
   "tool.call{tool=Write}",
   "tool.call{tool=Write}",
@@ -77,7 +79,9 @@ engine = "2.1.308"
   "tool.call{tool=Edit}",
   "tool.call{tool=Edit}",
   "tool.call{tool=Edit}",
+  "tool.call{tool=Edit}",
   "tool.call{tool=NotebookEdit}",
+  "tool.call{tool=Write}",
   "tool.call{tool=Write}",
   "tool.call{tool=Write}",
   "tool.call{tool=Write}",
@@ -86,6 +90,7 @@ engine = "2.1.308"
   "turn.complete",
   "turn.complete{reason=answer}",
   "turn.complete{reason=answer}",
+  "turn.complete{turnId=/\".\"/}",
   "turn.complete{turnId=/\".\"/}",
   "turn.complete{turnId=/\".\"/}",
   "turn.start",
@@ -103,6 +108,7 @@ engine = "2.1.308"
   "session-kit.contextWarnedAt",
   "session-kit.freshContext",
   "session-kit.lastPrompt",
+  "session-kit.lastPromptAt",
   "session-kit.lastTest",
   "session-kit.limitsDismissed",
   "session-kit.newTask",
@@ -121,6 +127,7 @@ engine = "2.1.308"
   "session-kit.contextWarnedAt",
   "session-kit.freshContext",
   "session-kit.lastPrompt",
+  "session-kit.lastPromptAt",
   "session-kit.lastTest",
   "session-kit.limitsDismissed",
   "session-kit.newTask",
@@ -141,6 +148,7 @@ engine = "2.1.308"
   "session-kit.contextWarnedAt",
   "session-kit.freshContext",
   "session-kit.lastPrompt",
+  "session-kit.lastPromptAt",
   "session-kit.lastTest",
   "session-kit.limitsDismissed",
   "session-kit.newTask",
@@ -152,15 +160,15 @@ engine = "2.1.308"
 
 [why]
 "$.clock.after" = "Defers the chain's and the offer's next stage until the turn lets go, and arms the cold-cache timer."
-"$.clock.now" = "Stamps the chain file's lines and the test log's runs, and dates the cold-cache deadline."
+"$.clock.now" = "Stamps the chain file's lines, the test log's runs, the person's last prompt and the handoff's facts, and dates the cold-cache deadline."
 "$.command.run" = "Runs the handoff command, /compact for the chain's compaction, and /clear after the new-task offer's press."
 "$.env.get" = "TMPDIR for the chain file and the test log, HOME for the timeline's directory."
 "$.fs.exists" = "Whether CLAUDE.local.md exists, for the checkout's handoff advice."
-"$.fs.read" = "The chain file before a line is added, the Task section of CLAUDE.local.md for the judge, a document's length after an edit, the suppressions index, and test_commands in .claude/claude-kit.json."
+"$.fs.read" = "The chain file before a line is added, the Task section of CLAUDE.local.md for the judge, CLAUDE.local.md before its facts are added, a document's length after an edit, the suppressions index, and test_commands in .claude/claude-kit.json."
 "$.fs.stat" = "When CLAUDE.local.md was last written, against the last commit, for the stale-handoff advice."
-"$.fs.write" = "The chain file and the test log under the temporary directory, and the timeline's files under ~/.claude/session-kit/measure/."
+"$.fs.write" = "The chain file and the test log under the temporary directory, the timeline's files under ~/.claude/session-kit/measure/, and the facts section of CLAUDE.local.md, after the model's text."
 "$.model.complete" = "Haiku reads the unattended chain at its third, fifth and every later signal for a loop or a step beyond the task, on the session's own credentials."
-"$.process.run" = "git log and git status for the checkout checks and the test log's tree print, with the repository's own config unable to run code."
+"$.process.run" = "git log and git status for the checkout checks, the test log's tree print and the handoff's facts, and git cat-file for the commit ids a handoff names, with the repository's own config unable to run code."
 "$.prompt.submit" = "The continue prompt after the chain's compaction, and the person's prompt sent again after the new-task offer's clear."
 "$.session.cwd" = "The checkout the session runs in, for git, CLAUDE.local.md and the settings."
 "$.session.id" = "Names the chain file, the test log and the timeline's directory after the session."
@@ -171,19 +179,19 @@ engine = "2.1.308"
 "$.state.get" = "The kit's own state under session-kit.*, declared in types/index.d.ts."
 "$.state.set" = "The kit's own state under session-kit.*, declared in types/index.d.ts."
 "$.tool.register" = "The clear_point and new_task tools."
-"$.ui.log" = "One dim transcript line per chain stage, the uncommitted-work line, and the failed or stale test run at a turn's end."
+"$.ui.log" = "One dim transcript line per chain stage, the uncommitted-work line, the failed or stale test run at a turn's end, and facts that could not be added to the handoff."
 "$.ui.resolve" = "The components the band above the prompt is drawn with."
 "$.ui.toast" = "A failure of the chain or the offer, and a moment where no band is drawn."
 "classic.PostModelSwitch" = "A model switch states the cache's lifetime, which the cold-cache timer takes over the option."
 "classic.PostToolUse" = "The tool's own execution time, for the timeline."
 "classic.PostToolUseFailure" = "The execution time of a call that failed, for the timeline."
-"prompt.submit" = "Records the person's own prompt for the new-task resend and starts the chain's steps over, and gives the first prompt of a context the checkout's handoff advice."
+"prompt.submit" = "Records the person's own prompt and its time, for the new-task resend and the handoff's facts, starts the chain's steps over, and gives the first prompt of a context the checkout's handoff advice."
 "session.compact" = "Gives the engine's own compaction the handoff's instructions, as a backstop."
 "session.end" = "Writes the timeline's last lines when the session ends."
 "session.measure" = "The engine's context figure and the plan's usage windows, for the band and the warning."
 "session.start" = "Registers the two tools, and sets the cold-cache timer again from its deadline."
-"tool.call" = "The context warning after each call, with the tool output landed since the engine last measured counted on top, the clear_point and new_task tools, the test log on Bash with the edits between tries, the single-edit nudge on Bash, the document-length and suppression warnings on Edit and Write, and the timeline's stopwatch around every call."
-"turn.complete" = "Runs the chain's and the offer's next stage, arms the cold-cache timer, reads the growth per turn, hands the context figure back to the engine's, names uncommitted work and a failed or stale test run, and writes the timeline."
+"tool.call" = "The context warning after each call, with the tool output landed since the engine last measured counted on top, the clear_point and new_task tools, the test log on Bash with the edits between tries, the single-edit nudge on Bash, the document-length and suppression warnings on Edit and Write, a write of CLAUDE.local.md noted for its facts, and the timeline's stopwatch around every call."
+"turn.complete" = "Adds the facts to a handoff the turn wrote, before the chain's compaction, runs the chain's and the offer's next stage, arms the cold-cache timer, reads the growth per turn, hands the context figure back to the engine's, names uncommitted work and a failed or stale test run, and writes the timeline."
 "turn.start" = "Disarms the cold-cache timer and opens the timeline's turn."
 "turn.step" = "Reads each main-loop request's usage, the engine's measurement of the context, which the warning's projection counts on from. Every chunk passes on unchanged."
 "ui.render" = "The band above the prompt: the context figure, the usage windows, the chain and the offer, drawn above the bands beneath."

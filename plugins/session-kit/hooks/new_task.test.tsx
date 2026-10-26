@@ -218,6 +218,7 @@ test('dismissing the offer drops it and sends nothing, before or after the hando
 })
 
 test('in a context that holds no task yet, new or just cleared, the signal is answered with nothing to clear and offers nothing', { options: { chain: true } }, async ($, on) => {
+  mock.clock(on)
   engine(on, { holdsTask: false })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   await $.prompt.submit({ text: PROMPT, wait: false, origin: { kind: 'composer' } })
