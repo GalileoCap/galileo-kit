@@ -90,6 +90,7 @@ engine = "2.1.308"
   "turn.complete{turnId=/\".\"/}",
   "turn.start",
   "turn.start{turnId=/\".\"/}",
+  "turn.step",
   "ui.render{component=AbovePrompt}",
 ]
 "./kit.tsx state reads" = [
@@ -181,7 +182,8 @@ engine = "2.1.308"
 "session.end" = "Writes the timeline's last lines when the session ends."
 "session.measure" = "The engine's context figure and the plan's usage windows, for the band and the warning."
 "session.start" = "Registers the two tools, and sets the cold-cache timer again from its deadline."
-"tool.call" = "The context warning after each call, the clear_point and new_task tools, the test log on Bash with the edits between tries, the single-edit nudge on Bash, the document-length and suppression warnings on Edit and Write, and the timeline's stopwatch around every call."
-"turn.complete" = "Runs the chain's and the offer's next stage, arms the cold-cache timer, reads the growth per turn, names uncommitted work and a failed or stale test run, and writes the timeline."
+"tool.call" = "The context warning after each call, with the tool output landed since the engine last measured counted on top, the clear_point and new_task tools, the test log on Bash with the edits between tries, the single-edit nudge on Bash, the document-length and suppression warnings on Edit and Write, and the timeline's stopwatch around every call."
+"turn.complete" = "Runs the chain's and the offer's next stage, arms the cold-cache timer, reads the growth per turn, hands the context figure back to the engine's, names uncommitted work and a failed or stale test run, and writes the timeline."
 "turn.start" = "Disarms the cold-cache timer and opens the timeline's turn."
+"turn.step" = "Reads each main-loop request's usage, the engine's measurement of the context, which the warning's projection counts on from. Every chunk passes on unchanged."
 "ui.render" = "The band above the prompt: the context figure, the usage windows, the chain and the offer, drawn above the bands beneath."

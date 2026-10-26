@@ -1,4 +1,5 @@
-// Context, in-process: the engine's own figure after every tool call, a
+// Context, in-process: the engine's own figure after every tool call, with
+// the tool output landed since the engine last measured counted on top, a
 // warning to the model every `step` tokens past `thresholdTokens` (or past
 // `threshold` percent of the window, whichever comes first), a band above the prompt with the figure for the person, and, with
 // the `chain` option on, two tools: `clear_point`, after which the kit writes
@@ -39,7 +40,7 @@
 // fails. The engine's own compaction gets the backstop whatever the option.
 
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, PromptOrigin, Register, RenderSurface, SessionRateLimit, Timer, TurnCompleteInput } from 'claude-code'
+import type { EngineInterface, PromptOrigin, Register, RenderSurface, SessionContextUsage, SessionRateLimit, Timer, TurnCompleteInput } from 'claude-code'
 
 import type { ChainState, ChainStep, ContextFigure, NewTaskState } from '../types'
 import { gitOutput } from './checkout'
@@ -79,6 +80,10 @@ const SUBJECT_SHOWN = 200
 const CACHE_MINUTES = 60
 const CACHE_LEAD_MINUTES = 5
 const MINUTE_MS = 60000
+// Tool output costs 2.42 characters a token over 669 pairs of requests in the
+// transcripts on disk, and never more than 3.21: at 3.5 the projection stays
+// below the engine's next figure, so a measurement never reads as a compaction.
+const CHARS_PER_TOKEN = 3.5
 
 /** The cold-cache timer's settings: the cache's lifetime and the lead, in minutes, and the floor of context in tokens (0: the warning's trigger). */
 type ColdOptions = {
@@ -305,6 +310,38 @@ export function triggerTokens(thresholdTokens: number, thresholdPercent: number,
 /** Whether `tokens` is within a step above `mark`: a context smaller than the mark has been compacted. */
 function withinStep(mark: number, tokens: number, step: number): boolean {
   return mark > 0 && mark <= tokens && tokens < mark + step
+}
+
+// The engine measures the context once per request, so a step of parallel
+// reads lands whole before its figure moves. The projection counts on top of
+// the context the last main-loop request was answered over, read from the
+// step's own usage, so it holds whenever the engine moves its figure. It is
+// null until a step is measured and again from a turn's end, where the
+// engine's figure stands in. `landed` is what reached the context since that
+// request was sent: the response's output, then each main-loop tool's result
+// and context.
+let answeredOver: number | null = null
+let landed = 0
+
+/** What a tool call puts into the next request, in tokens: the result as the model reads it and the context beside it. */
+function tokensLanded(ran: { text?: string; context?: readonly string[] }): number {
+  const chars = (ran.text?.length ?? 0) + (ran.context ?? []).reduce((n, c) => n + c.length, 0)
+
+  return Math.ceil(chars / CHARS_PER_TOKEN)
+}
+
+/** The figure the next request will carry as far as the kit can tell; the engine's own while nothing has landed on a measured step. */
+function projected(context: SessionContextUsage): ContextFigure | null {
+  if (answeredOver === null && landed === 0) {
+    return context.tokens === undefined || context.percent === undefined ? null : { tokens: context.tokens, window: context.window, percent: context.percent }
+  }
+  const base = answeredOver ?? context.tokens
+  if (base === undefined) {
+    return null
+  }
+  const tokens = base + landed
+
+  return { tokens, window: context.window, percent: Math.round((tokens * 100) / context.window) }
 }
 
 function asNumber(value: unknown, fallback: number): number {
@@ -835,14 +872,13 @@ export const register: Register = (on, options) => {
         await update($, statedCacheMinutes, () => stated)
       }
     }
-    const { context } = await $.session.usage()
-    if (context.tokens === undefined || context.percent === undefined) {
-      return ran
+    if (e.agentId === undefined) {
+      landed += tokensLanded(ran)
     }
-    const now: ContextFigure = {
-      tokens: context.tokens,
-      window: context.window,
-      percent: context.percent,
+    const { context } = await $.session.usage()
+    const now = projected(context)
+    if (now === null) {
+      return ran
     }
     await update($, figure, () => now)
 
@@ -860,6 +896,25 @@ export const register: Register = (on, options) => {
 
     return { ...ran, context: [...(ran.context ?? []), warning(now, trigger, chainOn)] }
   }).catch(($, e, next) => next(e))
+
+  // A main-loop request's usage is the engine's measurement of the context:
+  // what landed before the request was sent drops out, and its output and
+  // what landed while it streamed stay.
+  on('turn.step', async function* ($, e, next) {
+    if (e.agentId !== undefined) {
+      return yield* next(e)
+    }
+    const before = landed
+    const r = yield* next(e)
+    if (r.usage !== null) {
+      answeredOver = r.usage.input_tokens + r.usage.cache_read_input_tokens + r.usage.cache_creation_input_tokens
+      landed = landed - before + r.usage.output_tokens
+    }
+
+    return r
+  }).catch(async function* ($, e, next) {
+    return yield* next(e)
+  })
 
   // The engine's own measurement, after each main-loop turn and when a usage window moves a point.
   on('session.measure', async ($, e, next) => {
@@ -990,6 +1045,8 @@ export const register: Register = (on, options) => {
     if (e.agentId !== undefined) {
       return next(e)
     }
+    answeredOver = null
+    landed = 0
     await measureTurn($)
     if (!chainOn) {
       return next(e)

@@ -10,7 +10,7 @@ Every text the kit puts in front of a session, verbatim or by its source, for th
 
 ## Added to a tool result, by the in-process module (`hooks/context.tsx` and its siblings)
 
-The context warning, after a tool call, from 250,000 tokens and every 25,000 after, afresh after a compaction. Three tiers by the count, each `Context at <tokens> tokens (<percent>% of <window>).` followed by:
+The context warning, after a tool call, from 250,000 tokens and every 25,000 after, afresh after a compaction. The count is the engine's figure with the tool output landed since its last measurement on top, at 3.5 characters a token (`A62`, the context figure projected between the engine's measurements). Three tiers by the count, each `Context at <tokens> tokens (<percent>% of <window>).` followed by:
 
 - From 250,000: "Aim for a safe point: finish the step under the cursor, commit if it is green, write CLAUDE.local.md, then tell the user it is safe to compact."
 - From 500,000: "End this turn at the next green commit, even with the task unfinished: write CLAUDE.local.md, reach a clean tree, and tell the user whether it is safe to compact. Start nothing new before that."

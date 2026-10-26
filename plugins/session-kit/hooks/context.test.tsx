@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import type { On, SessionUsage } from 'claude-code'
+import type { EngineInterface, On, SessionUsage } from 'claude-code'
 
 const WINDOW = 1_000_000
 
@@ -150,4 +150,48 @@ test('a dismissed band stays away until the figure moves a step on, and comes ba
   // Compacted: the figure fell below where it was dismissed.
   expect(await bandAt(5)).toBe('engine')
   expect(await bandAt(26)).toMatch(/Context 260,000/)
+})
+
+// The engine beneath a step of reads: its own figure at 100,000 tokens, which
+// moves only when it measures again, each Read answering with `sizes[file]`
+// characters, and each step answered over 100,000 tokens with 1,000 written.
+function reads(on: On, sizes: Record<string, number>) {
+  on('session.usage', () => ({ value: usage(10) }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('session.cwd', () => ({ value: '/' }))
+  on('tool.register', (_, e) => ({ value: { tool: `mcp__session-kit__${e.name}` } }))
+  on('tool.call', (_, e) => ({ result: {}, text: 'x'.repeat(e.tool === 'Read' ? sizes[e.file_path] ?? 0 : 0) }))
+  on('turn.step', async function* (_, e) {
+    const usage = { input_tokens: 1000, cache_read_input_tokens: 99_000, cache_creation_input_tokens: 0, output_tokens: 1000, model: 'claude-fable-5-1' }
+    yield { kind: 'stop', stopReason: 'tool_use', usage }
+
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'tool_use', usage }
+  })
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+}
+
+async function warned($: EngineInterface, file: string): Promise<string | undefined> {
+  return (await $.tool.call({ tool: 'Read', file_path: file })).context?.[0]
+}
+
+test('between the engine\'s measurements the warning fires on the last request\'s context, its output and the tool output landed since, at 3.5 characters a token', async ($, on) => {
+  reads(on, { '/a': 350_000, '/b': 350_000, '/c': 35_000, '/d': 70_000 })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const step = $.turn.step({ turnId: 't1', index: 0, model: 'claude-fable-5-1', messageCount: 3 })
+  for await (const _ of step) {
+    // Read to its end, as the engine does.
+  }
+
+  // One step of parallel reads, with no request between them: the engine's figure stays at 100,000.
+  expect(await warned($, '/a')).toBeUndefined()
+  expect(await warned($, '/b')).toMatch(/^Context at 301,000 tokens \(30% of 1,000,000\)\. Aim for a safe point/)
+  expect(await warned($, '/c')).toBeUndefined()
+  expect(await warned($, '/d')).toMatch(/^Context at 331,000 tokens \(33% of 1,000,000\)/)
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /Context/ }))?.text).toMatch(/^Context 331,000 tokens \(33% of 1,000,000\)/)
+  await ui.unmount()
 })
