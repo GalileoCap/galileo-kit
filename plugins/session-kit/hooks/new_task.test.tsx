@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import type { On, SessionUsage, TurnCompleteInput } from 'claude-code'
+import type { EngineInterface, On, SessionUsage, TurnCompleteInput } from 'claude-code'
 
 const TOOL = 'mcp__session-kit__new_task'
 const PROMPT = 'Now rewrite the README install section for the new name'
@@ -36,7 +36,7 @@ function engine(on: On, { holdsTask = true } = {}) {
     return { value: { tool: `mcp__session-kit__${e.name}` } }
   })
   on('command.run', (_, e) => {
-    asked.push(`command ${e.command}`)
+    asked.push(`command ${e.command}${e.args === '' ? '' : ` ${e.args}`}`)
 
     return { text: 'ran' }
   })
@@ -241,4 +241,60 @@ test('a signal without a task is refused and offers nothing', { options: { chain
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect(await ui.find({ type: 'Text', text: /New task/ })).toBeUndefined()
   await ui.unmount()
+})
+
+// The engine's answer to a model request, registered before the session starts.
+function answersSteps(on: On) {
+  on('turn.step', async function* (_, e) {
+    const usage = { input_tokens: 10, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 10, model: 'claude-fable-5-1' }
+    yield { kind: 'stop', stopReason: 'end_turn', usage }
+
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage }
+  })
+}
+
+// A main-loop request sent at the session's effort, which the kit reads.
+async function stepAt($: EngineInterface, effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max') {
+  for await (const _ of $.turn.step({ turnId: 't0', index: 0, model: 'claude-fable-5-1', effort, messageCount: 3 })) {
+    // Read to its end, as the engine does.
+  }
+}
+
+test('an effort the model proposes for the new task is set by the person\'s press, after the clear and before the prompt is sent again', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  let isCleared = false
+  on('command.run', { command: 'clear' }, (_, e, next) => {
+    isCleared = true
+
+    return next(e)
+  })
+  on('state.get', { plugin: 'session-kit' }, (_, e, next) => (isCleared ? { value: { value: undefined, version: 0 } } : next(e)))
+  const asked = engine(on)
+  answersSteps(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await stepAt($, 'high')
+  await $.prompt.submit({ text: PROMPT, wait: false, origin: { kind: 'composer' } })
+  await $.tool.call({ tool: TOOL, task: 'rewrite the README', effort: 'low', effort_reason: 'a mechanical edit' })
+  asked.length = 0
+
+  let ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /New task/ }))?.text).toMatch(/effort low.*a mechanical edit/)
+  expect(await ui.find({ type: 'Button', text: /Handoff and clear/ })).toBeDefined()
+  await ui.press({ key: 'new-task-clear-effort' })
+  await clock.settle()
+  await ui.unmount()
+  await $.turn.complete(turn('t-handoff'))
+  await clock.settle()
+  expect(asked).toEqual(['command session-kit:handoff', 'command clear', 'command effort low', `prompt as user: ${PROMPT}`])
+
+  // Keeping on in this context never changes the effort: the change would write the whole context to the cache again.
+  isCleared = false
+  await $.prompt.submit({ text: PROMPT, wait: false, origin: { kind: 'composer' } })
+  await $.tool.call({ tool: TOOL, task: 'rewrite the README', effort: 'low', effort_reason: 'a mechanical edit' })
+  asked.length = 0
+  ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'new-task-here' })
+  await clock.settle()
+  await ui.unmount()
+  expect(asked).toEqual([`prompt as user: ${PROMPT}`])
 })

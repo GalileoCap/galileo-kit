@@ -42,7 +42,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PromptOrigin, Register, RenderSurface, SessionContextUsage, SessionRateLimit, Timer, TurnCompleteInput } from 'claude-code'
 
-import type { ChainState, ChainStep, ContextFigure, NewTaskState } from '../types'
+import type { ChainState, ChainStep, ContextFigure, Effort, NewTaskState } from '../types'
 import { gitOutput } from './checkout'
 
 const NO_WINDOWS: SessionRateLimit[] = []
@@ -54,6 +54,7 @@ const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, nu
 const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const chainSteps = atom({ plugin: 'session-kit', key: 'chainSteps' } as const, NO_STEPS)
 const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
+const sessionEffort = atom({ plugin: 'session-kit', key: 'sessionEffort' } as const, null)
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
 const lastPromptAt = atom({ plugin: 'session-kit', key: 'lastPromptAt' } as const, 0)
 const freshContext = atom({ plugin: 'session-kit', key: 'freshContext' } as const, false)
@@ -117,6 +118,8 @@ const NEW_TASK_TOOL = 'mcp__session-kit__new_task'
 const HANDOFF_COMMAND = 'session-kit:handoff'
 const CLEAR_COMMAND = 'clear'
 const COMPACT_COMMAND = 'compact'
+const EFFORT_COMMAND = 'effort'
+const EFFORTS: readonly Effort[] = ['low', 'medium', 'high', 'xhigh', 'max']
 
 const TOOL_DESCRIPTION =
   'Call this at a clear point: the tree is committed and green, nothing is in ' +
@@ -132,7 +135,9 @@ const NEW_TASK_DESCRIPTION =
   'sends their prompt again after. Then end the turn, saying in one line that ' +
   'it is a new task, with nothing started. A context that holds no task yet ' +
   '(new, or just cleared) takes the prompt as its task, whatever ' +
-  'CLAUDE.local.md describes.'
+  'CLAUDE.local.md describes. When the new task needs another effort than ' +
+  'this session runs at, name it with its reason: the person may take it ' +
+  'with the clear, and never in this context.'
 
 const NOTHING_TO_CLEAR =
   'This context holds no other task (it is new, or just cleared), so there is ' +
@@ -792,10 +797,18 @@ async function stepChain($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'
   }
 }
 
+function isEffort(value: unknown): value is Effort {
+  return EFFORTS.some((level) => level === value)
+}
+
+function proposal(effort: { level: Effort; reason: string }): string {
+  return effort.reason === '' ? effort.level : `${effort.level}: ${effort.reason}`
+}
+
 function newTaskLine(state: NewTaskState): string {
   switch (state.stage) {
     case 'offered':
-      return `New task: ${state.task}`
+      return state.effort === undefined ? `New task: ${state.task}` : `New task: ${state.task}. Proposed effort ${proposal(state.effort)}`
     case 'handoff':
       return 'session-kit is writing the handoff before the clear.'
     case 'clearing':
@@ -826,8 +839,8 @@ async function runHandoffBeforeClear($: EngineInterface): Promise<void> {
   }
 }
 
-async function handoffThenClear($: EngineInterface, state: NewTaskState): Promise<void> {
-  await update($, newTask, () => ({ ...state, stage: 'handoff' }))
+async function handoffThenClear($: EngineInterface, state: NewTaskState, setsEffort: boolean): Promise<void> {
+  await update($, newTask, () => ({ ...state, stage: 'handoff', setsEffort }))
   // Outside this dispatch: a command run inside a hook the turn waits on is refused.
   $.clock.after(0, () => {
     void runHandoffBeforeClear($)
@@ -835,8 +848,10 @@ async function handoffThenClear($: EngineInterface, state: NewTaskState): Promis
 }
 
 async function clearThenResend($: EngineInterface): Promise<void> {
-  // The clear starts the session's named values over, so the prompt is taken out first.
+  // The clear starts the session's named values over, so the prompt and the effort are taken out first.
   const text = await read($, lastPrompt)
+  const offered = await read($, newTask)
+  const level = offered?.setsEffort === true ? offered.effort?.level : undefined
   await update($, newTask, () => null)
   stage($, 'new task: clearing the context')
   try {
@@ -847,8 +862,22 @@ async function clearThenResend($: EngineInterface): Promise<void> {
 
     return
   }
+  if (level !== undefined) {
+    await setEffort($, level)
+  }
   stage($, `new task: the clear returned, sending ${text === '' ? 'no prompt' : 'the prompt'} again`)
   await resend($, text)
+}
+
+/** The effort the person chose for the new task, set after the clear, where the change writes no context to the cache again. */
+async function setEffort($: EngineInterface, level: Effort): Promise<void> {
+  try {
+    await $.command.run({ command: EFFORT_COMMAND, args: level })
+    stage($, `new task: the effort set to ${level}`)
+  } catch (error) {
+    stage($, `new task: the effort was not set (${reason(error)})`)
+    $.ui.toast(`session-kit: the effort was not set to ${level} (${reason(error)}), so the prompt runs at the session's.`)
+  }
 }
 
 export const register: Register = (on, options) => {
@@ -904,6 +933,10 @@ export const register: Register = (on, options) => {
   on('turn.step', async function* ($, e, next) {
     if (e.agentId !== undefined) {
       return yield* next(e)
+    }
+    const level = isEffort(e.effort) ? e.effort : null
+    if (level !== (await read($, sessionEffort))) {
+      await update($, sessionEffort, () => level)
     }
     const before = landed
     const r = yield* next(e)
@@ -978,8 +1011,16 @@ export const register: Register = (on, options) => {
       lines.push(
         <Box key="offer">
           <Text dimColor>{newTaskLine(offered)} </Text>
+          {offered.stage === 'offered' && offered.effort !== undefined ? (
+            <Button key="new-task-clear-effort" label={`Handoff, clear, effort ${offered.effort.level}`} variant="primary" onPress={() => handoffThenClear($, offered, true)} />
+          ) : null}
           {offered.stage === 'offered' ? (
-            <Button key="new-task-clear" label="Handoff and clear" variant="primary" onPress={() => handoffThenClear($, offered)} />
+            <Button
+              key="new-task-clear"
+              label="Handoff and clear"
+              variant={offered.effort === undefined ? 'primary' : undefined}
+              onPress={() => handoffThenClear($, offered, false)}
+            />
           ) : null}
           {offered.stage === 'offered' ? (
             <Button key="new-task-here" label="Keep going here" onPress={() => keepGoing($)} />
@@ -1094,7 +1135,15 @@ export const register: Register = (on, options) => {
       description: NEW_TASK_DESCRIPTION,
       inputSchema: {
         type: 'object',
-        properties: { task: { type: 'string', description: 'The new task, in one line.' } },
+        properties: {
+          task: { type: 'string', description: 'The new task, in one line.' },
+          effort: {
+            type: 'string',
+            enum: EFFORTS,
+            description: 'The effort the new task needs, only when it differs from this session\'s: lower for routine or mechanical work, higher for design or debugging.',
+          },
+          effort_reason: { type: 'string', description: 'Why that effort, in a few words.' },
+        },
         required: ['task'],
       },
       isDeferred: false,
@@ -1125,10 +1174,15 @@ export const register: Register = (on, options) => {
     if (task === '') {
       return refuse('task must name the new task in one line.')
     }
+    if (e.effort !== undefined && !isEffort(e.effort)) {
+      return refuse(`effort must be one of ${EFFORTS.join(', ')}, or left out.`)
+    }
     if (await read($, freshContext)) {
       return answer(NOTHING_TO_CLEAR)
     }
-    await update($, newTask, () => ({ stage: 'offered', task }))
+    const level = isEffort(e.effort) && e.effort !== (await read($, sessionEffort)) ? e.effort : undefined
+    const why = typeof e.effort_reason === 'string' ? e.effort_reason.trim() : ''
+    await update($, newTask, () => (level === undefined ? { stage: 'offered', task } : { stage: 'offered', task, effort: { level, reason: why } }))
     await moment($, `New task: ${task}. From a terminal or the desktop, the band offers the handoff and a clear, or to keep going here.`)
 
     return answer(

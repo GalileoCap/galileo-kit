@@ -46,7 +46,14 @@ export type NewTaskState = {
   stage: 'offered' | 'handoff' | 'clearing'
   /** The new task, in one line, as the model gave it. */
   task: string
+  /** The effort the model proposed for the new task with its reason, kept only when it differs from the session's. */
+  effort?: { level: Effort; reason: string }
+  /** True once the person chose the clear at the proposed effort. */
+  setsEffort?: boolean
 }
+
+/** A reasoning effort as the engine's `ModelEffort` spells it. */
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
 /**
  * The session's last test run: the command, when it ended, whether it passed,
@@ -87,6 +94,8 @@ declare module 'claude-code' {
       chainSteps: ChainStep[]
       /** The new task offered to the person; null while none is. */
       newTask: NewTaskState | null
+      /** The effort the session's last main-loop request was sent at; null before any, or for a model that takes none. */
+      sessionEffort: Effort | null
       /** The person's last prompt, sent again after a clear or when they keep going. */
       lastPrompt: string
       /** When the person's last prompt was submitted, in epoch milliseconds; 0 before any. The handoff's facts count the commits since. */

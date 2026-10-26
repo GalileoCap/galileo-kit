@@ -122,6 +122,15 @@ Each was written down by a mod's author from live runs. Those checked against th
    - Later, each needing its own decision: M6 (projection), M10 (`/compact` by command), M11 (facts in the handoff), M12 (a fork handoff, measured first), M16 (asks tracked), M21 (narrowed ports, with step 4 of `A20`), M22 (a footprint gate), M23 (`session-review`).
 3. Each pattern taken becomes an action under `docs/intent/` when it is decided, naming the objective it serves.
 
+## Decided on 2026-10-26
+
+The owner read where the build stood and answered.
+
+- M12 (a fork handoff) is dropped. The handoff stays the skill's, which reads git and the last test run where a fork with no tools cannot.
+- M27 (an effort carried by the `new_task` offer), from the effort question under `PLAN.md`'s open questions, is built before the install as `A65` (an effort for the new task carried by the offer). The model proposes an effort with its reason, and the person's press sets it through `/effort` after the clear. A `turn.step` rewrite was rejected, since the engine's indicator would then disagree with the level each request carries.
+- After the install, the band's usage-window line of M9 (`A50`, the plan's usage windows and the growth per turn beside the context figure) is reviewed and changed with the owner.
+- After the install, the owner considers facts on the UI, from the facts section of M11 (`A63`, facts from git and the session beside the model's prose in the handoff).
+
 ## Decided on 2026-10-25
 
 The owner read the analysis and answered.

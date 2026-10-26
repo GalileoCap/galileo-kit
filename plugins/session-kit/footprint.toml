@@ -9,7 +9,7 @@ engine = "2.1.308"
 "./kit.tsx calls" = [
   "$.clock.after (via handoffThenClear, holdColdTimer, stepChain, stepOffer)",
   "$.clock.now",
-  "$.command.run (via clearThenResend, compactByCommand, runHandoff, runHandoffBeforeClear)",
+  "$.command.run (via clearThenResend, compactByCommand, runHandoff, runHandoffBeforeClear, setEffort)",
   "$.env.get",
   "$.fs.exists (via handoffState)",
   "$.fs.read (via indexOf, journalLine, ownerTask, past, projectRunners, writeFacts)",
@@ -29,7 +29,7 @@ engine = "2.1.308"
   "$.tool.register",
   "$.ui.log",
   "$.ui.resolve",
-  "$.ui.toast (via clearThenResend, compactByCommand, moment, resend, runHandoff, runHandoffBeforeClear)",
+  "$.ui.toast (via clearThenResend, compactByCommand, moment, resend, runHandoff, runHandoffBeforeClear, setEffort)",
 ]
 "./kit.tsx env reads" = [
   "HOME",
@@ -113,6 +113,7 @@ engine = "2.1.308"
   "session-kit.limitsDismissed",
   "session-kit.newTask",
   "session-kit.rateLimits",
+  "session-kit.sessionEffort",
   "session-kit.testRetry",
   "session-kit.turnEndTokens",
   "session-kit.turnGrowth",
@@ -132,6 +133,7 @@ engine = "2.1.308"
   "session-kit.limitsDismissed",
   "session-kit.newTask",
   "session-kit.rateLimits",
+  "session-kit.sessionEffort",
   "session-kit.testRetry",
   "session-kit.turnEndTokens",
   "session-kit.turnGrowth",
@@ -153,6 +155,7 @@ engine = "2.1.308"
   "session-kit.limitsDismissed",
   "session-kit.newTask",
   "session-kit.rateLimits",
+  "session-kit.sessionEffort",
   "session-kit.testRetry",
   "session-kit.turnEndTokens",
   "session-kit.turnGrowth",
@@ -161,7 +164,7 @@ engine = "2.1.308"
 [why]
 "$.clock.after" = "Defers the chain's and the offer's next stage until the turn lets go, and arms the cold-cache timer."
 "$.clock.now" = "Stamps the chain file's lines, the test log's runs, the person's last prompt and the handoff's facts, and dates the cold-cache deadline."
-"$.command.run" = "Runs the handoff command, /compact for the chain's compaction, and /clear after the new-task offer's press."
+"$.command.run" = "Runs the handoff command, /compact for the chain's compaction, and /clear after the new-task offer's press, then /effort when the person chose the effort the model proposed."
 "$.env.get" = "TMPDIR for the chain file and the test log, HOME for the timeline's directory."
 "$.fs.exists" = "Whether CLAUDE.local.md exists, for the checkout's handoff advice."
 "$.fs.read" = "The chain file before a line is added, the Task section of CLAUDE.local.md for the judge, CLAUDE.local.md before its facts are added, a document's length after an edit, the suppressions index, and test_commands in .claude/claude-kit.json."
