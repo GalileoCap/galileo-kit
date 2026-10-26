@@ -1595,3 +1595,130 @@ code = "{} if before is None else before.why"
 class = "declared"
 disposition = "keep"
 why = "a footprint taken for the first time has no reasons to keep"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/cli.py"
+where = "_review"
+form = "except-returns"
+code = "except footprint.FootprintError: return REFUSED"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "call_table"
+form = "or"
+code = "shown(via) or 'the hook itself'"
+class = "declared"
+disposition = "keep"
+why = "a call the validator lists with no function before it is made in the hook itself, as the table says"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "controls"
+form = "or"
+code = "done.stdout or '[]'"
+class = "declared"
+disposition = "keep"
+why = "ast-grep prints nothing when no file matched its globs, which is no string to list"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "decoded"
+form = "except-returns"
+code = "except ValueError: return ''"
+class = "silent"
+disposition = "keep"
+why = "an escape whose digits do not parse is a syntax error the engine's loader refuses, so it stands for nothing that runs"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "decoded"
+form = "get"
+code = "SIMPLE.get(body, '')"
+class = "declared"
+disposition = "keep"
+why = "a quote, a backslash or a line break escapes no control character"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "header"
+form = "or"
+code = "seen.name or '(no name)'"
+class = "spoken"
+disposition = "keep"
+why = "a manifest with no name is said in the row, and the validator names the error"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "header"
+form = "or"
+code = "shown(seen.version) or 'with no version'"
+class = "spoken"
+disposition = "keep"
+why = "a missing version is the checklist's first question, said in the row"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "hook_table"
+form = "if-none"
+code = "code(matcher) if matcher else 'none'"
+class = "declared"
+disposition = "keep"
+why = "a hook with no matcher runs on every event of its kind, which the row says"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "hook_table"
+form = "or"
+code = "gate or 'no'"
+class = "declared"
+disposition = "keep"
+why = "a hook the validator does not list as gating is said not to gate"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "manifest"
+form = "except-returns"
+code = "except (OSError, ValueError): return ('', '')"
+class = "spoken"
+disposition = "keep"
+why = "an unreadable plugin.json is the validator's error, printed in the section, and the row says there is no name"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "manifest"
+form = "if-none"
+code = "name if isinstance(name, str) else ''"
+class = "spoken"
+disposition = "keep"
+why = "a name that is not a string is shown as missing, and the validator names the error"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "manifest"
+form = "if-none"
+code = "version if isinstance(version, str) else ''"
+class = "spoken"
+disposition = "keep"
+why = "a version that is not a string is shown as missing, the checklist's first question"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "render"
+form = "or"
+code = "problems(seen.report) or ['Nothing: no error and no warning.']"
+class = "spoken"
+disposition = "keep"
+why = "a validation with no problem says so"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/review.py"
+where = "surroundings"
+form = "or"
+code = "', '.join((code(i) for i in listed)) or 'nothing'"
+count = 2
+class = "declared"
+disposition = "keep"
+why = "an empty list is said as nothing, as the validator says it"

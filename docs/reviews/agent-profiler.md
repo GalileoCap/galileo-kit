@@ -1,5 +1,103 @@
 # Review: agent-profiler
 
+<!-- session-codeintel review -->
+## What the program read
+
+Written by `session-codeintel review` on 2026-10-26 with Claude Code 2.1.308, from the plugin at `~/devel/galileo/misc/mod-clones/my-claude-code-mods/agent-profiler`. It ran the engine's validator and `plugin details`, read the plugin's files and git, and ran none of the plugin's code. Nothing here is a verdict: the hooks and the calls below are where the reading starts. The next run replaces this section and nothing around it.
+
+| | |
+| --- | --- |
+| Plugin | `agent-profiler` 0.1.7 |
+| Commit | `93fa0f7e84e37705da049ef2727530ec01af3dd9`, committed 2026-10-24 |
+| Origin | `https://github.com/YeonwooSung/my-claude-code-mods.git` |
+| Working tree | clean |
+| Engine | Claude Code 2.1.308 |
+| Validator | passed, 0 errors, 0 warnings |
+| Reach | L3, reaches the network: network, writes files, reads env vars, runs a timer, draws. |
+| Install | 161.1 KiB in 33 files, the plugin's folder, which an install copies |
+| Marketplace | 1.7 MiB in 342 files, the repository, which adding it as a marketplace clones |
+
+### What the validator found
+
+- Nothing: no error and no warning.
+
+### Calls on `$`, by reach
+
+| Member | Through | Level |
+| --- | --- | --- |
+| `$.http.fetch` | post | L3, network |
+| `$.fs.write` | exportTrace | L2, writes files |
+| `$.env.get` | outputDir | L1, reads env vars |
+| `$.clock.every` | the hook itself | L0, runs a timer |
+| `$.ui.invalidate` | paintNow | L0, draws |
+| `$.ui.open` | the hook itself | L0, draws |
+| `$.ui.resolve` | the hook itself | L0, draws |
+| `$.ui.status` | paintNow | L0, draws |
+| `$.ui.toast` | warn | L0, draws |
+| `$.clock.after` | the hook itself | L0 |
+| `$.clock.sleep` | post | L0 |
+| `$.command.register` | the hook itself | L0 |
+| `$.session.id` | the hook itself | L0 |
+
+### Hooks
+
+| Event | Matcher | Gating | Hot | What to read |
+| --- | --- | --- | --- | --- |
+| `classic.PostToolUse` | none | without .catch | hot | the settings hooks' event of that name |
+| `classic.PostToolUseFailure` | none | without .catch | hot | the settings hooks' event of that name |
+| `classic.StopFailure` | none | without .catch |  | the settings hooks' event of that name |
+| `classic.SubagentStart` | none | without .catch |  | the settings hooks' event of that name |
+| `classic.SubagentStop` | none | without .catch |  | the settings hooks' event of that name |
+| `command.run` | `command=profile-export` | without .catch |  | the slash commands it matches |
+| `command.run` | `command=profile-pane` | without .catch |  | the slash commands it matches |
+| `command.run` | `command=profile` | without .catch |  | the slash commands it matches |
+| `session.end` | none | no |  |  |
+| `session.start` | none | no |  |  |
+| `telemetry.log` | `to=collector` | without .catch |  | the telemetry records it matches |
+| `tool.call` | none | with .catch | hot | the tool calls it matches: read whether it approves, refuses or rewrites one |
+| `turn.complete` | none | no |  |  |
+| `turn.start` | none | no |  |  |
+| `turn.step` | none | no | hot | every model request: read whether it changes the model, the effort or the stream |
+| `ui.render` | `component=Pane, requestId=agent-profiler` | no | hot | what the surfaces draw: read whether it passes on what it does not draw |
+
+### Environment and state
+
+- Environment read: `HOME`
+- Environment written: nothing
+- Telemetry hooked for: `collector`
+- Declares on `$`: nothing
+- State: 0 keys written, 0 read, 0 declared
+
+### `claude plugin details`
+
+```text
+agent-profiler 0.1.7
+  Description: Execution profiler for Claude Code: model wait vs tools vs subagents, live, with OTLP export
+  Source: agent-profiler@inline
+
+Component inventory
+  Skills (0)
+  Agents (0)
+  Hooks (0)
+  MCP servers (0)
+  LSP servers (0)
+
+Projected token cost
+  Always-on:   ~0 tok   added to every session
+```
+
+### Control characters in source strings
+
+Each line of the plugin's TypeScript and JavaScript whose strings hold a control character other than tab and newline, comments and regular expressions left out. A string built at run time (`String.fromCharCode(27)`) is not seen. The plugin hooks `ui.render`, where such a string can rewrite what a terminal draws.
+
+- `hooks/core/redact.ts:12`: `\b \r`
+- `hooks/core/redact.ts:19`: `\b`
+
+### Symbolic links
+
+None.
+<!-- end of session-codeintel review -->
+
 | | |
 | --- | --- |
 | Upstream | https://github.com/YeonwooSung/my-claude-code-mods, folder `agent-profiler/`, Apache-2.0 by the repository's `LICENSE` (the folder has none of its own) |

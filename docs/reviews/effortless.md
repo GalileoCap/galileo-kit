@@ -1,5 +1,125 @@
 # Review: effortless
 
+<!-- session-codeintel review -->
+## What the program read
+
+Written by `session-codeintel review` on 2026-10-26 with Claude Code 2.1.308, from the plugin at `~/devel/galileo/misc/mod-clones/effortless`. It ran the engine's validator and `plugin details`, read the plugin's files and git, and ran none of the plugin's code. Nothing here is a verdict: the hooks and the calls below are where the reading starts. The next run replaces this section and nothing around it.
+
+| | |
+| --- | --- |
+| Plugin | `effortless` 1.72.0 |
+| Commit | `e5c590dfd9402244ea66a8bf795d1cb86d1df7b9`, committed 2026-10-23 |
+| Origin | `https://github.com/HeyCubit/effortless.git` |
+| Working tree | clean |
+| Engine | Claude Code 2.1.308 |
+| Validator | failed, 1 error, 1 warning |
+| Reach | at least L3, reaches the network: network, runs processes, writes files, changes config, calls a model, drives the session, writes the prompt box, reads files, reads env vars, reads settings, reads the transcript, reads the prompt box, reads plugins' state, runs a timer. The calls were cut short. |
+| Install | 41.3 MiB in 1001 files, the plugin's folder, which an install copies |
+
+### What the validator found
+
+- warning `author`: No author information provided. Consider adding author details for plugin attribution
+- error `modules../register.tsx`: effortless.updateCheck is not declared: the manifest's types contract must name it in interface PluginState { effortless: { updateCheck: ... } }
+- The engine cut `types ./types/index.d.ts declares state` short at `effortle… [+38 chars]`: what follows the cut is unseen, so read the source for it.
+- The engine cut `./register.tsx calls` short at `$.state… [+133 chars]`: what follows the cut is unseen, so read the source for it.
+- The engine cut `./register.tsx state writes` short at `… [+23 chars]`: what follows the cut is unseen, so read the source for it.
+- The engine cut `./register.tsx state reads` short at `effortless.switch… [+49 chars]`: what follows the cut is unseen, so read the source for it.
+
+### Calls on `$`, by reach
+
+| Member | Through | Level |
+| --- | --- | --- |
+| `$.http.fetch` | askJev, latestAvailable | L3, network |
+| `$.process.run` | latestFromGit, runClaude, syncRunningCopy | L2, runs processes |
+| `$.fs.write` | the hook itself | L2, writes files |
+| `$.config.set` | saveSetting | L2, changes config |
+| `$.model.complete` | askHaiku, checkHandoff, haikuCompaction, haikuHandoff | L2, calls a model |
+| `$.model.fork` | writeHandoff | L2, calls a model |
+| `$.command.run` | compactCold, finishHandoff, runUpdate, switchModel, uninstallButton, writeHandoff | L2, drives the session |
+| `$.prompt.submit` | finishHandoff, writeHandoff | L2, drives the session |
+| `$.prompt.fill` | finishHandoff, typeCommand | L1, writes the prompt box |
+| `$.fs.read` | the hook itself | L1, reads files |
+| `$.env.get` | envHome, envJevKey, envJevUrl, envLog, envModelUi, envTemp, envTmpdir, envUserProfile | L1, reads env vars |
+| `$.config.list` | refreshAppearance | L1, reads settings |
+| `$.session.messages` | the hook itself | L1, reads the transcript |
+| `$.prompt.read` | typeCommand | L1, reads the prompt box |
+| `$.state.get` | the hook itself | L1, reads plugins' state |
+| `$.clock.every` | bandArt, startTimers | L0, runs a timer |
+| `$.agent.list` | helperEffortOf | L0 |
+| `$.clock.after` | the hook itself | L0 |
+| `$.clock.now` | the hook itself | L0 |
+| `$.clock.sleep` | askJev | L0 |
+| `$.command.list` | loadInstalledSkills, typedSkill | L0 |
+| `$.command.register` | the hook itself | L0 |
+| `$.session.id` | the hook itself | L0 |
+| `$.session.model` | the hook itself | L0 |
+| `$.session.root` | the hook itself | L0 |
+| `$.session.usage` | checkSwamp | L0 |
+
+### Hooks
+
+| Event | Matcher | Gating | Hot | What to read |
+| --- | --- | --- | --- | --- |
+| `agent.spawn` | none | without .catch |  | every subagent's start: read whether it changes or refuses one |
+| `classic.PostModelSwitch` | none | without .catch |  | the settings hooks' event of that name |
+| `classic.SessionStart` | none | without .catch |  | the settings hooks' event of that name |
+| `command.run` | none | without .catch |  | the slash commands it matches |
+| `prompt.submit` | none | without .catch |  | every prompt: read whether it rewrites or drops one |
+| `session.compact` | none | without .catch |  | every compaction: read whether it changes or skips one |
+| `session.start` | none | no |  |  |
+| `tool.call` | none | without .catch | hot | the tool calls it matches: read whether it approves, refuses or rewrites one |
+| `turn.complete` | none | no |  |  |
+| `turn.step` | none | no | hot | every model request: read whether it changes the model, the effort or the stream |
+| `ui.render` | `component=AbovePrompt` | no | hot | what the surfaces draw: read whether it passes on what it does not draw |
+| `ui.render` | `component=Pane, requestId=effortless-agents` | no | hot | what the surfaces draw: read whether it passes on what it does not draw |
+| `ui.render` | `component=SessionMode` | no | hot | what the surfaces draw: read whether it passes on what it does not draw |
+| `ui.render` | `component=TurnDuration` | no | hot | what the surfaces draw: read whether it passes on what it does not draw |
+
+### Environment and state
+
+- Environment read: `EFFORTLESS_LOG`, `EFFORTLESS_MODEL_UI`, `HOME`, `JEV_URL`, `TEMP`, `TMPDIR`, `TYPESAFE_API_KEY`, `USERPROFILE`
+- Environment written: nothing
+- Telemetry hooked for: nothing
+- Declares on `$`: nothing
+- State: 43 keys written, 42 read, 42 declared
+
+### `claude plugin details`
+
+```text
+effortless 1.72.0
+  Description: Sets the reasoning effort for every prompt automatically, shows it under the prompt box, and counts down how long the prompt cache stays warm.
+  Source: effortless@inline
+
+Component inventory
+  Skills (1)  effortless
+  Agents (0)
+  Hooks (0)
+  MCP servers (0)
+  LSP servers (0)
+
+Projected token cost
+  Always-on:   ~63 tok   added to every session
+
+Per-component (rounded)
+  component   always-on  on-invoke
+  effortless        ~60        ~80
+
+  On-invoke cost is paid each time a skill or agent fires.
+  Token counts are estimates and may differ from actual usage.
+```
+
+### Control characters in source strings
+
+Each line of the plugin's TypeScript and JavaScript whose strings hold a control character other than tab and newline, comments and regular expressions left out. A string built at run time (`String.fromCharCode(27)`) is not seen. The plugin hooks `ui.render`, where such a string can rewrite what a terminal draws.
+
+- `tests/effortless.test.ts:3656`: `\r`
+- `textless/market/worker/src/index.mjs:343`: `\r`
+
+### Symbolic links
+
+None.
+<!-- end of session-codeintel review -->
+
 | | |
 | --- | --- |
 | Upstream | https://github.com/HeyCubit/effortless |

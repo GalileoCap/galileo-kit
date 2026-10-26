@@ -1,5 +1,101 @@
 # Review: cache-tax
 
+<!-- session-codeintel review -->
+## What the program read
+
+Written by `session-codeintel review` on 2026-10-26 with Claude Code 2.1.308, from the plugin at `~/devel/galileo/misc/mod-clones/cache-tax`. It ran the engine's validator and `plugin details`, read the plugin's files and git, and ran none of the plugin's code. Nothing here is a verdict: the hooks and the calls below are where the reading starts. The next run replaces this section and nothing around it.
+
+| | |
+| --- | --- |
+| Plugin | `cache-tax` 2.3.1 |
+| Commit | `e4940afcc62c109bd667bae1b996bee765021759`, committed 2026-10-22 |
+| Origin | `https://github.com/karanb192/cache-tax` |
+| Working tree | clean |
+| Engine | Claude Code 2.1.308 |
+| Validator | passed, 0 errors, 0 warnings |
+| Reach | L2, writes, runs or drives Claude: calls a model, reads env vars, reads settings, keeps a store, draws. |
+| Install | 6.6 MiB in 29 files, the plugin's folder, which an install copies |
+
+### What the validator found
+
+- Nothing: no error and no warning.
+
+### Calls on `$`, by reach
+
+| Member | Through | Level |
+| --- | --- | --- |
+| `$.model.fork` | ping | L2, calls a model |
+| `$.env.get` | the hook itself | L1, reads env vars |
+| `$.config.list` | the hook itself | L1, reads settings |
+| `$.store.delete` | endConversation, prune, startWindow, stop | L0, keeps a store |
+| `$.store.get` | the hook itself | L0, keeps a store |
+| `$.store.set` | the hook itself | L0, keeps a store |
+| `$.ui.invalidate` | the hook itself | L0, draws |
+| `$.ui.log` | the hook itself | L0, draws |
+| `$.ui.resolve` | the hook itself | L0, draws |
+| `$.ui.status` | the hook itself | L0, draws |
+| `$.clock.after` | arm, ping | L0 |
+| `$.clock.now` | the hook itself | L0 |
+| `$.command.list` | the hook itself | L0 |
+| `$.command.register` | the hook itself | L0 |
+| `$.session.id` | reseat, seat | L0 |
+| `$.session.model` | seat | L0 |
+| `$.session.usage` | the hook itself | L0 |
+
+### Hooks
+
+| Event | Matcher | Gating | Hot | What to read |
+| --- | --- | --- | --- | --- |
+| `classic.SessionStart` | none | without .catch |  | the settings hooks' event of that name |
+| `command.run` | `command=cache-tax` | no |  | the slash commands it matches |
+| `command.run` | `command=keepwarm` | no |  | the slash commands it matches |
+| `config.set` | `key=theme` | without .catch |  |  |
+| `prompt.submit` | none | without .catch |  | every prompt: read whether it rewrites or drops one |
+| `session.compact` | none | without .catch |  | every compaction: read whether it changes or skips one |
+| `session.end` | none | no |  |  |
+| `session.start` | none | no |  |  |
+| `turn.complete` | none | no |  |  |
+| `turn.step` | none | no | hot | every model request: read whether it changes the model, the effort or the stream |
+| `ui.render` | `component=AbovePrompt` | no | hot | what the surfaces draw: read whether it passes on what it does not draw |
+
+### Environment and state
+
+- Environment read: `NO_COLOR`
+- Environment written: nothing
+- Telemetry hooked for: nothing
+- Declares on `$`: nothing
+- State: 0 keys written, 0 read, 0 declared
+- `./register.ts answers its own command`: `command.run{command=cache-tax}`, `command.run{command=keepwarm}`
+
+### `claude plugin details`
+
+```text
+cache-tax 2.3.1
+  Description: A Claude Code mod that keeps the one-hour prompt cache warm during breaks and stops a cold send once with its estimated rewrite cost. Warming uses model requests and costs tokens. Requires Claude Code 2.1.287+.
+  Source: cache-tax@inline
+
+Component inventory
+  Skills (0)
+  Agents (0)
+  Hooks (0)
+  MCP servers (0)
+  LSP servers (0)
+
+Projected token cost
+  Always-on:   ~0 tok   added to every session
+```
+
+### Control characters in source strings
+
+Each line of the plugin's TypeScript and JavaScript whose strings hold a control character other than tab and newline, comments and regular expressions left out. A string built at run time (`String.fromCharCode(27)`) is not seen. The plugin hooks `ui.render`, where such a string can rewrite what a terminal draws.
+
+None.
+
+### Symbolic links
+
+None.
+<!-- end of session-codeintel review -->
+
 | | |
 | --- | --- |
 | Upstream | https://github.com/karanb192/cache-tax |

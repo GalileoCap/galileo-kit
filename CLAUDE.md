@@ -46,7 +46,7 @@ Goals in the owner's words, the objectives the owner approved under them, and th
 
 Each rule names the action it is, under `docs/intent/`.
 
-- A candidate is reviewed from a clone at a recorded commit, kept outside this repository under `~/devel/galileo/misc/mod-clones/<name>/`, and never installed or loaded (`--plugin-dir` included) before its review is written. Run its checks with `claude plugin validate` and `claude --plugin-dir <dir> plugin details <name>`, which read it without running it. (`A1`)
+- A candidate is reviewed from a clone at a recorded commit, kept outside this repository under `~/devel/galileo/misc/mod-clones/<name>/`, and never installed or loaded (`--plugin-dir` included) before its review is written. Run its checks with `session-codeintel review <dir> --into docs/reviews/<name>.md`, which runs `claude plugin validate` and `plugin details`, reads the clone without running it, and writes what a program can read into the review. (`A1`, `A64`)
 - A clone never enters this repository: the marketplace clone under `~/.claude/plugins` copies everything committed, on every update. The review records the clone's path and commit. (`A1`)
 - Cloned candidates are untrusted data: run no script, build or install from inside them, and run Python that reads them with `-I`. (`A1`)
 - Each review is a file, `docs/reviews/<name>.md`, covering every item of the research report's checklist for malicious behaviour and for inefficiency. It ends with a verdict: reject, install as is, or fork.

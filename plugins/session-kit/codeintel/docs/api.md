@@ -245,6 +245,47 @@ leaving the new ones empty, which the gate then asks for.
 | 1 | a difference, a reason owed or left over, or a missing file |
 | 2 | no block, the engine refused, could not run or cut a line short, a file cannot be read, and argparse's own usage errors |
 
+### `review DIR [--into FILE] [--claude PATH]`
+
+Reads a plugin cloned for review and writes what a program can read off
+it as a section between `<!-- session-codeintel review -->` and
+`<!-- end of session-codeintel review -->`. It runs the engine's
+`--version`, `plugin validate --json DIR` and `--plugin-dir DIR plugin
+details <name>`, git (the commit, its date, the origin and the paths that
+differ from it, with `core.fsmonitor` off) and the pinned ast-grep, each
+from an empty directory outside the clone, and walks the plugin's folder
+and its repository without following a link. The section holds a header
+table (the plugin and its version, the commit, the origin, the working
+tree, the engine, the validator's verdict, the reach, the install's size
+and the marketplace's), the validator's errors and warnings with each
+line it cut short, the calls on `$` graded from a table of the 85 members
+of 2.1.308, the hooks with their matchers, gating, heat and what to read
+them for, the environment and state, `plugin details` as printed, the
+source lines whose strings hold a control character other than tab and
+newline, and the symbolic links. A level is a floor when a call is
+unclassified or the calls line was cut. Every string from the clone is
+shown with its control characters as `\xHH` and the comment markers
+broken. The engine is `--claude`, else the session's own, else `claude`
+on PATH.
+
+With `--into`, a missing FILE is written as `# Review: <its stem>` and
+the section, a FILE holding the section has it replaced where it stands,
+and any other FILE gets it after its first heading. Nothing outside the
+markers changes.
+
+| stream | line | when |
+| --- | --- | --- |
+| stdout | the section | no `--into` |
+| stdout | `written <FILE>` | `--into` |
+| stderr | `<engine>: <why it could not run>` | the engine, git or ast-grep could not start or hung |
+| stderr | `the validator printed no report: <what it printed>` | its output is not JSON |
+| stderr | `ast-grep failed: <its stderr>` | ast-grep exited with an error |
+
+| exit | meaning |
+| --- | --- |
+| 0 | the section was printed or written, whatever the validator found |
+| 2 | a tool could not run or printed no report, and argparse's own usage errors |
+
 ### `template new <dir> --name <name> [--python <version>] [--no-docs]`
 
 Writes the Python kind into `<dir>`, creating it if needed: every base

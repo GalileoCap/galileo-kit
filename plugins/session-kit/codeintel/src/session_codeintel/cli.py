@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import sys
 from importlib.metadata import version
 from pathlib import Path
@@ -16,6 +17,7 @@ from session_codeintel import (
     pyright_env,
     quality,
     recipes,
+    review,
     template,
 )
 
@@ -37,6 +39,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     when none could be written. ``footprint`` exits 0 when every plugin's
     validation matches its footprint with every reason given, 1 on a
     difference or a reason owed, 2 when the engine or a file refuses.
+    ``review`` exits 0 when the section is printed or written, whatever the
+    validator found, and 2 when the engine or ast-grep cannot run.
     ``looks``, ``layers`` and ``measure`` are in ``docs/api.md``.
     """
     args = _parser().parse_args(argv)
@@ -54,6 +58,7 @@ def _handlers() -> dict[str, Callable[[argparse.Namespace], int]]:
         "measure": lambda a: _measure(Path(a.root).resolve(), a.at, a.area, a.skip, a.out),
         "quality": lambda a: _quality(Path(a.root).resolve(), report=a.report),
         "footprint": lambda a: _footprint(Path(a.root).resolve(), a.claude, write=a.write),
+        "review": lambda a: _review(Path(a.plugin).resolve(), a.claude, a.into),
         "template": _template,
     }
 
@@ -212,6 +217,24 @@ def _footprint_of(root: Path, plugin: str, engine: str, *, write: bool) -> int:
     return 0
 
 
+def _review(plugin: Path, claude: str | None, into: str | None) -> int:
+    """Print the review's section, or write it into the review; 2 when a tool cannot run."""
+    try:
+        seen = review.read(footprint.engine_of(claude), plugin)
+    except footprint.FootprintError as refused:
+        _err(str(refused))
+        return REFUSED
+    section = review.render(seen, datetime.datetime.now().astimezone().date().isoformat())
+    if into is None:
+        _out(section)
+        return 0
+    path = Path(into)
+    existing = path.read_text(encoding="utf-8") if path.is_file() else None
+    path.write_text(review.placed(existing, path.stem, section), encoding="utf-8")
+    _out(f"written {into}")
+    return 0
+
+
 def _template(args: argparse.Namespace) -> int:
     """Write, refresh or check a project's bar; name each file dealt with or each finding."""
     project = Path(args.dir)
@@ -242,7 +265,7 @@ def _written(written: list[template.Written]) -> bool:
 
 
 def _parser() -> argparse.ArgumentParser:
-    """Build the command's parser: eight subcommands, two with actions of their own."""
+    """Build the command's parser: nine subcommands, two with actions of their own."""
     parser = argparse.ArgumentParser(prog="session-codeintel")
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -286,6 +309,13 @@ def _parser() -> argparse.ArgumentParser:
     reach.add_argument("root", nargs="?", default=".", metavar="ROOT")
     reach.add_argument("--write", action="store_true", help="take the footprint again")
     reach.add_argument("--claude", metavar="PATH", help="the engine that validates")
+
+    read = commands.add_parser(
+        "review", help="what a program can read off a plugin cloned for review"
+    )
+    read.add_argument("plugin", metavar="DIR", help="the plugin's directory in the clone")
+    read.add_argument("--into", metavar="FILE", help="the review to write the section into")
+    read.add_argument("--claude", metavar="PATH", help="the engine that validates")
 
     _template_verbs(
         commands.add_parser("template", help="the quality bar as base files a project extends")

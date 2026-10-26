@@ -94,11 +94,11 @@ def engine_of(named: str | None) -> str:
 
 def validate(engine: str, plugin: Path) -> Footprint:
     """Run the engine's validator over the plugin; its lines, or its errors refused."""
-    version = _run([engine, "--version"]).stdout.split()
+    version = run([engine, "--version"]).stdout.split()
     if not version:
         msg = f"{engine} --version printed nothing"
         raise FootprintError(msg)
-    done = _run([engine, "plugin", "validate", str(plugin)])
+    done = run([engine, "plugin", "validate", str(plugin)])
     if done.returncode != 0:
         msg = "\n".join(
             line.strip() for line in (done.stdout + done.stderr).splitlines() if line.strip()
@@ -111,11 +111,11 @@ def validate(engine: str, plugin: Path) -> Footprint:
     return Footprint(version[0], found, {})
 
 
-def _run(argv: list[str]) -> subprocess.CompletedProcess[str]:
-    """Run the engine; a missing one or one that hangs is refused."""
+def run(argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+    """Run a program by its argument vector; a missing one or one that hangs is refused."""
     try:
-        return subprocess.run(  # noqa: S603  the engine the session runs on, fixed arguments, no shell
-            argv, capture_output=True, text=True, check=False, timeout=TIMEOUT_SECONDS
+        return subprocess.run(  # noqa: S603  the engine, git or the pinned ast-grep, an argument vector and no shell
+            argv, capture_output=True, text=True, check=False, timeout=TIMEOUT_SECONDS, cwd=cwd
         )
     except (OSError, subprocess.TimeoutExpired) as failed:
         msg = f"{argv[0]}: {failed}"
@@ -123,17 +123,24 @@ def _run(argv: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def parse(report: str) -> dict[str, tuple[str, ...]]:
-    """Read the validator's findings as each line's head and its items, sorted."""
-    lines: dict[str, list[str]] = {}
+    """Read the validator's findings up to the directory's checks, as ``notes`` reads them."""
+    marked: list[str] = []
     for raw in report.splitlines():
         if raw.startswith(END):
             break
         line = raw.strip()
-        if not line.startswith(MARK):
-            continue
-        head, _, rest = line.removeprefix(MARK).strip().partition(": ")
+        if line.startswith(MARK):
+            marked.append(line.removeprefix(MARK).strip())
+    return notes(marked)
+
+
+def notes(found: Iterable[str]) -> dict[str, tuple[str, ...]]:
+    """Read the validator's notes as each one's head and its items, sorted."""
+    lines: dict[str, list[str]] = {}
+    for note in found:
+        head, _, rest = note.partition(": ")
         lines.setdefault(head, []).extend(items(rest))
-    return {head: tuple(sorted(found)) for head, found in lines.items()}
+    return {head: tuple(sorted(listed)) for head, listed in lines.items()}
 
 
 def items(text: str) -> tuple[str, ...]:

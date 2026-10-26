@@ -6,6 +6,14 @@ the command line, which is the public surface in [`api.md`](api.md), is
 a major bump, and its entry says what a consumer has to change. Before
 1.0, a minor bump may break.
 
+## 0.8.0, 2026-10-26
+
+- `review DIR [--into FILE] [--claude PATH]`: what a program can read off
+  a plugin cloned for review, as a section of the review between its own
+  markers, replaced in place on the next run ([`api.md`](api.md)). None of
+  the plugin's code runs, and none of its text reaches the review as a
+  control character.
+
 ## 0.7.1, 2026-10-26
 
 - `footprint` refuses a validation whose line the engine cut short (at

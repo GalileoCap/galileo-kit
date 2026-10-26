@@ -59,6 +59,11 @@ structural search and rewrite, import boundaries as a gate, and complete
   with the plugin's `footprint.toml`, where each `$` member and each event
   has its reason. A new call fails the gate until the file holds it with
   a reason, so it reaches the owner as a line of the diff.
+- Writes a review's mechanical third. `session-codeintel review` runs
+  the engine's validator and `plugin details` over a plugin cloned for
+  review, grades each `$` call by reach, names each hook and the strings
+  in its source that hold a control character, and measures the install,
+  into a section of the review that the next run replaces in place.
 - Carries the quality bar as a template. `session-codeintel template`
   writes three base files a project's own configs extend (ruff over every
   rule, basedpyright strict, the gate's legs), refreshes them when the bar

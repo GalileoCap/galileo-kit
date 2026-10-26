@@ -1,5 +1,91 @@
 # Review: replay-theater
 
+<!-- session-codeintel review -->
+## What the program read
+
+Written by `session-codeintel review` on 2026-10-26 with Claude Code 2.1.308, from the plugin at `~/devel/galileo/misc/mod-clones/claude-code-playground/claude-code/mods/replay-theater`. It ran the engine's validator and `plugin details`, read the plugin's files and git, and ran none of the plugin's code. Nothing here is a verdict: the hooks and the calls below are where the reading starts. The next run replaces this section and nothing around it.
+
+| | |
+| --- | --- |
+| Plugin | `replay-theater` 0.1.0 |
+| Commit | `569c5283d9a0a7ee7938df85bb32e4f48cbb8c86`, committed 2026-10-01 |
+| Origin | `https://github.com/anthropics/claude-code-playground.git` |
+| Working tree | clean |
+| Engine | Claude Code 2.1.308 |
+| Validator | passed, 0 errors, 0 warnings |
+| Reach | L1, reads: reads files, draws. |
+| Install | 422.7 KiB in 9 files, the plugin's folder, which an install copies |
+| Marketplace | 824.2 KiB in 50 files, the repository, which adding it as a marketplace clones |
+
+### What the validator found
+
+- Nothing: no error and no warning.
+
+### Calls on `$`, by reach
+
+| Member | Through | Level |
+| --- | --- | --- |
+| `$.fs.exists` | stepsFor | L1, reads files |
+| `$.fs.read` | stepsFor | L1, reads files |
+| `$.ui.close` | replayView | L0, draws |
+| `$.ui.invalidate` | the hook itself | L0, draws |
+| `$.ui.open` | openReplay | L0, draws |
+| `$.ui.resolve` | the hook itself | L0, draws |
+| `$.clock.sleep` | openReplay | L0 |
+| `$.command.register` | the hook itself | L0 |
+| `$.session.cwd` | stepsFor | L0 |
+
+### Hooks
+
+| Event | Matcher | Gating | Hot | What to read |
+| --- | --- | --- | --- | --- |
+| `command.run` | `command=replay` | no |  | the slash commands it matches |
+| `session.start` | none | no |  |  |
+| `tool.call` | none | without .catch | hot | the tool calls it matches: read whether it approves, refuses or rewrites one |
+| `turn.complete` | none | no |  |  |
+| `turn.start` | none | no |  |  |
+| `ui.close` | none | without .catch |  |  |
+| `ui.render` | `component=AbovePrompt` | no | hot | what the surfaces draw: read whether it passes on what it does not draw |
+| `ui.render` | `component=Pane` | no | hot | what the surfaces draw: read whether it passes on what it does not draw |
+
+### Environment and state
+
+- Environment read: nothing
+- Environment written: nothing
+- Telemetry hooked for: nothing
+- Declares on `$`: nothing
+- State: 0 keys written, 0 read, 0 declared
+- `./replay-theater.mjs answers its own command`: `command.run{command=replay}`
+
+### `claude plugin details`
+
+```text
+replay-theater 0.1.0
+  Description: Replay Theater: step through the file edits Claude made in the last turn, one diff at a time.
+  Source: replay-theater@inline
+
+Component inventory
+  Skills (0)
+  Agents (0)
+  Hooks (0)
+  MCP servers (0)
+  LSP servers (0)
+
+Projected token cost
+  Always-on:   ~0 tok   added to every session
+```
+
+### Control characters in source strings
+
+Each line of the plugin's TypeScript and JavaScript whose strings hold a control character other than tab and newline, comments and regular expressions left out. A string built at run time (`String.fromCharCode(27)`) is not seen. The plugin hooks `ui.render`, where such a string can rewrite what a terminal draws.
+
+None.
+
+### Symbolic links
+
+None.
+<!-- end of session-codeintel review -->
+
 | | |
 | --- | --- |
 | Upstream | https://github.com/anthropics/claude-code-playground, folder `claude-code/mods/replay-theater/` |

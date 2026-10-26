@@ -130,6 +130,8 @@ Merging pays off for a mod that shares code or `$.state` with `session-kit`. Dec
 
 ## Review checklist for each candidate mod
 
+`session-codeintel review <dir> --into docs/reviews/<name>.md` writes the items a program can read into a section of the review (`A64`, a review's mechanical third written by a program): the version, the validator's verdict and the lines it cut, each `$` call graded by reach, each hook with its matcher and whether it gates without a `.catch`, the environment read, `plugin details` with the always-on cost, the strings that hold a control character, the install's size and the symbolic links. The reviewer reads the code those point at, and the items below that no program answers.
+
 - `plugin.json`: is `version` present? `dependencies` (pulls in other plugins)? `userConfig` with `sensitive` fields (secrets it will receive)?
 - `hooks/hooks.json`: every settings hook command and the script it runs, plus the `modules` entry for a mod.
 - Mod module: the `claude plugin validate` output. Every `tool.call` and `tool.check` hook (can it approve or rewrite?), `prompt.compose` and `session.append` (can it change the system prompt or transcript?), `$.process`, `$.fs` writes, network targets, `$.model` calls (cost per turn), `telemetry.*` hooks, timers (`$.clock.every` is background cost).
