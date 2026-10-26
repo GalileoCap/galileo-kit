@@ -34,10 +34,15 @@ const BAND = {
   },
 } as const
 
+type Compaction = {
+  percent?: number
+  // A /compact still running until this settles.
+  held?: Promise<void>
+}
+
 // The engine beneath the plugin, recording what the chain asked of it.
-function engine(on: On, { percent = 55, refuseCompactions = 0 } = {}) {
+function engine(on: On, { percent = 55, held }: Compaction = {}) {
   const asked: string[] = []
-  let refusals = refuseCompactions
   on('session.usage', () => ({ value: usage(percent) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
@@ -49,16 +54,16 @@ function engine(on: On, { percent = 55, refuseCompactions = 0 } = {}) {
 
     return { value: { tool: `mcp__session-kit__${e.name}` } }
   })
-  on('command.run', (_, e) => {
-    asked.push(`command ${e.command}`)
+  on('command.run', async (_, e) => {
+    asked.push(e.args === '' ? `command ${e.command}` : `command ${e.command} ${e.args}`)
+    if (e.command === 'compact' && held !== undefined) {
+      await held
+    }
 
     return { text: 'handoff written' }
   })
+  // The engine's own compaction call, which the chain never makes.
   on('session.compact', (_, e) => {
-    if (refusals > 0) {
-      refusals -= 1
-      throw new Error('a turn is running')
-    }
     asked.push(`compact ${e.instructions ?? ''}`)
 
     return { messages: [{ role: 'user' as const, text: 'the summary', toolUses: [] }] }
@@ -111,7 +116,8 @@ test('on: the model signals, the mod writes the handoff, compacts and continues'
 
   await $.turn.complete(turn('t2'))
   await clock.settle()
-  expect(asked[2]).toMatch(/^compact .*CLAUDE\.local\.md/)
+  // A person is at the prompt, and the chain still compacts through /compact.
+  expect(asked[2]).toMatch(/^command compact .*CLAUDE\.local\.md/)
   expect(asked[3]).toMatch(/^prompt .*CLAUDE\.local\.md.*run the checks/)
   expect(asked.length).toBe(4)
 
@@ -136,7 +142,7 @@ test('when the next step is the owner\'s, the chain stops after the compaction a
   await clock.settle()
   await $.turn.complete(turn('t2'))
   await clock.settle()
-  expect(asked[2]).toMatch(/^compact /)
+  expect(asked[2]).toMatch(/^command compact /)
   expect(asked.length).toBe(3)
 
   for (const surface of ['terminal', 'desktop'] as const) {
@@ -180,22 +186,6 @@ test('a signal without a next step is refused and starts nothing', { options: { 
   await $.turn.complete(turn('t1'))
   await clock.settle()
   expect(asked).toEqual(['register clear_point'])
-})
-
-test('a compaction refused while the turn still runs is tried again', { options: { chain: true } }, async ($, on) => {
-  const clock = mock.clock(on)
-  const asked = engine(on, { refuseCompactions: 2 })
-  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-
-  await $.tool.call({ tool: TOOL, next_step: 'session', note: 'next' })
-  await $.turn.complete(turn('t1'))
-  await clock.settle()
-  await $.turn.complete(turn('t2'))
-  await clock.settle()
-  expect(asked.length).toBe(2)
-  await clock.advance(2000)
-  expect(asked[2]).toMatch(/^compact /)
-  expect(asked[3]).toMatch(/^prompt /)
 })
 
 test('the band shows each stage of the chain', { options: { chain: true } }, async ($, on) => {
@@ -367,7 +357,7 @@ test('a judge that finds a loop, a step beyond the task, or gives no verdict sto
     expect(third.result).toMatch(pattern)
     expect(third.result).toMatch(/End this turn now, with nothing more started/)
     // The handoff and the compaction ran, and no continue was sent.
-    expect(asked.slice(-2).map((a) => a.split(' ')[0])).toEqual(['command', 'compact'])
+    expect(asked.slice(-2)).toEqual(['command session-kit:handoff', expect.stringMatching(/^command compact /)])
     expect(continues()).toBe(before)
     const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
     const row = await ui.find({ type: 'Text', text: /next step/ })
@@ -395,7 +385,7 @@ test('where no person is at the prompt, the chain compacts through /compact and 
 
   // The engine's own compaction is refused in an SDK session, so it is never asked.
   expect(asked.filter((a) => a.startsWith('compact '))).toEqual([])
-  expect(asked.slice(1, 3)).toEqual(['command session-kit:handoff', 'command compact'])
+  expect(asked.slice(1, 3)).toEqual(['command session-kit:handoff', expect.stringMatching(/^command compact CLAUDE\.local\.md holds the handoff/)])
   expect(asked[3]).toMatch(/^prompt .*run the checks/)
 })
 
@@ -448,7 +438,11 @@ test('the backstop tells the engine\'s own compaction what a handoff keeps', asy
 
 test('dismissing the band stops the chain where it stands, before the handoff or during the compaction', { options: { chain: true } }, async ($, on) => {
   const clock = mock.clock(on)
-  const asked = engine(on, { refuseCompactions: 1 })
+  let finish = () => {}
+  const held = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  const asked = engine(on, { held })
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
 
@@ -469,13 +463,14 @@ test('dismissing the band stops the chain where it stands, before the handoff or
   await clock.settle()
   expect(asked).toEqual(['register clear_point'])
 
-  // The first compaction is refused, and the band is dismissed before the second try.
+  // The band is dismissed while /compact still runs: the compaction lands, and nothing continues after it.
   await $.tool.call({ tool: TOOL, next_step: 'session', note: 'next' })
   await $.turn.complete(turn('t2'))
   await clock.settle()
   await $.turn.complete(turn('t3'))
   await clock.settle()
   await dismiss()
+  finish()
   await clock.advance(2000)
-  expect(asked).toEqual(['register clear_point', 'command session-kit:handoff'])
+  expect(asked).toEqual(['register clear_point', 'command session-kit:handoff', expect.stringMatching(/^command compact /)])
 })

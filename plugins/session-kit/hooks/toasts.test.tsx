@@ -56,7 +56,6 @@ function engine(on: On, host: Host) {
   on('session.messages', () => ({ value: [{ role: 'assistant' as const, text: 'the last task', toolUses: [] }] }))
   on('tool.register', (_, e) => ({ value: { tool: `mcp__session-kit__${e.name}` } }))
   on('command.run', () => ({ text: 'ran' }))
-  on('session.compact', () => ({ messages: [{ role: 'user' as const, text: 'the summary', toolUses: [] }] }))
   on('prompt.submit', (_, e) => ({ text: e.text }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('turn.complete', (_, e) => ({ text: e.answer }))

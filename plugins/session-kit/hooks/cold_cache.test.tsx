@@ -92,14 +92,14 @@ test('left alone past the floor, the kit writes the handoff and compacts five mi
   await $.turn.start({ text: '', turnId: 't-handoff' })
   await $.turn.complete(turn('t-handoff'))
   await clock.settle()
-  expect(asked).toEqual(['command session-kit:handoff', 'compact'])
+  expect(asked).toEqual(['command session-kit:handoff', 'command compact'])
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect((await ui.find({ type: 'Text', text: /next step/ }))?.text).toMatch(/yours/)
   await ui.unmount()
 
   // The handoff turn's own end arms nothing: hours on, nothing more ran.
   await clock.advance(180 * MINUTE)
-  expect(asked).toEqual(['command session-kit:handoff', 'compact'])
+  expect(asked).toEqual(['command session-kit:handoff', 'command compact'])
 })
 
 test('a turn that starts before the lead disarms the timer, and the next turn end arms it afresh from that moment', { options: { chain: true } }, async ($, on) => {

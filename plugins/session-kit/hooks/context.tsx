@@ -111,8 +111,6 @@ const NEW_TASK_TOOL = 'mcp__session-kit__new_task'
 const HANDOFF_COMMAND = 'session-kit:handoff'
 const CLEAR_COMMAND = 'clear'
 const COMPACT_COMMAND = 'compact'
-const COMPACT_TRIES = 20
-const COMPACT_RETRY_MS = 1000
 
 const TOOL_DESCRIPTION =
   'Call this at a clear point: the tree is committed and green, nothing is in ' +
@@ -532,38 +530,6 @@ async function runHandoff($: EngineInterface): Promise<void> {
   }
 }
 
-async function compactThenContinue($: EngineInterface, state: ChainState, asOf: number, tries = COMPACT_TRIES): Promise<void> {
-  if (asOf !== chainDismissals) {
-    return
-  }
-  let compacted
-  try {
-    compacted = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS })
-  } catch (error) {
-    // The turn that just ended may not have let go yet: try again shortly.
-    stage($, `the compaction was refused (${reason(error)}), ${tries - 1} tries left`)
-    if (tries > 1) {
-      $.clock.after(COMPACT_RETRY_MS, () => {
-        void compactThenContinue($, state, asOf, tries - 1)
-      })
-
-      return
-    }
-    await update($, chain, () => null)
-    $.ui.toast(`session-kit: the compaction did not run (${reason(error)}), so the chain stops here.`)
-
-    return
-  }
-  if (compacted.skip !== undefined) {
-    await update($, chain, () => null)
-    stage($, `the compaction was skipped (${compacted.skip}), so the chain stops here`)
-    $.ui.toast(`session-kit: the compaction was skipped (${compacted.skip}), so the chain stops here.`)
-
-    return
-  }
-  await afterCompaction($, state, asOf)
-}
-
 async function afterCompaction($: EngineInterface, state: ChainState, asOf: number): Promise<void> {
   if (asOf !== chainDismissals) {
     stage($, 'compacted after the band was dismissed, so nothing continues')
@@ -586,16 +552,20 @@ async function afterCompaction($: EngineInterface, state: ChainState, asOf: numb
 }
 
 /**
- * Where no person is at the prompt (the SDK, the desktop app), `$.session.compact`
- * is refused and a compaction runs inside a turn, so the chain runs `/compact`.
+ * The chain compacts by running `/compact` in every session, which the engine
+ * queues until the session is idle. `$.session.compact` rejects while a turn
+ * runs, and where no person is at the prompt (the SDK, the desktop app) it is
+ * refused outright. A command's result carries no veto, so the chain file
+ * keeps what `/compact` printed.
  */
 async function compactByCommand($: EngineInterface, state: ChainState, asOf: number): Promise<void> {
   if (asOf !== chainDismissals) {
     return
   }
-  stage($, 'compacting through the /compact command, since no person is at the prompt')
+  stage($, 'compacting through the /compact command')
+  let printed
   try {
-    await $.command.run({ command: COMPACT_COMMAND, args: COMPACT_INSTRUCTIONS })
+    printed = (await $.command.run({ command: COMPACT_COMMAND, args: COMPACT_INSTRUCTIONS })).text?.trim() ?? ''
   } catch (error) {
     await update($, chain, () => null)
     stage($, `the /compact command did not run (${reason(error)}), so the chain stops here`)
@@ -603,6 +573,7 @@ async function compactByCommand($: EngineInterface, state: ChainState, asOf: num
 
     return
   }
+  stage($, printed === '' ? 'the /compact command returned' : `the /compact command returned: ${clip(printed, SUBJECT_SHOWN)}`)
   await afterCompaction($, state, asOf)
 }
 
@@ -746,7 +717,7 @@ async function stepOffer($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'
   }
 }
 
-async function stepChain($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'>, state: ChainState, isInteractive: boolean): Promise<void> {
+async function stepChain($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'>, state: ChainState): Promise<void> {
   if (e.reason !== 'answer') {
     await update($, chain, () => null)
     stage($, `the turn ended by ${e.reason} at the ${state.stage} stage, so the chain stops here`)
@@ -768,7 +739,7 @@ async function stepChain($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'
       stage($, 'the handoff turn ended: compacting')
       const asOf = chainDismissals
       $.clock.after(0, () => {
-        void (isInteractive ? compactThenContinue($, state, asOf) : compactByCommand($, state, asOf))
+        void compactByCommand($, state, asOf)
       })
       break
     }
@@ -1015,7 +986,6 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  let isInteractive = true
   on('turn.complete', async ($, e, next) => {
     if (e.agentId !== undefined) {
       return next(e)
@@ -1030,7 +1000,7 @@ export const register: Register = (on, options) => {
     }
     const state = await read($, chain)
     if (state !== null) {
-      await stepChain($, e, state, isInteractive)
+      await stepChain($, e, state)
     }
     await armCold($, cold, (window) => triggerTokens(thresholdTokens, thresholdPercent, window))
 
@@ -1042,7 +1012,6 @@ export const register: Register = (on, options) => {
   }
 
   on('session.start', async ($, e, next) => {
-    isInteractive = e.isInteractive
     await $.tool.register({
       name: TOOL_NAME,
       description: TOOL_DESCRIPTION,
