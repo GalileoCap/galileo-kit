@@ -45,4 +45,4 @@ Each of these ran in the engine's tests alone: the facts section after a handoff
 
 ### main, C2: the timeline's classic hooks removed
 
-`measure.ts` no longer hooks `classic.PostToolUse` or `classic.PostToolUseFailure`, which the organization's security default sends past the kit (`C2`). It reaches a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.1. Until then every session on 0.35.1 shows the two skip notices once each.
+`measure.ts` hooks neither `classic.PostToolUse` nor `classic.PostToolUseFailure`, events the organization's security default sends past the kit (`C2`). It reaches a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.1. Until then every session on 0.35.1 shows the two skip notices once each.
