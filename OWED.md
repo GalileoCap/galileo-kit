@@ -52,3 +52,9 @@ The kit hooks neither `classic.PostToolUse`, `classic.PostToolUseFailure`, `clas
 ### main, A68: the warning firms at 300,000 tokens
 
 The context warning's second tier moves from 500,000 to 300,000 tokens and its third from 750,000 to 400,000, and a tier that rises is said at once (`A68`, the warning firms at 300,000 tokens and stops at 400,000). It reaches a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.2. `global/CLAUDE.md` says "firmer from 300,000", so the link at `~/.claude/CLAUDE.md` carries the sentence at once and the sessions on 0.35.2 warn later than it says until they update. Only a real session proves the second tier: the check is a long run that crosses 300,000 tokens.
+
+## At the next rebuild of the nix-darwin configuration
+
+### ~/.config/nix-darwin, the deny rules for Artifact and the iOS simulator
+
+`claude/settings.json` in the configuration now denies the `Artifact` tool and the `mcp__Claude_Code_iOS_Simulator` server (`docs/analyses/restart-size.md`). `~/.claude/settings.json` is a link into the nix store, so the rules reach a session only after the owner runs the configuration's rebuild, and the file holds the owner's other uncommitted change (the `chain` option) beside them. The check after the rebuild: the next desktop session's `api-request-shape` record, which should hold no `Artifact` tool and no `mcp__Claude_Code_iOS_Simulator__control` (about 14.5k tokens fewer in the prefix). Only the Artifact rule was shown to work, in a terminal session. The simulator rule is unproven on the app's own server.
