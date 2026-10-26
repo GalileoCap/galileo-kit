@@ -283,7 +283,7 @@ wheels = [
 
 [[package]]
 name = "session-codeintel"
-version = "0.7.0"
+version = "0.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "ast-grep-cli" },

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import tomllib
 from collections import Counter
@@ -35,6 +36,8 @@ MARK = chr(0x276F)
 """How the validator opens each line of its findings."""
 END = "Plugin directory checks"
 """The line after which the validator checks a catalogue submission, not the reach."""
+CUT = re.compile("… \\[\\+[0-9]+ chars\\]")
+"""How the engine marks a line it shortened, at about a thousand characters."""
 TIMEOUT_SECONDS = 120
 HEADER = """\
 # This plugin's reach as `claude plugin validate` reports it, held by
@@ -101,7 +104,11 @@ def validate(engine: str, plugin: Path) -> Footprint:
             line.strip() for line in (done.stdout + done.stderr).splitlines() if line.strip()
         )
         raise FootprintError(msg)
-    return Footprint(version[0], parse(done.stdout), {})
+    found = parse(done.stdout)
+    if shortened := cut(found):
+        msg = f"the engine cut short {', '.join(shortened)}: what follows the cut is unseen"
+        raise FootprintError(msg)
+    return Footprint(version[0], found, {})
 
 
 def _run(argv: list[str]) -> subprocess.CompletedProcess[str]:
@@ -149,6 +156,11 @@ def items(text: str) -> tuple[str, ...]:
             start = at + 1
     found.append(text[start:].strip())
     return tuple(found)
+
+
+def cut(lines: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
+    """Return the heads of the lines the engine shortened, whose last items are unseen."""
+    return tuple(head for head, found in lines.items() if any(CUT.search(i) for i in found))
 
 
 def names(lines: dict[str, tuple[str, ...]]) -> set[str]:

@@ -236,13 +236,14 @@ leaving the new ones empty, which the gate then asks for.
 | stdout | `<plugin>/footprint.toml: missing, and --write takes it` | no file |
 | stdout | `<plugin>: the footprint holds the validator's <n> items, each with its reason` | nothing to report |
 | stderr | `.claude/claude-kit.json: no `footprint` block, so no plugin to hold` | no block |
+| stderr | `<plugin>: the engine cut short <kinds>: what follows the cut is unseen` | a line of the validator's ended in `… [+N chars]` |
 | stderr | `<plugin>: <the engine's errors, or what is wrong with the file>` | the engine refused the plugin, could not run, or the file cannot be read |
 
 | exit | meaning |
 | --- | --- |
 | 0 | every plugin's validation matches its footprint, with every reason given |
 | 1 | a difference, a reason owed or left over, or a missing file |
-| 2 | no block, the engine refused or could not run, a file cannot be read, and argparse's own usage errors |
+| 2 | no block, the engine refused, could not run or cut a line short, a file cannot be read, and argparse's own usage errors |
 
 ### `template new <dir> --name <name> [--python <version>] [--no-docs]`
 

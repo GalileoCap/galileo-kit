@@ -2,7 +2,8 @@
 
 Kept from the blind cases: a reach the footprint does not hold fails, since
 the gate passing it would be silent and would let the kit's code reach further
-unreviewed.
+unreviewed. A line the engine cut short is refused, a regression: the gate
+held the cut as an item and every call past it went unseen.
 """
 
 from __future__ import annotations
@@ -109,3 +110,16 @@ def test_a_call_the_footprint_lacks_fails_naming_it(
     assert "+ ./kit.tsx calls: $.process.run (via gitOutput, judge)" in out
     assert "- ./kit.tsx calls: $.process.run (via gitOutput)" in out
     assert "no reason for $.net.fetch" in out
+
+
+def test_a_line_the_engine_cut_short_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A list the validator shortened holds no footprint: the calls past the cut are unseen."""
+    project(tmp_path)
+    cut = MODULE.replace("$.fs.read, $.process.run (via gitOutput)", "$.fs.re… [+31 chars]")
+    assert gate(tmp_path, engine(tmp_path, cut), "--write") == 2
+    err = capsys.readouterr().err
+    assert "./kit.tsx calls" in err
+    assert "cut" in err
+    assert not (tmp_path / "plug" / "footprint.toml").exists()

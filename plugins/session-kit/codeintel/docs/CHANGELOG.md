@@ -6,6 +6,12 @@ the command line, which is the public surface in [`api.md`](api.md), is
 a major bump, and its entry says what a consumer has to change. Before
 1.0, a minor bump may break.
 
+## 0.7.1, 2026-10-26
+
+- `footprint` refuses a validation whose line the engine cut short (at
+  about a thousand characters, marked `… [+N chars]`), which it had held
+  as an item while the calls past the cut went unseen.
+
 ## 0.7.0, 2026-10-26
 
 - `footprint [ROOT] [--write] [--claude PATH]`: each plugin's reach
