@@ -49,6 +49,8 @@ The figures go to `docs/measurements/local-voice-<date>.md` with the script that
 3. Measure, and hand the owner the WAVs and the figures.
 4. Wire the owner's choice into read-aloud: an `engine` option (`system` stays the default), the synthesis command, the `afplay` playback with its immediate stop, and the next paragraph synthesized while the current one plays.
 
+Step 1 is done for two candidates: `docs/reviews/kokoro-onnx.md` and `docs/reviews/piper-tts.md`, each with the verdict to install as is under the conditions it lists.
+
 I recommend reviewing kokoro-onnx first and Piper as the light baseline, and leaving mlx-audio until kokoro-onnx's CPU cost turns out to be too high, since its review is the largest by far.
 
 ## Sources
