@@ -41,7 +41,8 @@
       "plugins/session-kit/bin/session-rulebook",
       "plugins/session-kit/codeintel/scripts/check",
       "plugins/session-kit/tells/scripts/check",
-      "uv run --quiet --project plugins/session-kit/codeintel session-codeintel quality ."
+      "uv run --quiet --project plugins/session-kit/codeintel session-codeintel quality .",
+      "uv run --quiet --project plugins/session-kit/codeintel session-codeintel footprint ."
     ]
   },
   "quality": {
@@ -50,6 +51,11 @@
         "name": "session-kit",
         "path": "plugins/session-kit"
       }
+    ]
+  },
+  "footprint": {
+    "plugins": [
+      "plugins/session-kit"
     ]
   }
 }

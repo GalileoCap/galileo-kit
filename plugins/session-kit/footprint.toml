@@ -1,0 +1,189 @@
+# This plugin's reach as `claude plugin validate` reports it, held by
+# `session-codeintel footprint`. [validator] is what the engine printed,
+# written by --write and compared as counts. [why] gives the reason for each
+# $ member and each hook event, and a new one waits on its reason.
+
+engine = "2.1.308"
+
+[validator]
+"./kit.tsx calls" = [
+  "$.clock.after (via compactThenContinue, handoffThenClear, holdColdTimer, stepChain, stepOffer)",
+  "$.clock.now",
+  "$.command.run (via clearThenResend, compactByCommand, runHandoff, runHandoffBeforeClear)",
+  "$.env.get",
+  "$.fs.exists (via handoffState)",
+  "$.fs.read (via indexOf, journalLine, ownerTask, past, projectRunners)",
+  "$.fs.stat (via handoffState)",
+  "$.fs.write",
+  "$.model.complete (via judgeChain)",
+  "$.process.run (via gitOutput, lastCommitMs, uncommitted)",
+  "$.prompt.submit (via afterCompaction, resend)",
+  "$.session.compact (via compactThenContinue)",
+  "$.session.cwd",
+  "$.session.id",
+  "$.session.messages (via opensFreshContext)",
+  "$.session.surfaces (via moment)",
+  "$.session.turns (via opensFreshContext)",
+  "$.session.usage",
+  "$.state.get",
+  "$.state.set",
+  "$.tool.register",
+  "$.ui.log",
+  "$.ui.resolve",
+  "$.ui.toast (via clearThenResend, compactByCommand, compactThenContinue, moment, resend, runHandoff, runHandoffBeforeClear)",
+]
+"./kit.tsx env reads" = [
+  "HOME",
+  "TMPDIR",
+]
+"./kit.tsx env writes" = [
+]
+"./kit.tsx gating hook with .catch" = [
+  "classic.PostModelSwitch",
+  "classic.PostToolUse",
+  "classic.PostToolUseFailure",
+  "prompt.submit",
+  "prompt.submit{text=/\"\\\\S\"/}",
+  "session.compact{trigger=auto}",
+  "tool.call",
+  "tool.call{tool=/\".\"/}",
+  "tool.call{tool=/\".\"/}",
+  "tool.call{tool=Bash}",
+  "tool.call{tool=Bash}",
+  "tool.call{tool=Edit}",
+  "tool.call{tool=Edit}",
+  "tool.call{tool=Edit}",
+  "tool.call{tool=NotebookEdit}",
+  "tool.call{tool=Write}",
+  "tool.call{tool=Write}",
+  "tool.call{tool=Write}",
+  "tool.call{tool=mcp__session-kit__clear_point}",
+  "tool.call{tool=mcp__session-kit__new_task}",
+]
+"./kit.tsx hooks" = [
+  "classic.PostModelSwitch",
+  "classic.PostToolUse",
+  "classic.PostToolUseFailure",
+  "prompt.submit",
+  "prompt.submit{text=/\"\\\\S\"/}",
+  "session.compact{trigger=auto}",
+  "session.end",
+  "session.measure",
+  "session.start",
+  "tool.call",
+  "tool.call{tool=/\".\"/}",
+  "tool.call{tool=/\".\"/}",
+  "tool.call{tool=Bash}",
+  "tool.call{tool=Bash}",
+  "tool.call{tool=Edit}",
+  "tool.call{tool=Edit}",
+  "tool.call{tool=Edit}",
+  "tool.call{tool=NotebookEdit}",
+  "tool.call{tool=Write}",
+  "tool.call{tool=Write}",
+  "tool.call{tool=Write}",
+  "tool.call{tool=mcp__session-kit__clear_point}",
+  "tool.call{tool=mcp__session-kit__new_task}",
+  "turn.complete",
+  "turn.complete{reason=answer}",
+  "turn.complete{reason=answer}",
+  "turn.complete{turnId=/\".\"/}",
+  "turn.complete{turnId=/\".\"/}",
+  "turn.start",
+  "turn.start{turnId=/\".\"/}",
+  "ui.render{component=AbovePrompt}",
+]
+"./kit.tsx state reads" = [
+  "session-kit.cacheMinutes",
+  "session-kit.chain",
+  "session-kit.chainSteps",
+  "session-kit.coldTimerAt",
+  "session-kit.contextDismissedAt",
+  "session-kit.contextFigure",
+  "session-kit.contextWarnedAt",
+  "session-kit.freshContext",
+  "session-kit.lastPrompt",
+  "session-kit.lastTest",
+  "session-kit.limitsDismissed",
+  "session-kit.newTask",
+  "session-kit.rateLimits",
+  "session-kit.testRetry",
+  "session-kit.turnEndTokens",
+  "session-kit.turnGrowth",
+]
+"./kit.tsx state writes" = [
+  "session-kit.cacheMinutes",
+  "session-kit.chain",
+  "session-kit.chainSteps",
+  "session-kit.coldTimerAt",
+  "session-kit.contextDismissedAt",
+  "session-kit.contextFigure",
+  "session-kit.contextWarnedAt",
+  "session-kit.freshContext",
+  "session-kit.lastPrompt",
+  "session-kit.lastTest",
+  "session-kit.limitsDismissed",
+  "session-kit.newTask",
+  "session-kit.rateLimits",
+  "session-kit.testRetry",
+  "session-kit.turnEndTokens",
+  "session-kit.turnGrowth",
+]
+"types ./types/index.d.ts declares on $" = [
+]
+"types ./types/index.d.ts declares state" = [
+  "session-kit.cacheMinutes",
+  "session-kit.chain",
+  "session-kit.chainSteps",
+  "session-kit.coldTimerAt",
+  "session-kit.contextDismissedAt",
+  "session-kit.contextFigure",
+  "session-kit.contextWarnedAt",
+  "session-kit.freshContext",
+  "session-kit.lastPrompt",
+  "session-kit.lastTest",
+  "session-kit.limitsDismissed",
+  "session-kit.newTask",
+  "session-kit.rateLimits",
+  "session-kit.testRetry",
+  "session-kit.turnEndTokens",
+  "session-kit.turnGrowth",
+]
+
+[why]
+"$.clock.after" = "Defers the chain's and the offer's next stage until the turn lets go, retries the compaction, and arms the cold-cache timer."
+"$.clock.now" = "Stamps the chain file's lines and the test log's runs, and dates the cold-cache deadline."
+"$.command.run" = "Runs the handoff command, /compact where no person is at the prompt, and /clear after the new-task offer's press."
+"$.env.get" = "TMPDIR for the chain file and the test log, HOME for the timeline's directory."
+"$.fs.exists" = "Whether CLAUDE.local.md exists, for the checkout's handoff advice."
+"$.fs.read" = "The chain file before a line is added, the Task section of CLAUDE.local.md for the judge, a document's length after an edit, the suppressions index, and test_commands in .claude/claude-kit.json."
+"$.fs.stat" = "When CLAUDE.local.md was last written, against the last commit, for the stale-handoff advice."
+"$.fs.write" = "The chain file and the test log under the temporary directory, and the timeline's files under ~/.claude/session-kit/measure/."
+"$.model.complete" = "Haiku reads the unattended chain at its third, fifth and every later signal for a loop or a step beyond the task, on the session's own credentials."
+"$.process.run" = "git log and git status for the checkout checks and the test log's tree print, with the repository's own config unable to run code."
+"$.prompt.submit" = "The continue prompt after the chain's compaction, and the person's prompt sent again after the new-task offer's clear."
+"$.session.compact" = "The chain's compaction where a person is at the prompt."
+"$.session.cwd" = "The checkout the session runs in, for git, CLAUDE.local.md and the settings."
+"$.session.id" = "Names the chain file, the test log and the timeline's directory after the session."
+"$.session.messages" = "Whether the context holds an answer yet, so new_task in a fresh context answers that there is nothing to clear."
+"$.session.surfaces" = "Where the session is drawn, so a moment goes out as a toast where no band is drawn (the phone, VS Code)."
+"$.session.turns" = "Whether the context has had a turn yet, beside the messages."
+"$.session.usage" = "The context figure for the warning and the cold-cache floor, the cost for the timeline, and the memory files' tokens once per context."
+"$.state.get" = "The kit's own state under session-kit.*, declared in types/index.d.ts."
+"$.state.set" = "The kit's own state under session-kit.*, declared in types/index.d.ts."
+"$.tool.register" = "The clear_point and new_task tools."
+"$.ui.log" = "One dim transcript line per chain stage, the uncommitted-work line, and the failed or stale test run at a turn's end."
+"$.ui.resolve" = "The components the band above the prompt is drawn with."
+"$.ui.toast" = "A failure of the chain or the offer, and a moment where no band is drawn."
+"classic.PostModelSwitch" = "A model switch states the cache's lifetime, which the cold-cache timer takes over the option."
+"classic.PostToolUse" = "The tool's own execution time, for the timeline."
+"classic.PostToolUseFailure" = "The execution time of a call that failed, for the timeline."
+"prompt.submit" = "Records the person's own prompt for the new-task resend and starts the chain's steps over, and gives the first prompt of a context the checkout's handoff advice."
+"session.compact" = "Gives the engine's own compaction the handoff's instructions, as a backstop."
+"session.end" = "Writes the timeline's last lines when the session ends."
+"session.measure" = "The engine's context figure and the plan's usage windows, for the band and the warning."
+"session.start" = "Registers the two tools, reads whether a person is at the prompt, and sets the cold-cache timer again from its deadline."
+"tool.call" = "The context warning after each call, the clear_point and new_task tools, the test log on Bash with the edits between tries, the single-edit nudge on Bash, the document-length and suppression warnings on Edit and Write, and the timeline's stopwatch around every call."
+"turn.complete" = "Runs the chain's and the offer's next stage, arms the cold-cache timer, reads the growth per turn, names uncommitted work and a failed or stale test run, and writes the timeline."
+"turn.start" = "Disarms the cold-cache timer and opens the timeline's turn."
+"ui.render" = "The band above the prompt: the context figure, the usage windows, the chain and the offer, drawn above the bands beneath."

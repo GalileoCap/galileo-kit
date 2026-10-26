@@ -22,6 +22,7 @@ session-codeintel looks [ROOT]
 session-codeintel layers [ROOT]
 session-codeintel measure [ROOT] [--at REF]... [--area PATH]... [--skip PATH]... [--out FILE]
 session-codeintel quality [ROOT] [--report]
+session-codeintel footprint [ROOT] [--write] [--claude PATH]
 session-codeintel template new <dir> --name <name> [--python <version>] [--no-docs]
 session-codeintel template refresh <dir>
 session-codeintel template check <dir>
@@ -207,6 +208,42 @@ unjudged site with the judgement blank, to paste in and fill.
 | 1 | a problem, as printed |
 | 2 | the ledger or a settings tree refused, and argparse's own usage errors |
 
+### `footprint [ROOT] [--write] [--claude PATH]`
+
+Holds each plugin named under `footprint.plugins` in
+`ROOT/.claude/claude-kit.json` to its reach as the engine reports it. It
+runs `claude plugin validate <plugin>` and reads the lines of its findings
+up to the plugin directory's checks: for each hooks module the events it
+hooks, its gating hooks, the `$` calls with the functions they are made
+through, and the environment and state it reads and writes, with the state
+its types declare. `<plugin>/footprint.toml` holds those lines under
+`[validator]`, one table key per kind of line and its items sorted, and
+under `[why]` a reason for each `$` member and each hook event (the name
+before a matcher). The lines compare as counts, since their order is the
+order of registration. The engine is `--claude`, else the session's own
+(`CLAUDE_CODE_EXECPATH`), else `claude` on PATH. `--write` takes
+the footprint again, keeping each reason whose name is still there and
+leaving the new ones empty, which the gate then asks for.
+
+| stream | line | when |
+| --- | --- | --- |
+| stdout | `written <plugin>/footprint.toml` | `--write` |
+| stdout | `<plugin>/footprint.toml: + <kind>: <item>` | once per item the validator prints more often than the file holds |
+| stdout | `<plugin>/footprint.toml: - <kind>: <item>` | once per item the file holds more often than the validator prints |
+| stdout | `<plugin>/footprint.toml: no reason for <name>` | once per member or event with an empty or missing reason |
+| stdout | `<plugin>/footprint.toml: a reason for <name>, which the validator no longer lists` | once per reason left over |
+| stdout | `<plugin>/footprint.toml: taken with <version>, checked with <version>` | the engine differs from the engine that took the file |
+| stdout | `<plugin>/footprint.toml: missing, and --write takes it` | no file |
+| stdout | `<plugin>: the footprint holds the validator's <n> items, each with its reason` | nothing to report |
+| stderr | `.claude/claude-kit.json: no `footprint` block, so no plugin to hold` | no block |
+| stderr | `<plugin>: <the engine's errors, or what is wrong with the file>` | the engine refused the plugin, could not run, or the file cannot be read |
+
+| exit | meaning |
+| --- | --- |
+| 0 | every plugin's validation matches its footprint, with every reason given |
+| 1 | a difference, a reason owed or left over, or a missing file |
+| 2 | no block, the engine refused or could not run, a file cannot be read, and argparse's own usage errors |
+
 ### `template new <dir> --name <name> [--python <version>] [--no-docs]`
 
 Writes the Python kind into `<dir>`, creating it if needed: every base
@@ -379,13 +416,13 @@ PARTIAL: int = 1
 
 ## Not public
 
-- **Every Python name**, above or starting with `_`.
-- **The file's exact text**, beyond the shape `render` gives: key order
+- Every Python name, above or starting with `_`.
+- The file's exact text, beyond the shape `render` gives: key order
   and indentation are stable in practice, and not promised.
-- **The recipes' own text.** A recipe's pattern and comments can
+- The recipes' own text. A recipe's pattern and comments can
   improve in any release. Copy the one you use, since a script that
   references the installed file follows those changes.
-- **`index.toml`**, the purposes file. `bundled()` reads it for you.
-- **The shim**, `shims/language-server`. It is in the source tree and
+- `index.toml`, the purposes file. `bundled()` reads it for you.
+- The shim, `shims/language-server`. It is in the source tree and
   not in the wheel. [`operating.md`](operating.md) says how to install
   it.

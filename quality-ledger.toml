@@ -1532,3 +1532,66 @@ code = "day(max(ends)) if ends else '?'"
 class = "spoken"
 disposition = "keep"
 why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/cli.py"
+where = "_footprint_of"
+form = "except-returns"
+code = "except footprint.FootprintError: return REFUSED"
+class = "spoken"
+disposition = "keep"
+why = "the refusal is printed at the site and the status returned is the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/footprint.py"
+where = "compare"
+form = "get"
+code = "held.lines.get(head, ())"
+class = "declared"
+disposition = "keep"
+why = "a kind of line one side lacks holds no items there, so each item of the other side is named"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/footprint.py"
+where = "compare"
+form = "get"
+code = "held.why.get(name, '')"
+class = "declared"
+disposition = "keep"
+why = "a name with no reason in the file is owed one, and the finding names it"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/footprint.py"
+where = "compare"
+form = "get"
+code = "seen.lines.get(head, ())"
+class = "declared"
+disposition = "keep"
+why = "a kind of line one side lacks holds no items there, so each item of the other side is named"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/footprint.py"
+where = "engine_of"
+form = "or"
+code = "running or 'claude'"
+class = "declared"
+disposition = "keep"
+why = "the documented order, the engine named, the session's, then claude on PATH, with the version printed beside the verdict"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/footprint.py"
+where = "taken"
+form = "get"
+code = "kept.get(n, '')"
+class = "declared"
+disposition = "keep"
+why = "a new name starts with no reason, which the gate then asks for"
+
+[[fallbacks]]
+site = "plugins/session-kit/codeintel/src/session_codeintel/footprint.py"
+where = "taken"
+form = "if-none"
+code = "{} if before is None else before.why"
+class = "declared"
+disposition = "keep"
+why = "a footprint taken for the first time has no reasons to keep"

@@ -6,28 +6,28 @@ structural search and rewrite, import boundaries as a gate, and complete
 
 ## What it does
 
-- **Pins two tools, so every session runs the same ones.**
+- Pins two tools, so every session runs the same ones.
   [`ast-grep`](https://ast-grep.github.io/) for structural search and
   rewrite, and [`import-linter`](https://import-linter.readthedocs.io/)
   for import contracts. Both are runtime dependencies of this package,
   so running them through it gives the version its lock names, whatever
   is on `PATH`. A rule's test or a contract's verdict then means the
   same thing on every machine.
-- **Ships tested rewrite recipes.** An ast-grep rule for a sweep that has
+- Ships tested rewrite recipes. An ast-grep rule for a sweep that has
   gone wrong before, carrying the passes and guards that make it
   correct. The first one awaits every call site of a method that became
   `async`. It rewrites whole attribute chains, is idempotent on a
   half-converted tree, and documents the two ways a regex sweep of the
   same change breaks code. A recipe is a template: you copy it, retarget
   it and run it. It is never a check.
-- **Finds a look written twice.** In a frontend built on utility
+- Finds a look written twice. In a frontend built on utility
   classes, the same information shown the same way everywhere means one
   component or one looks entry per look, and `session-codeintel looks`
   fails when a class string of two or more classes is written in two
   places under the source. A look that repeats by coincidence is allowed
   in the project's settings with the files it lives in, and the check
   fails again when it spreads or leaves one, so the entry is reviewed.
-- **Holds a pure core.** A project that keeps its pure code in a core
+- Holds a pure core. A project that keeps its pure code in a core
   and its effects in a shell names the two under `layers` in its
   settings, and `session-codeintel layers` writes the ast-grep rules
   that hold the shape (no I/O, clock, randomness or `await` in the
@@ -35,7 +35,7 @@ structural search and rewrite, import boundaries as a gate, and complete
   file that unwinds, the core importing only the core), a test per
   rule, and the core's `ruff.toml`. The rules carry the project's paths,
   so they are generated from the settings and never edited.
-- **Measures the code.** `session-codeintel measure` gives, per area
+- Measures the code. `session-codeintel measure` gives, per area
   and per snapshot, the size (files, lines, code, comment and docstring
   lines), the complexity (McCabe per function, Python from the pinned
   ruff's `C901` and TypeScript counted on the syntax tree) and the
@@ -43,23 +43,30 @@ structural search and rewrite, import boundaries as a gate, and complete
   change is argued from one row against the next. The numbers generic-app
   argued its conventions from (2.6% less code, 16.5% less complexity,
   six defects) came from the same counts.
-- **Holds the quality gates no linter has.** `session-codeintel quality`
+- Holds the quality gates no linter has. `session-codeintel quality`
   fails on a function body written twice, on a fallback the ledger has
   not judged (`x or v`, `.get(k, v)`, a broad `except` and the rest,
   each a substitution the caller cannot see), and on a file over the
   code-line cap. The ledger is a ratchet: it names every site with its
-  class and disposition, fails on a row the tree no longer matches, and
+  class and disposition, fails on a row the tree does not match, and
   is deleted when empty. The rules behind it are tagents' code-quality
   rulebook, written for code an LLM writes: it re-derives what exists,
   copies the nearest pattern and adds a default to quiet a type checker.
-- **Carries the quality bar as a template.** `session-codeintel template`
+- Holds a plugin's reach to what was reviewed. `session-codeintel
+  footprint` runs the engine's validator over each plugin the settings
+  name and compares what it reports (the events each hooks module hooks,
+  the `$` calls it makes, the environment and state it reads and writes)
+  with the plugin's `footprint.toml`, where each `$` member and each event
+  has its reason. A new call fails the gate until the file holds it with
+  a reason, so it reaches the owner as a line of the diff.
+- Carries the quality bar as a template. `session-codeintel template`
   writes three base files a project's own configs extend (ruff over every
   rule, basedpyright strict, the gate's legs), refreshes them when the bar
   moves, and fails when a project's copy drifts or its config stops
   extending the base. The Python kind only, until a project of another
   kind takes it.
-- **Writes the `pyrightconfig.json` that makes a language server
-  complete.** A server started at the root of a repository of several
+- Writes the `pyrightconfig.json` that makes a language server
+  complete. A server started at the root of a repository of several
   `uv` projects sees one interpreter, and answers "no references" for
   whatever lives in the other packages. `session-codeintel pyright-env`
   writes a root config with one execution environment per package: its
@@ -69,35 +76,35 @@ structural search and rewrite, import boundaries as a gate, and complete
 
 ## What it does not do
 
-- **It holds no contracts and no rules of yours.** An import contract
+- It holds no contracts and no rules of yours. An import contract
   names your modules, so it lives in your `pyproject.toml`.
   [`integrating.md`](integrating.md) gives the two shapes as templates.
   Gate rules for your own code are yours too. The recipes here are
   templates for one-off sweeps.
-- **It does not wrap either tool.** `ast-grep` and `lint-imports` are
+- It does not wrap either tool. `ast-grep` and `lint-imports` are
   run by their own documented CLIs. This package only fixes their
   versions.
-- **It does not run a language server, or pin one.** It writes the
+- It does not run a language server, or pin one. It writes the
   server's configuration. The server comes from your toolchain, or from
   your editor, and [`operating.md`](operating.md) covers one way to make
   an agent start your toolchain's server.
-- **It does not find call sites for a signature change.** Your
+- It does not find call sites for a signature change. Your
   typechecker does, per package, after the change. A language server
   answers "what depends on this?" before the change. The typechecker
   answers "what did I break?" after it. You want both.
-- **It has no dataflow or control-flow analysis.** For a concurrency
+- It has no dataflow or control-flow analysis. For a concurrency
   bug, read the code.
 
 ## What it depends on
 
-- **Python 3.12 or newer**, and [`uv`](https://docs.astral.sh/uv/).
-- **Three binaries, installed as wheels**: `ast-grep-cli` (MIT), `ruff`
+- Python 3.12 or newer, and [`uv`](https://docs.astral.sh/uv/).
+- Three binaries, installed as wheels: `ast-grep-cli` (MIT), `ruff`
   (MIT) and `import-linter` (BSD-2-Clause). Nothing to run as a service.
-- **For `pyright-env`**: every package is an immediate subdirectory of
+- For `pyright-env`: every package is an immediate subdirectory of
   the repository root, with its own `pyproject.toml` and its venv at
   `<package>/.venv`, which is where `uv sync` puts it. POSIX venv layout
   only.
-- **For navigation**: a pyright-based language server of your choosing
+- For navigation: a pyright-based language server of your choosing
   (`pyright`, `basedpyright`), and an editor or agent that speaks LSP.
 
 ## Install, and the smallest thing that works

@@ -8,13 +8,22 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from session_codeintel import layers, looks, measure, pyright_env, quality, recipes, template
+from session_codeintel import (
+    footprint,
+    layers,
+    looks,
+    measure,
+    pyright_env,
+    quality,
+    recipes,
+    template,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
 REFUSED = 2
-"""An unknown recipe, or a pyright-env that could write nothing — argparse's usage status."""
+"""An unknown recipe, or a pyright-env that could write nothing: argparse's usage status."""
 PARTIAL = 1
 """A pyright-env that wrote the file, and left some packages out or overridden."""
 
@@ -25,8 +34,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     ``recipes list`` and ``recipes path`` exit 0, or 2 for an unknown recipe.
     ``pyright-env`` exits 0 when every package was written as it is checked,
     1 when some were left out or have settings the root file overrides, 2
-    when none could be written. ``looks``, ``layers`` and ``measure`` are in
-    ``docs/api.md``.
+    when none could be written. ``footprint`` exits 0 when every plugin's
+    validation matches its footprint with every reason given, 1 on a
+    difference or a reason owed, 2 when the engine or a file refuses.
+    ``looks``, ``layers`` and ``measure`` are in ``docs/api.md``.
     """
     args = _parser().parse_args(argv)
     handler: Callable[[argparse.Namespace], int] = _handlers()[args.command]
@@ -42,6 +53,7 @@ def _handlers() -> dict[str, Callable[[argparse.Namespace], int]]:
         "layers": lambda a: _layers(Path(a.root).resolve()),
         "measure": lambda a: _measure(Path(a.root).resolve(), a.at, a.area, a.skip, a.out),
         "quality": lambda a: _quality(Path(a.root).resolve(), report=a.report),
+        "footprint": lambda a: _footprint(Path(a.root).resolve(), a.claude, write=a.write),
         "template": _template,
     }
 
@@ -163,6 +175,43 @@ def _quality(root: Path, *, report: bool) -> int:
     return PARTIAL
 
 
+def _footprint(root: Path, claude: str | None, *, write: bool) -> int:
+    """Hold each plugin's validation against its footprint, or take it; 1 on a finding."""
+    plugins = footprint.read_settings(root)
+    if plugins is None:
+        _err(".claude/claude-kit.json: no `footprint` block, so no plugin to hold")
+        return REFUSED
+    engine = footprint.engine_of(claude)
+    verdicts = [_footprint_of(root, plugin, engine, write=write) for plugin in plugins]
+    return max(verdicts, default=0)
+
+
+def _footprint_of(root: Path, plugin: str, engine: str, *, write: bool) -> int:
+    """Hold one plugin: its lines and the clean line and 0, 1 on a finding, 2 on a refusal."""
+    path = root / plugin / footprint.FILE
+    try:
+        seen = footprint.validate(engine, root / plugin)
+        held = footprint.read(path)
+    except footprint.FootprintError as refused:
+        _err(f"{plugin}: {refused}")
+        return REFUSED
+    if write:
+        held = footprint.taken(seen, held)
+        path.write_text(footprint.render(held), encoding="utf-8")
+        _out(f"written {plugin}/{footprint.FILE}")
+    if held is None:
+        _out(f"{plugin}/{footprint.FILE}: missing, and --write takes it")
+        return PARTIAL
+    finding = footprint.compare(plugin, held, seen)
+    for line in footprint.lines(finding):
+        _out(line)
+    if not finding.clean:
+        return PARTIAL
+    count = sum(len(found) for found in seen.lines.values())
+    _out(f"{plugin}: the footprint holds the validator's {count} items, each with its reason")
+    return 0
+
+
 def _template(args: argparse.Namespace) -> int:
     """Write, refresh or check a project's bar; name each file dealt with or each finding."""
     project = Path(args.dir)
@@ -193,7 +242,7 @@ def _written(written: list[template.Written]) -> bool:
 
 
 def _parser() -> argparse.ArgumentParser:
-    """Build the command's parser: seven subcommands, two with actions of their own."""
+    """Build the command's parser: eight subcommands, two with actions of their own."""
     parser = argparse.ArgumentParser(prog="session-codeintel")
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -231,7 +280,21 @@ def _parser() -> argparse.ArgumentParser:
     gates.add_argument("root", nargs="?", default=".", metavar="ROOT")
     gates.add_argument("--report", action="store_true", help="print ledger rows to fill in")
 
-    bar = commands.add_parser("template", help="the quality bar as base files a project extends")
+    reach = commands.add_parser(
+        "footprint", help="each plugin's reach as the engine's validator reports it, held"
+    )
+    reach.add_argument("root", nargs="?", default=".", metavar="ROOT")
+    reach.add_argument("--write", action="store_true", help="take the footprint again")
+    reach.add_argument("--claude", metavar="PATH", help="the engine that validates")
+
+    _template_verbs(
+        commands.add_parser("template", help="the quality bar as base files a project extends")
+    )
+    return parser
+
+
+def _template_verbs(bar: argparse.ArgumentParser) -> None:
+    """Give the template subcommand its three verbs."""
     verbs = bar.add_subparsers(dest="verb", required=True)
     started = verbs.add_parser("new", help="start a project, or give an existing one the bar")
     started.add_argument("dir", help="the project's directory")
@@ -244,7 +307,6 @@ def _parser() -> argparse.ArgumentParser:
     refreshed.add_argument("dir", help="the project's directory")
     checked = verbs.add_parser("check", help="fail when a base file drifts from the template")
     checked.add_argument("dir", help="the project's directory")
-    return parser
 
 
 def _out(line: str) -> None:
