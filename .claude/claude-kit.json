@@ -53,6 +53,11 @@
       }
     ]
   },
+  "suppressions": {
+    "skip": [
+      ".claude-plugin"
+    ]
+  },
   "footprint": {
     "plugins": [
       "plugins/session-kit",
