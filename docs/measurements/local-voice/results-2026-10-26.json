@@ -1,0 +1,263 @@
+{
+  "say": {
+    "warm_first_sound_s": 0.72,
+    "cpu_per_audio_s": 0.013223658367207184,
+    "realtime_factor": 15.176262779397465,
+    "audio_s": 663.9614965986392,
+    "peak_footprint_mb": 11.031753540039062
+  },
+  "configs": {
+    "kokoro-int8 as shipped": {
+      "cold_first_sound_s": [
+        3.1843244999999953,
+        2.578657041999996,
+        4.0989725419999985
+      ],
+      "cold_peak_footprint_mb": 1089.579818725586,
+      "cold_max_rss_mb": 1047.625,
+      "cold_cpu_s": [
+        7.83,
+        20.66,
+        83.10000000000001
+      ],
+      "load_wall_s": 0.49751958396518603,
+      "load_cpu_s": 0.480785,
+      "warm_first_sound_s": 1.341943875013385,
+      "cpu_per_audio_s": 0.5709851626621213,
+      "cores_busy": 4.711720618956639,
+      "realtime_factor": 8.251914282656738,
+      "slowest_utterance_factor": 5.129766692981274,
+      "audio_s": 714.0965416666669,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 1118.15625,
+      "server_loaded_rss_mb": 258.328125,
+      "server_peak_footprint_mb": 1271.517433166504,
+      "server_max_rss_mb": 1163.6875
+    },
+    "kokoro-int8 4 threads": {
+      "cold_first_sound_s": [
+        2.6332258749999937,
+        2.529354459000018,
+        3.5599514580000005
+      ],
+      "cold_peak_footprint_mb": 1082.5016479492188,
+      "cold_max_rss_mb": 1118.765625,
+      "cold_cpu_s": [
+        4.33,
+        11.100000000000001,
+        44.839999999999996
+      ],
+      "load_wall_s": 0.4376495420001447,
+      "load_cpu_s": 0.434571,
+      "warm_first_sound_s": 1.2698842704994604,
+      "cpu_per_audio_s": 0.2858173268285009,
+      "cores_busy": 2.8312051141288923,
+      "realtime_factor": 9.905645488832457,
+      "slowest_utterance_factor": 6.333841676542316,
+      "audio_s": 713.9905416666667,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 1255.03125,
+      "server_loaded_rss_mb": 258.453125,
+      "server_peak_footprint_mb": 1266.564308166504,
+      "server_max_rss_mb": 1262.09375
+    },
+    "kokoro-int8 2 threads": {
+      "cold_first_sound_s": [
+        3.1767690000000357,
+        2.884243292000008,
+        4.232598333999988
+      ],
+      "cold_peak_footprint_mb": 1082.1891708374023,
+      "cold_max_rss_mb": 1118.453125,
+      "cold_cpu_s": [
+        3.5,
+        8.87,
+        34.370000000000005
+      ],
+      "load_wall_s": 0.4938339159707539,
+      "load_cpu_s": 0.43905,
+      "warm_first_sound_s": 1.6007767289993353,
+      "cpu_per_audio_s": 0.2223957368829749,
+      "cores_busy": 1.7346879049448667,
+      "realtime_factor": 7.80000520359643,
+      "slowest_utterance_factor": 5.352234758124641,
+      "audio_s": 714.1879166666668,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 1183.796875,
+      "server_loaded_rss_mb": 258.453125,
+      "server_peak_footprint_mb": 1266.4861602783203,
+      "server_max_rss_mb": 1191.765625
+    },
+    "kokoro-fp32 as shipped": {
+      "cold_first_sound_s": [
+        4.059570416999975,
+        3.665070917000037,
+        5.858490958999994
+      ],
+      "cold_peak_footprint_mb": 1176.5486373901367,
+      "cold_max_rss_mb": 1210.765625,
+      "cold_cpu_s": [
+        12.85,
+        37.6,
+        151.70000000000002
+      ],
+      "load_wall_s": 0.49984662502538413,
+      "load_cpu_s": 0.44711700000000004,
+      "warm_first_sound_s": 2.6241899374872446,
+      "cpu_per_audio_s": 1.0389071227782738,
+      "cores_busy": 4.799422130822195,
+      "realtime_factor": 4.6196835362794015,
+      "slowest_utterance_factor": 2.981354883003599,
+      "audio_s": 714.8299166666668,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 1239.84375,
+      "server_loaded_rss_mb": 472.9375,
+      "server_peak_footprint_mb": 1414.2207412719727,
+      "server_max_rss_mb": 1365.1875
+    },
+    "kokoro-fp32 4 threads": {
+      "cold_first_sound_s": [
+        4.14140195799996,
+        3.7992874999999913,
+        6.311840332999964
+      ],
+      "cold_peak_footprint_mb": 1172.1111373901367,
+      "cold_max_rss_mb": 1127.65625,
+      "cold_cpu_s": [
+        9.59,
+        27.89,
+        124.52
+      ],
+      "load_wall_s": 0.5606089580105618,
+      "load_cpu_s": 0.476881,
+      "warm_first_sound_s": 2.759048291511135,
+      "cpu_per_audio_s": 0.7925189786258868,
+      "cores_busy": 3.3860101260996336,
+      "realtime_factor": 4.272465666337082,
+      "slowest_utterance_factor": 2.884311682749519,
+      "audio_s": 714.8425416666669,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 1002.578125,
+      "server_loaded_rss_mb": 472.796875,
+      "server_peak_footprint_mb": 1409.8457412719727,
+      "server_max_rss_mb": 1216.234375
+    },
+    "kokoro-fp32 2 threads": {
+      "cold_first_sound_s": [
+        5.629015207999942,
+        5.334350166000036,
+        9.635107832999893
+      ],
+      "cold_peak_footprint_mb": 1176.9392852783203,
+      "cold_max_rss_mb": 1074.625,
+      "cold_cpu_s": [
+        8.28,
+        23.73,
+        100.74
+      ],
+      "load_wall_s": 0.6849162919679657,
+      "load_cpu_s": 0.5131129999999999,
+      "warm_first_sound_s": 4.771653062489349,
+      "cpu_per_audio_s": 0.6695886938372408,
+      "cores_busy": 1.8617342130805068,
+      "realtime_factor": 2.7804146488964534,
+      "slowest_utterance_factor": 1.6875028749179737,
+      "audio_s": 714.8225416666668,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 866.21875,
+      "server_loaded_rss_mb": 481.734375,
+      "server_peak_footprint_mb": 1374.7519226074219,
+      "server_max_rss_mb": 1078.640625
+    },
+    "piper as shipped": {
+      "cold_first_sound_s": [
+        1.1215850000000955,
+        0.9682394170001771,
+        1.1627409580000858
+      ],
+      "cold_peak_footprint_mb": 484.2510757446289,
+      "cold_max_rss_mb": 510.0625,
+      "cold_cpu_s": [
+        2.04,
+        4.38,
+        17.04
+      ],
+      "load_wall_s": 0.6845040000043809,
+      "load_cpu_s": 0.719825,
+      "warm_first_sound_s": 0.2590962084941566,
+      "cpu_per_audio_s": 0.12027367042109763,
+      "cores_busy": 4.951649625217963,
+      "realtime_factor": 41.16985544617899,
+      "slowest_utterance_factor": 28.312841118209036,
+      "audio_s": 641.9504761904758,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 526.546875,
+      "server_loaded_rss_mb": 139.234375,
+      "server_peak_footprint_mb": 492.8293151855469,
+      "server_max_rss_mb": 526.703125
+    },
+    "piper 2 threads": {
+      "cold_first_sound_s": [
+        1.1202794579999136,
+        1.051571875000036,
+        1.3942115840000042
+      ],
+      "cold_peak_footprint_mb": 474.5948028564453,
+      "cold_max_rss_mb": 502.453125,
+      "cold_cpu_s": [
+        1.4200000000000002,
+        2.56,
+        9.7
+      ],
+      "load_wall_s": 0.7116360000218265,
+      "load_cpu_s": 0.704498,
+      "warm_first_sound_s": 0.3714385000348557,
+      "cpu_per_audio_s": 0.06433654045932514,
+      "cores_busy": 1.8716246665985627,
+      "realtime_factor": 29.09116115408539,
+      "slowest_utterance_factor": 24.433587740234714,
+      "audio_s": 643.8312925170065,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 487.640625,
+      "server_loaded_rss_mb": 138.890625,
+      "server_peak_footprint_mb": 478.0480194091797,
+      "server_max_rss_mb": 511.6875
+    },
+    "piper 1 thread": {
+      "cold_first_sound_s": [
+        1.3358720840001297,
+        1.2715562079999927,
+        1.9811968330000127
+      ],
+      "cold_peak_footprint_mb": 483.3449401855469,
+      "cold_max_rss_mb": 517.40625,
+      "cold_cpu_s": [
+        1.32,
+        2.39,
+        8.24
+      ],
+      "load_wall_s": 0.7180224999901839,
+      "load_cpu_s": 0.687607,
+      "warm_first_sound_s": 0.5758822085044812,
+      "cpu_per_audio_s": 0.05621471450001586,
+      "cores_busy": 0.9965658379250941,
+      "realtime_factor": 17.727846646358273,
+      "slowest_utterance_factor": 15.862740904996508,
+      "audio_s": 642.0085260770974,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 457.953125,
+      "server_loaded_rss_mb": 139.03125,
+      "server_peak_footprint_mb": 482.3449172973633,
+      "server_max_rss_mb": 473.40625
+    }
+  }
+}

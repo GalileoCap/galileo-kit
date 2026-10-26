@@ -1,0 +1,60 @@
+{
+  "configs": {
+    "kokoro-int8 4 threads no arena": {
+      "cold_first_sound_s": [
+        3.0637049579999998,
+        2.5805831670000003,
+        3.6317661250000004
+      ],
+      "cold_peak_footprint_mb": 1401.9081268310547,
+      "cold_max_rss_mb": 1347.34375,
+      "cold_cpu_s": [
+        4.43,
+        11.370000000000001,
+        44.08
+      ],
+      "load_wall_s": 0.521496000001207,
+      "load_cpu_s": 0.466204,
+      "warm_first_sound_s": 1.3488244369800668,
+      "cpu_per_audio_s": 0.33381912163758726,
+      "cores_busy": 2.672511213167405,
+      "realtime_factor": 8.005866171048263,
+      "slowest_utterance_factor": 3.6514027018783692,
+      "audio_s": 714.1604166666667,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 657.65625,
+      "server_loaded_rss_mb": 256.734375,
+      "server_peak_footprint_mb": 2007.7367553710938,
+      "server_max_rss_mb": 1961.21875
+    },
+    "piper 2 threads no arena": {
+      "cold_first_sound_s": [
+        1.631682541999993,
+        1.1918990420000029,
+        1.630780417000011
+      ],
+      "cold_peak_footprint_mb": 842.9232711791992,
+      "cold_max_rss_mb": 839.203125,
+      "cold_cpu_s": [
+        1.84,
+        3.2600000000000002,
+        10.71
+      ],
+      "load_wall_s": 0.6675937090185471,
+      "load_cpu_s": 0.6666169999999999,
+      "warm_first_sound_s": 0.4294683540065307,
+      "cpu_per_audio_s": 0.06992167912736064,
+      "cores_busy": 1.8696765221479288,
+      "realtime_factor": 26.739582708566804,
+      "slowest_utterance_factor": 20.922797672070462,
+      "audio_s": 643.6687528344671,
+      "silence_s": 0.0,
+      "readings_with_silence": 0,
+      "server_rest_rss_mb": 456.296875,
+      "server_loaded_rss_mb": 142.515625,
+      "server_peak_footprint_mb": 849.0484313964844,
+      "server_max_rss_mb": 851.71875
+    }
+  }
+}

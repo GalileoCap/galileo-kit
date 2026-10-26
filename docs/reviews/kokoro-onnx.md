@@ -53,3 +53,13 @@ Pinned at 0.6.1 in a `uv` environment of its own outside the clones, with:
 4. The session built by read-aloud's own script with a capped thread count, through `Kokoro.from_session`.
 
 No fork: read-aloud needs none of its code changed, and its upstream is small enough to diff at each update.
+
+## Installed
+
+On 2026-10-26, under `~/.local/share/read-aloud/`, for the measurement in `docs/measurements/local-voice-2026-10-26.md`.
+
+- The wheel, `kokoro_onnx-0.6.1-py3-none-any.whl`, SHA-256 `50c8de4950d601df41428ee5462a48c8a78bef441bf671f2492e070ef44d8a32` as PyPI lists it, unpacked into its own folder: its `kokoro_onnx/` is byte for byte `src/kokoro_onnx/` at `659b166` (`diff -r` empty), and its `dist-info` holds no entry point and no `.pth`.
+- `kokoro-env`, Python 3.13.13, 122 MB, installed by `uv pip install` from that file: onnxruntime 1.31.1, numpy 2.5.4, phonemizer 3.4.0, espeakng-loader 0.2.4 and nine smaller packages, each resolved to a wheel (`--only-binary :all:` resolves the same set), so no source build ran.
+- espeak-ng 1.52.0.1 from nixpkgs, built with `mbrolaSupport = false` (`/nix/store/997zpr4c4fsm2l0h9s96b1niwykdfgvf-espeak-ng-1.52.0.1-unstable-2025-09-09`, 18.6 MB with its closure). The package as nixpkgs ships it pulls in 645 MB of MBROLA voices that Kokoro never uses.
+- The weights from `model-files-v1.1`, each matching the digest GitHub publishes for the asset: `kokoro-v1.0.int8.onnx` `ae315a79b623f244700e4afb9246c46a26066782e049ba174bf3ba433970ee9c`, `kokoro-v1.0.onnx` `beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a`, `voices-v1.0.bin` `bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d`.
+- At run time, with `EspeakConfig` naming nix's library and data, `lsof` shows nix's `libespeak-ng` mapped and espeakng-loader's never. phonemizer copies the library it is given into a fresh temporary folder for each wrapper it builds, four of them in one process, which are copies of nix's build (501,472 bytes, against the loader's 504 KB).

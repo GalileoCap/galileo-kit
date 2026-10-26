@@ -46,3 +46,11 @@ Piper, a speech engine of the Open Home Foundation that runs VITS voices on ONNX
 ## Verdict: install as is
 
 Pinned at 1.8.0 from its attested wheel, in a `uv` environment of its own outside the clones, without extras. One English voice, `en_US-lessac-medium` or the owner's pick, from `rhasspy/piper-voices` at a pinned revision, its SHA-256 written here once downloaded. For the measurement, the session is built by read-aloud's script with a capped thread count. No fork.
+
+## Installed
+
+On 2026-10-26, under `~/.local/share/read-aloud/`, for the measurement in `docs/measurements/local-voice-2026-10-26.md`.
+
+- `piper-env`, Python 3.13.13, 145 MB, from `uv pip install 'piper-tts==1.8.0' --only-binary :all:`: the wheel `piper_tts-1.8.0-cp39-abi3-macosx_11_0_arm64.whl`, SHA-256 `33e7425933e9290fe651ae127916ed1ca6104cfa3d94e9049295dd3a5c449382` as PyPI lists it, with onnxruntime 1.31.1, numpy 2.5.4, pathvalidate 3.3.1 and three smaller packages, no extras and no source build.
+- The voice `en_US-lessac-medium` from `rhasspy/piper-voices` at revision `5041a7a49ae5b3a0f30e6837769eb03fdbb231bd`: `en_US-lessac-medium.onnx` (63 MB) `5efe09e69902187827af646e1a6e9d269dee769f9877d17b16b1b46eeaaf019f`, matching the LFS digest Hugging Face lists, and `en_US-lessac-medium.onnx.json` `efe19c417bed055f2d69908248c6ba650fa135bc868b0e6abb3da181dab690a0`.
+- The voice's licence. Its model card names the Blizzard 2013 Lessac data, which Voice Factory and Lessac Technologies license as a research licence agreement to a named person. The card says nothing about the voice trained on it, so this voice is taken as fit for personal use and no further. Another voice would need its own card read.
