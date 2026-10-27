@@ -64,34 +64,27 @@ async function press($: EngineInterface, key: string): Promise<void> {
   await ui.unmount()
 }
 
-test('a usage window at 80% draws a line naming the window and when it resets, above the band beneath, and below 80% draws nothing', async ($, on) => {
+test('a usage window draws a band row from 95%, naming the window and when it resets, above the band beneath, and below 95% draws nothing', async ($, on) => {
   engine(on, { percent: 10 })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
-  await $.session.measure(measured(10, [fiveHour(79)]))
+  await $.session.measure(measured(10, [fiveHour(94)]))
   expect(await bandLine($, /usage window/)).toBeUndefined()
   expect(await bandLine($, /engine/)).toBe('engine')
 
-  await $.session.measure(measured(10, [fiveHour(80.5)]))
+  await $.session.measure(measured(10, [fiveHour(95.5)]))
   for (const surface of ['terminal', 'desktop'] as const) {
-    expect(await bandLine($, /usage window/, surface)).toMatch(/^The 5-hour usage window is at 80\.5% and resets at \d\d:\d\d\./)
+    expect(await bandLine($, /usage window/, surface)).toMatch(/^The 5-hour usage window is at 95\.5% and resets at \d\d:\d\d\./)
     expect(await bandLine($, /engine/, surface)).toBe('engine')
   }
 })
 
-test('dismissed at 80, the line stays away until the window reaches 95, and dismissed there until the window resets', async ($, on) => {
+test('dismissed at 95, the row stays away until the window resets below where it was dismissed', async ($, on) => {
   engine(on, { percent: 10 })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
-  await $.session.measure(measured(10, [fiveHour(82)]))
-  expect(await bandLine($, /usage window/)).toMatch(/82%/)
-  await press($, 'limit-dismiss-five_hour')
-  expect(await bandLine($, /usage window/)).toBeUndefined()
-  await $.session.measure(measured(10, [fiveHour(90)]))
-  expect(await bandLine($, /usage window/)).toBeUndefined()
-  await $.session.measure(measured(10, [fiveHour(95)]))
-  expect(await bandLine($, /usage window/)).toMatch(/95%/)
-
+  await $.session.measure(measured(10, [fiveHour(96)]))
+  expect(await bandLine($, /usage window/)).toMatch(/96%/)
   await press($, 'limit-dismiss-five_hour')
   expect(await bandLine($, /usage window/)).toBeUndefined()
   await $.session.measure(measured(10, [fiveHour(99)]))
@@ -99,24 +92,24 @@ test('dismissed at 80, the line stays away until the window reaches 95, and dism
   // The window reset.
   await $.session.measure(measured(10, [fiveHour(3)]))
   expect(await bandLine($, /usage window/)).toBeUndefined()
-  await $.session.measure(measured(10, [fiveHour(85)]))
-  expect(await bandLine($, /usage window/)).toMatch(/85%/)
+  await $.session.measure(measured(10, [fiveHour(97)]))
+  expect(await bandLine($, /usage window/)).toMatch(/97%/)
 })
 
-test('two windows draw two lines, each dismissed on its own, and a 7-day window names the day it resets', async ($, on) => {
+test('two windows draw two rows, each dismissed on its own, and a 7-day window names the day it resets', async ($, on) => {
   engine(on, { percent: 10 })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
-  await $.session.measure(measured(10, [fiveHour(85), { kind: 'seven_day', percentUsed: 82, resetsAt: RESETS_IN_DAYS }]))
-  expect(await bandLine($, /5-hour/)).toMatch(/85%/)
-  expect(await bandLine($, /7-day/)).toMatch(/^The 7-day usage window is at 82% and resets on \d{1,2} [A-Z][a-z]{2} at \d\d:\d\d\./)
+  await $.session.measure(measured(10, [fiveHour(96), { kind: 'seven_day', percentUsed: 97, resetsAt: RESETS_IN_DAYS }]))
+  expect(await bandLine($, /5-hour/)).toMatch(/96%/)
+  expect(await bandLine($, /7-day/)).toMatch(/^The 7-day usage window is at 97% and resets on \d{1,2} [A-Z][a-z]{2} at \d\d:\d\d\./)
 
   await press($, 'limit-dismiss-five_hour')
   expect(await bandLine($, /5-hour/)).toBeUndefined()
-  expect(await bandLine($, /7-day/)).toMatch(/82%/)
+  expect(await bandLine($, /7-day/)).toMatch(/97%/)
 })
 
-test('the figure\'s line says how much the context grew in the last turn, read at the turn\'s end, and nothing after a compaction or before a second turn', { options: { chain: false } }, async ($, on) => {
+test('the figure row says how much the context grew in the last turn, read at the turn\'s end, and nothing after a compaction or before a second turn', { options: { chain: false } }, async ($, on) => {
   const state = { percent: 30 }
   engine(on, state)
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
@@ -125,17 +118,13 @@ test('the figure\'s line says how much the context grew in the last turn, read a
     await $.turn.start({ text: 'go on', turnId: id })
     await $.turn.complete(turn(id))
 
-    return bandLine($, /Context/)
+    return { value: await bandLine($, /\/ 1M/), growth: await bandLine($, /last turn/) }
   }
 
   // The first turn's end gives the figure with no tool call read, and no growth yet.
-  const first = await turnEnds('t1', 30)
-  expect(first).toMatch(/^Context 300,000 tokens \(30% of 1,000,000\): find a clear point/)
-  expect(first).not.toMatch(/last turn/)
-  expect(await turnEnds('t2', 34)).toMatch(/^Context 340,000 tokens \(34% of 1,000,000\), up 40,000 in the last turn: find a clear point/)
+  expect(await turnEnds('t1', 30)).toEqual({ value: '300k / 1M  30%', growth: undefined })
+  expect(await turnEnds('t2', 34)).toEqual({ value: '340k / 1M  34%', growth: '+40k last turn' })
   // Compacted during the turn: the context shrank, so nothing grew.
-  const after = await turnEnds('t3', 26)
-  expect(after).toMatch(/^Context 260,000 tokens/)
-  expect(after).not.toMatch(/last turn/)
-  expect(await turnEnds('t4', 29)).toMatch(/up 30,000 in the last turn/)
+  expect(await turnEnds('t3', 26)).toEqual({ value: '260k / 1M  26%', growth: undefined })
+  expect((await turnEnds('t4', 29)).growth).toBe('+30k last turn')
 })

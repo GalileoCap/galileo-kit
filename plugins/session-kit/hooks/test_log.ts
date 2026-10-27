@@ -29,7 +29,7 @@ import type { EngineInterface, Register, ToolCallResult } from 'claude-code'
 
 import type { TestRetry, TestRun } from '../types'
 import { gitOutput } from './checkout'
-import { clockTime } from './context'
+import { clockTime } from './lines'
 
 export const BUILTIN_TEST_COMMANDS = [
   'pytest', 'vitest', 'jest', 'playwright test', 'cargo test', 'go test',

@@ -17,7 +17,7 @@ import { atom, read } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import { gitOutput } from './checkout'
-import { clip, clockTime } from './context'
+import { clip, clockTime } from './lines'
 import { verdictOf } from './test_log'
 import type { Verdict } from './test_log'
 

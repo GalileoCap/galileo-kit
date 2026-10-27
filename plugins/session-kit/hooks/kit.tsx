@@ -8,12 +8,14 @@
 
 import type { Register } from 'claude-code'
 
+import { register as band } from './band'
 import { register as checkout } from './checkout'
 import { register as context } from './context'
 import { register as docLength } from './doc_length'
 import { register as facts } from './facts'
 import { lap, lapBeneath, register as measure } from './measure'
 import { register as nudge } from './nudge'
+import { register as pane } from './pane'
 import { register as suppressions } from './suppressions'
 import { register as testLog } from './test_log'
 
@@ -23,6 +25,10 @@ export const register: Register = (on, options) => {
   facts(on, options)
   lap(on, options, 'context')
   context(on, options)
+  lap(on, options, 'band')
+  band(on, options)
+  lap(on, options, 'pane')
+  pane(on, options)
   lap(on, options, 'test_log')
   testLog(on, options)
   lap(on, options, 'doc_length')

@@ -52,6 +52,28 @@ export type NewTaskState = {
   setsEffort?: boolean
 }
 
+/**
+ * A failure the person has not dismissed: what did not run and what the kit
+ * did about it. A chain failure carries `retry`, the stage to run again with the
+ * note and the owner's say the chain had.
+ */
+export type Failure = {
+  text: string
+  retry?: { stage: 'handoff' | 'compacting'; waitsOnOwner: boolean; note: string }
+}
+
+/** One line of the chain's journal, kept for the pane: when it was written, in epoch milliseconds, and what it says. */
+export type StageLine = {
+  at: number
+  text: string
+}
+
+/** The context percent a main-loop turn ended at, keyed by the turn's duration, which is what the turn line carries to find it. */
+export type TurnFigure = {
+  durationMs: number
+  percent: number
+}
+
 /** A reasoning effort as the engine's `ModelEffort` spells it. */
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
@@ -116,6 +138,12 @@ declare module 'claude-code' {
       rateLimits: UsageWindow[]
       /** Per window kind, the percent used at which the person dismissed its line; dropped when the window resets. */
       limitsDismissed: Record<string, number>
+      /** The failure the band shows until the person dismisses it; null while none is. */
+      failure: Failure | null
+      /** The last lines of the chain's journal, for the pane; the newest last. */
+      stages: StageLine[]
+      /** The context percent at the end of the last main-loop turns, for the turn line. */
+      turnFigures: TurnFigure[]
       /** The last test run, stamped with the tree it ran on; null before any. */
       lastTest: TestRun | null
       /** The test command failing the same way, counted across edits; null while none is, and after a pass. */

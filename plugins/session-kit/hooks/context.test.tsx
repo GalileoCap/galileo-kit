@@ -116,7 +116,7 @@ test('the band shows the count past the threshold, above the bands beneath it, a
     state.percent = 30
     await $.tool.call({ tool: 'Bash', command: 'ls' })
     ui = await $.ui.mount({ ...BAND, surface })
-    expect((await ui.find({ type: 'Text', text: /Context 300,000/ }))?.text).toMatch(/Context 300,000 tokens \(30% of 1,000,000\)/)
+    expect((await ui.find({ type: 'Text', text: /300k \/ 1M/ }))?.text).toBe('300k / 1M  30%')
     // The band beneath, another plugin's or the engine's, is drawn under the kit's and never hidden by it.
     expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
     await ui.unmount()
@@ -137,26 +137,26 @@ test('a dismissed band stays away until the figure moves a step on, and comes ba
     state.percent = p
     await $.tool.call({ tool: 'Bash', command: 'ls' })
     const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-    const row = await ui.find({ type: 'Text', text: /Context|engine/ })
+    const row = await ui.find({ type: 'Text', text: /\/ 1M|engine/ })
     await ui.unmount()
 
     return row?.text
   }
 
-  expect(await bandAt(30)).toMatch(/Context 300,000/)
+  expect(await bandAt(30)).toMatch(/^300k \/ 1M  30%/)
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await ui.press({ key: 'context-dismiss' })
   await ui.unmount()
   expect(await bandAt(30)).toBe('engine')
   expect(await bandAt(32)).toBe('engine')
-  expect(await bandAt(33)).toMatch(/Context 330,000/)
+  expect(await bandAt(33)).toMatch(/^330k \/ 1M/)
   const again = await $.ui.mount({ ...BAND, surface: 'terminal' })
   await again.press({ key: 'context-dismiss' })
   await again.unmount()
   expect(await bandAt(34)).toBe('engine')
   // Compacted: the figure fell below where it was dismissed.
   expect(await bandAt(5)).toBe('engine')
-  expect(await bandAt(26)).toMatch(/Context 260,000/)
+  expect(await bandAt(26)).toMatch(/^260k \/ 1M/)
 })
 
 // The engine beneath a step of reads: its own figure at 100,000 tokens, which
@@ -199,6 +199,6 @@ test('between the engine\'s measurements the warning fires on the last request\'
   expect(await warned($, '/c')).toBeUndefined()
   expect(await warned($, '/d')).toMatch(/^Context at 331,000 tokens \(33% of 1,000,000\)/)
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  expect((await ui.find({ type: 'Text', text: /Context/ }))?.text).toMatch(/^Context 331,000 tokens \(33% of 1,000,000\)/)
+  expect((await ui.find({ type: 'Text', text: /\/ 1M/ }))?.text).toMatch(/^331k \/ 1M  33%/)
   await ui.unmount()
 })

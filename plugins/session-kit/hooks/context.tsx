@@ -42,12 +42,19 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PromptOrigin, Register, RenderSurface, SessionContextUsage, SessionRateLimit, Timer, TurnCompleteInput } from 'claude-code'
 
-import type { ChainState, ChainStep, ContextFigure, Effort, NewTaskState } from '../types'
+import type { ChainState, ChainStep, ContextFigure, Effort, Failure, NewTaskState, StageLine, TurnFigure } from '../types'
 import { gitOutput } from './checkout'
+import { registerKitCommand } from './pane'
+import { clip, limitLine, limitTier, sameWindows, sentence, stageLine } from './lines'
+import { readOptions, triggerTokens, withinStep } from './options'
+import type { ColdOptions } from './options'
+import { holdStatus, refreshStatus } from './status'
 
 const NO_WINDOWS: SessionRateLimit[] = []
 const NO_MARKS: Record<string, number> = {}
 const NO_STEPS: ChainStep[] = []
+const NO_STAGES: StageLine[] = []
+const NO_TURNS: TurnFigure[] = []
 
 const warnedAt = atom({ plugin: 'session-kit', key: 'contextWarnedAt' } as const, 0)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
@@ -65,13 +72,13 @@ const turnEndTokens = atom({ plugin: 'session-kit', key: 'turnEndTokens' } as co
 const turnGrowth = atom({ plugin: 'session-kit', key: 'turnGrowth' } as const, 0)
 const rateLimits = atom({ plugin: 'session-kit', key: 'rateLimits' } as const, NO_WINDOWS)
 const limitsDismissed = atom({ plugin: 'session-kit', key: 'limitsDismissed' } as const, NO_MARKS)
+const failure = atom({ plugin: 'session-kit', key: 'failure' } as const, null)
+const stages = atom({ plugin: 'session-kit', key: 'stages' } as const, NO_STAGES)
+const turnFigures = atom({ plugin: 'session-kit', key: 'turnFigures' } as const, NO_TURNS)
 
-const THRESHOLD_TOKENS = 250000
-const LIMIT_WARN = 80
-const LIMIT_FIRM = 95
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const STEP_TOKENS = 25000
-// The second and third tier, as multiples of the trigger: 300,000 and 400,000 tokens at 250,000.
+const STAGES_KEPT = 8
+const TURNS_KEPT = 40
+const STAGE_TEXT_SHOWN = 300
 const FIRMER_AT = 1.2
 const STOP_AT = 1.6
 const JUDGE_MODEL = 'haiku'
@@ -80,20 +87,11 @@ const JUDGE_TIMEOUT_MS = 30000
 const TEXT_SHOWN = 2000
 const COMMITS_SHOWN = 12
 const SUBJECT_SHOWN = 200
-const CACHE_MINUTES = 60
-const CACHE_LEAD_MINUTES = 5
 const MINUTE_MS = 60000
 // Tool output costs 2.42 characters a token over 669 pairs of requests in the
 // transcripts on disk, and never more than 3.21: at 3.5 the projection stays
 // below the engine's next figure, so a measurement never reads as a compaction.
 const CHARS_PER_TOKEN = 3.5
-
-/** The cold-cache timer's settings: the cache's lifetime and the lead, in minutes, and the floor of context in tokens (0: the warning's trigger). */
-type ColdOptions = {
-  lifetime: number
-  lead: number
-  floor: number
-}
 
 // The kinds of prompt that are not the person's own words. What a plugin's
 // `$.command.run` stamps is `plugin` too. The rest (typed, from the phone, the
@@ -159,6 +157,7 @@ const JUDGE_RULES =
   'has not chosen, approving its own work). Otherwise answer CONTINUE.'
 
 const COLD_NOTE = 'go on from the handoff, written before the cache went cold'
+const PRESSED_NOTE = 'go on from the handoff, written at your request'
 
 const HANDOFF_FIELDS =
   'Keep the task in the user\'s own words, every decision with who took it and ' +
@@ -230,64 +229,6 @@ function figureLine(f: ContextFigure, grewBy: number, chainOn: boolean): string 
   return `Context ${f.tokens.toLocaleString('en-US')} tokens (${f.percent}% of ${f.window.toLocaleString('en-US')})${growth}: find a clear point, commit, write the handoff, ${close}`
 }
 
-export function clockTime(when: Date): string {
-  return `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`
-}
-
-function limitName(kind: string): string {
-  switch (kind) {
-    case 'five_hour':
-      return 'The 5-hour usage window'
-    case 'seven_day':
-      return 'The 7-day usage window'
-    case 'spend_limit':
-      return 'The spend limit'
-    default:
-      return `The ${kind.replace(/_/g, ' ')} window`
-  }
-}
-
-/** A 5-hour window resets within the day, so its time is enough; any other names the day too. */
-function resetClause(w: SessionRateLimit): string {
-  if (w.resetsAt === undefined) {
-    return ''
-  }
-  const when = new Date(w.resetsAt)
-  if (Number.isNaN(when.getTime())) {
-    return ''
-  }
-
-  return w.kind === 'five_hour'
-    ? ` and resets at ${clockTime(when)}`
-    : ` and resets on ${when.getDate()} ${MONTHS[when.getMonth()]} at ${clockTime(when)}`
-}
-
-function limitLine(w: SessionRateLimit): string {
-  return `${limitName(w.kind)} is at ${w.percentUsed}%${resetClause(w)}.`
-}
-
-/** 0 below the warning, 1 from 80%, 2 from 95%. */
-function limitTier(percentUsed: number): number {
-  if (percentUsed >= LIMIT_FIRM) {
-    return 2
-  }
-
-  return percentUsed >= LIMIT_WARN ? 1 : 0
-}
-
-/** Whether a window's line draws: past 80 and not dismissed, or dismissed below 95 and now past it. */
-function showsLimit(w: SessionRateLimit, mark: number | undefined): boolean {
-  if (w.percentUsed < LIMIT_WARN) {
-    return false
-  }
-
-  return mark === undefined || (mark < LIMIT_FIRM && w.percentUsed >= LIMIT_FIRM)
-}
-
-function sameWindows(a: SessionRateLimit[], b: SessionRateLimit[]): boolean {
-  return a.length === b.length && a.every((w, i) => w.kind === b[i]?.kind && w.percentUsed === b[i]?.percentUsed && w.resetsAt === b[i]?.resetsAt)
-}
-
 /** The band is raised on the terminal and desktop surfaces only. */
 function drawsBand(surface: RenderSurface): boolean {
   return surface === 'terminal' || surface === 'desktop'
@@ -304,20 +245,6 @@ async function moment($: EngineInterface, text: string): Promise<void> {
   if (surfaces.some((s) => !drawsBand(s))) {
     $.ui.toast(text)
   }
-}
-
-/** Where the warning starts: the token count, or the percent of the window, whichever is reached first; 0 turns one off. */
-export function triggerTokens(thresholdTokens: number, thresholdPercent: number, window: number): number {
-  const byCount = thresholdTokens > 0 ? thresholdTokens : Infinity
-  const byPercent = thresholdPercent > 0 ? (window * thresholdPercent) / 100 : Infinity
-  const trigger = Math.min(byCount, byPercent)
-
-  return Number.isFinite(trigger) ? trigger : THRESHOLD_TOKENS
-}
-
-/** Whether `tokens` is within a step above `mark`: a context smaller than the mark has been compacted. */
-function withinStep(mark: number, tokens: number, step: number): boolean {
-  return mark > 0 && mark <= tokens && tokens < mark + step
 }
 
 // The engine measures the context once per request, so a step of parallel
@@ -394,32 +321,6 @@ function answer(text: string) {
 
 function refuse(text: string) {
   return { deny: text }
-}
-
-function stageLine(state: ChainState): string {
-  switch (state.stage) {
-    case 'requested':
-      return 'Clear point: the handoff, the compaction and the continue run when this turn ends.'
-    case 'handoff':
-      return 'session-kit is writing the handoff.'
-    case 'compacting':
-      return 'session-kit is compacting the context.'
-    case 'waiting':
-      return state.stopped === undefined
-        ? `Compacted. The next step is yours: ${state.note}`
-        : `Compacted. The next step is yours: ${sentence(state.note)} The chain stopped since ${state.stopped}`
-  }
-}
-
-/** The text with its end made a full stop. */
-function sentence(text: string): string {
-  return `${text.trim().replace(/[\s.:;,!]+$/, '')}.`
-}
-
-export function clip(text: string, max: number): string {
-  const flat = text.trim()
-
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat
 }
 
 /** Whether the chain's nth signal since the person's last prompt goes to the judge: the third, the fifth, and every one from the seventh. */
@@ -513,8 +414,31 @@ async function journalLine($: EngineInterface, line: string): Promise<void> {
 function stage($: EngineInterface, text: string): void {
   $.ui.log(`session-kit chain: ${text}`)
   journal = journal
-    .then(async () => journalLine($, `${new Date(await $.clock.now()).toISOString()} ${text}`))
+    .then(async () => {
+      const at = await $.clock.now()
+      await journalLine($, `${new Date(at).toISOString()} ${text}`)
+      await update($, stages, (kept) => [...kept, { at, text: clip(text, STAGE_TEXT_SHOWN) }].slice(-STAGES_KEPT))
+    })
     .catch(() => undefined)
+}
+
+/** A failure the band holds until the person dismisses it, and a toast where no band is drawn. A chain's failure also reaches the person who is away. */
+async function failed($: EngineInterface, text: string, retry?: Failure['retry']): Promise<void> {
+  const held: Failure = retry === undefined ? { text } : { text, retry }
+  await update($, failure, () => held)
+  await moment($, `session-kit: ${sentence(text)}`)
+  if (retry !== undefined) {
+    await notifyOwner($, `session-kit: ${sentence(text)}`)
+  }
+}
+
+/** A message to the person's notifications, for an end they may not be there to see; a channel that cannot send is not an error. */
+async function notifyOwner($: EngineInterface, text: string): Promise<void> {
+  try {
+    await $.ui.notify(text)
+  } catch {
+    // Nothing else to do: the band holds the same words.
+  }
 }
 
 async function gitLines($: EngineInterface, args: string[]): Promise<string[] | null> {
@@ -569,9 +493,10 @@ async function runHandoff($: EngineInterface): Promise<void> {
     await $.command.run({ command: HANDOFF_COMMAND })
     stage($, 'the handoff command returned')
   } catch (error) {
+    const state = await read($, chain)
     await update($, chain, () => null)
     stage($, `the handoff did not run (${reason(error)}), so the chain stops here`)
-    $.ui.toast(`session-kit: the handoff did not run (${reason(error)}), so the chain stops here.`)
+    await failed($, `the handoff did not run (${reason(error)}), so the chain stopped`, state === null ? undefined : { stage: 'handoff', waitsOnOwner: state.waitsOnOwner, note: state.note })
   }
 }
 
@@ -586,6 +511,7 @@ async function afterCompaction($: EngineInterface, state: ChainState, asOf: numb
     await update($, chain, () => waiting)
     stage($, 'compacted, and waiting on the owner')
     await moment($, stageLine(waiting))
+    await notifyOwner($, `session-kit: compacted, the next step is yours: ${state.note}`)
 
     return
   }
@@ -614,7 +540,7 @@ async function compactByCommand($: EngineInterface, state: ChainState, asOf: num
   } catch (error) {
     await update($, chain, () => null)
     stage($, `the /compact command did not run (${reason(error)}), so the chain stops here`)
-    $.ui.toast(`session-kit: the compaction did not run (${reason(error)}), so the chain stops here.`)
+    await failed($, `the compaction did not run (${reason(error)}), so the chain stopped`, { stage: 'compacting', waitsOnOwner: state.waitsOnOwner, note: state.note })
 
     return
   }
@@ -622,22 +548,22 @@ async function compactByCommand($: EngineInterface, state: ChainState, asOf: num
   await afterCompaction($, state, asOf)
 }
 
-async function dismissChain($: EngineInterface): Promise<void> {
+export async function dismissChain($: EngineInterface): Promise<void> {
   chainDismissals += 1
   await update($, chain, () => null)
   stage($, 'the person dismissed the band, so the chain stops here')
 }
 
-async function dismissFigure($: EngineInterface): Promise<void> {
+export async function dismissFigure($: EngineInterface): Promise<void> {
   const now = await read($, figure)
   await update($, figureDismissedAt, () => now?.tokens ?? 0)
 }
 
-async function dismissOffer($: EngineInterface): Promise<void> {
+export async function dismissOffer($: EngineInterface): Promise<void> {
   await update($, newTask, () => null)
 }
 
-async function dismissLimit($: EngineInterface, w: SessionRateLimit): Promise<void> {
+export async function dismissLimit($: EngineInterface, w: SessionRateLimit): Promise<void> {
   await update($, limitsDismissed, (marks) => ({ ...marks, [w.kind]: w.percentUsed }))
 }
 
@@ -667,19 +593,21 @@ function lifetimeStated(result: unknown): number | null {
   return typeof minutes === 'number' && minutes > 0 ? 5 : null
 }
 
-function coldLine(at: number): string {
-  return `Left alone, session-kit writes the handoff and compacts at ${clockTime(new Date(at))}, before the cache goes cold.`
+/** The cold-cache deadline, kept with the status line that names it. */
+async function setColdAt($: EngineInterface, at: number): Promise<void> {
+  await update($, coldTimerAt, () => at)
+  await refreshStatus($)
 }
 
 async function disarmCold($: EngineInterface): Promise<void> {
   coldTimer?.cancel()
   coldTimer = null
   if ((await read($, coldTimerAt)) !== 0) {
-    await update($, coldTimerAt, () => 0)
+    await setColdAt($, 0)
   }
 }
 
-async function dismissCold($: EngineInterface): Promise<void> {
+export async function dismissCold($: EngineInterface): Promise<void> {
   await disarmCold($)
   stage($, 'the person dismissed the cold-cache timer, so nothing runs before their next turn ends')
 }
@@ -687,15 +615,77 @@ async function dismissCold($: EngineInterface): Promise<void> {
 /** With nobody at the prompt for the lead, the chain runs from the handoff stage and stops after the compaction. */
 async function runColdChain($: EngineInterface, lead: number): Promise<void> {
   coldTimer = null
-  await update($, coldTimerAt, () => 0)
+  await setColdAt($, 0)
+  const text = `the cache goes cold in ${lead} minutes with nobody at the prompt: writing the handoff`
+  if (await beginChain($, COLD_NOTE, text)) {
+    await moment($, `session-kit: ${text}.`)
+  }
+}
+
+/** The chain from its handoff stage, stopping after the compaction since the next step is the owner's; false when a chain or an offer is under way. */
+async function beginChain($: EngineInterface, note: string, why: string): Promise<boolean> {
   if ((await read($, chain)) !== null || (await read($, newTask)) !== null) {
+    return false
+  }
+  await update($, failure, () => null)
+  await update($, chain, () => ({ stage: 'handoff', waitsOnOwner: true, note }))
+  stage($, why)
+  await runHandoff($)
+
+  return true
+}
+
+// Outside the press's dispatch: a command run inside a hook the turn waits on is refused.
+function later($: EngineInterface, run: () => Promise<void>): void {
+  $.clock.after(0, () => {
+    void run()
+  })
+}
+
+/** The person's own signal: the handoff, then the compaction, and the next step is theirs. */
+export async function chainByPerson($: EngineInterface): Promise<void> {
+  later($, async () => {
+    await beginChain($, PRESSED_NOTE, 'the person asked for the handoff and the compaction')
+  })
+}
+
+/** The cold-cache timer run now by the person, in place of the lead's wait. */
+export async function runColdNow($: EngineInterface): Promise<void> {
+  await disarmCold($)
+  await chainByPerson($)
+}
+
+export async function handoffByPerson($: EngineInterface): Promise<void> {
+  later($, async () => {
+    stage($, 'the person asked for the handoff')
+    try {
+      await $.command.run({ command: HANDOFF_COMMAND })
+    } catch (error) {
+      await failed($, `the handoff did not run (${reason(error)})`)
+    }
+  })
+}
+
+export async function dismissFailure($: EngineInterface): Promise<void> {
+  await update($, failure, () => null)
+}
+
+/** A chain's failure run again from its stage, with the note and the owner's say it had. */
+export async function retryFailure($: EngineInterface): Promise<void> {
+  const held = await read($, failure)
+  await update($, failure, () => null)
+  if (held?.retry === undefined) {
     return
   }
-  await update($, chain, () => ({ stage: 'handoff', waitsOnOwner: true, note: COLD_NOTE }))
-  const text = `the cache goes cold in ${lead} minutes with nobody at the prompt: writing the handoff`
-  stage($, text)
-  await moment($, `session-kit: ${text}.`)
-  await runHandoff($)
+  const { retry } = held
+  if ((await read($, chain)) !== null) {
+    return
+  }
+  const state: ChainState = { stage: retry.stage, waitsOnOwner: retry.waitsOnOwner, note: retry.note }
+  await update($, chain, () => state)
+  stage($, `the person asked to try the ${retry.stage === 'handoff' ? 'handoff' : 'compaction'} again`)
+  const asOf = chainDismissals
+  later($, async () => (retry.stage === 'handoff' ? runHandoff($) : compactByCommand($, state, asOf)))
 }
 
 function holdColdTimer($: EngineInterface, wait: number, lead: number): void {
@@ -721,7 +711,7 @@ async function armCold($: EngineInterface, cold: ColdOptions, trigger: (window: 
   }
   const at = (await $.clock.now()) + wait
   holdColdTimer($, wait, cold.lead)
-  await update($, coldTimerAt, () => at)
+  await setColdAt($, at)
 }
 
 /** After a hot reload the deadline outlives the timer: set the timer again, or drop a deadline already past. */
@@ -734,7 +724,7 @@ async function holdColdTimerAgain($: EngineInterface, lead: number): Promise<voi
   if (at > now) {
     holdColdTimer($, at - now, lead)
   } else {
-    await update($, coldTimerAt, () => 0)
+    await setColdAt($, 0)
   }
 }
 
@@ -749,6 +739,14 @@ async function measureTurn($: EngineInterface): Promise<void> {
   const last = await read($, turnEndTokens)
   await update($, turnGrowth, () => (last > 0 && now.tokens > last ? now.tokens - last : 0))
   await update($, turnEndTokens, () => now.tokens)
+}
+
+/** The context percent this turn ended at, kept under the turn's duration for the turn line to find. */
+async function recordTurn($: EngineInterface, durationMs: number): Promise<void> {
+  const now = await read($, figure)
+  if (now !== null) {
+    await update($, turnFigures, (kept) => [...kept, { durationMs, percent: now.percent }].slice(-TURNS_KEPT))
+  }
 }
 
 async function stepOffer($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'>, offered: NewTaskState): Promise<void> {
@@ -803,31 +801,16 @@ function isEffort(value: unknown): value is Effort {
   return EFFORTS.some((level) => level === value)
 }
 
-function proposal(effort: { level: Effort; reason: string }): string {
-  return effort.reason === '' ? effort.level : `${effort.level}: ${effort.reason}`
-}
-
-function newTaskLine(state: NewTaskState): string {
-  switch (state.stage) {
-    case 'offered':
-      return state.effort === undefined ? `New task: ${state.task}` : `New task: ${state.task}. Proposed effort ${proposal(state.effort)}`
-    case 'handoff':
-      return 'session-kit is writing the handoff before the clear.'
-    case 'clearing':
-      return 'Clearing the context, then sending your prompt again.'
-  }
-}
-
 async function resend($: EngineInterface, text: string): Promise<void> {
   if (text === '') {
-    $.ui.toast('session-kit: no prompt of yours was recorded, so none was sent again.')
+    await failed($, 'no prompt of yours was recorded, so none was sent again')
 
     return
   }
   await $.prompt.submit({ text, asUser: true })
 }
 
-async function keepGoing($: EngineInterface): Promise<void> {
+export async function keepGoing($: EngineInterface): Promise<void> {
   await update($, newTask, () => null)
   await resend($, await read($, lastPrompt))
 }
@@ -837,12 +820,12 @@ async function runHandoffBeforeClear($: EngineInterface): Promise<void> {
     await $.command.run({ command: HANDOFF_COMMAND })
   } catch (error) {
     await update($, newTask, () => null)
-    $.ui.toast(`session-kit: the handoff did not run (${reason(error)}), so the context was not cleared.`)
+    await failed($, `the handoff did not run (${reason(error)}), so the context was not cleared`)
   }
 }
 
-async function handoffThenClear($: EngineInterface, state: NewTaskState, setsEffort: boolean): Promise<void> {
-  await update($, newTask, () => ({ ...state, stage: 'handoff', setsEffort }))
+export async function handoffThenClear($: EngineInterface, state: NewTaskState, setsEffort: boolean): Promise<void> {
+  await update($, newTask, () => ({ ...state, stage: 'handoff' as const, setsEffort }))
   // Outside this dispatch: a command run inside a hook the turn waits on is refused.
   $.clock.after(0, () => {
     void runHandoffBeforeClear($)
@@ -860,7 +843,7 @@ async function clearThenResend($: EngineInterface): Promise<void> {
     await $.command.run({ command: CLEAR_COMMAND })
   } catch (error) {
     stage($, `new task: the clear did not run (${reason(error)})`)
-    $.ui.toast(`session-kit: the clear did not run (${reason(error)}).`)
+    await failed($, `the clear did not run (${reason(error)})`)
 
     return
   }
@@ -878,20 +861,13 @@ async function setEffort($: EngineInterface, level: Effort): Promise<void> {
     stage($, `new task: the effort set to ${level}`)
   } catch (error) {
     stage($, `new task: the effort was not set (${reason(error)})`)
-    $.ui.toast(`session-kit: the effort was not set to ${level} (${reason(error)}), so the prompt runs at the session's.`)
+    await failed($, `the effort was not set to ${level} (${reason(error)}), so the prompt runs at the session's`)
   }
 }
 
 export const register: Register = (on, options) => {
-  const thresholdTokens = asCount(options.thresholdTokens, THRESHOLD_TOKENS)
-  const thresholdPercent = asCount(options.threshold, 0)
-  const step = asNumber(options.step, STEP_TOKENS)
-  const chainOn = options.chain === true
-  const cold: ColdOptions = {
-    lifetime: asCount(options.cacheMinutes, CACHE_MINUTES),
-    lead: asCount(options.cacheLeadMinutes, CACHE_LEAD_MINUTES),
-    floor: asCount(options.cacheFloorTokens, 0),
-  }
+  const { thresholdTokens, thresholdPercent, step, chainOn, statusLine, cold } = readOptions(options)
+  holdStatus(statusLine)
 
   on('tool.call', async ($, e, next) => {
     const ran = await next(e)
@@ -913,6 +889,7 @@ export const register: Register = (on, options) => {
       return ran
     }
     await update($, figure, () => now)
+    await refreshStatus($)
 
     const trigger = triggerTokens(thresholdTokens, thresholdPercent, context.window)
     if (now.tokens < trigger) {
@@ -961,9 +938,12 @@ export const register: Register = (on, options) => {
     }
     const before = await read($, rateLimits)
     if (sameWindows(before, e.rateLimits)) {
+      await refreshStatus($)
+
       return next(e)
     }
     await update($, rateLimits, () => e.rateLimits)
+    await refreshStatus($)
     // A dismissal is dropped once its window reset below where it was dismissed.
     const marks = await read($, limitsDismissed)
     const kept = Object.fromEntries(
@@ -980,87 +960,6 @@ export const register: Register = (on, options) => {
     }
 
     return next(e)
-  }).catch(($, e, next) => next(e))
-
-  // The kit's line draws above whatever the plugins beneath drew, so no band of theirs is hidden.
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const below = await next(e)
-    const offered = await read($, newTask)
-    const running = await read($, chain)
-    const now = await read($, figure)
-    const dismissedAt = await read($, figureDismissedAt)
-    const coldAt = await read($, coldTimerAt)
-    const grewBy = await read($, turnGrowth)
-    const marks = await read($, limitsDismissed)
-    const limits = (await read($, rateLimits)).filter((w) => showsLimit(w, marks[w.kind]))
-    const past =
-      now !== null &&
-      now.tokens >= triggerTokens(thresholdTokens, thresholdPercent, now.window) &&
-      !withinStep(dismissedAt, now.tokens, step)
-    if (e.props.hasSurvey || (offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
-      return below
-    }
-    const { Box, Button, Text } = $.ui.resolve(e)
-    const lines = []
-    if (offered !== null) {
-      lines.push(
-        <Box key="offer">
-          <Text dimColor>{newTaskLine(offered)} </Text>
-          {offered.stage === 'offered' && offered.effort !== undefined ? (
-            <Button key="new-task-clear-effort" label={`Handoff, clear, effort ${offered.effort.level}`} variant="primary" onPress={() => handoffThenClear($, offered, true)} />
-          ) : null}
-          {offered.stage === 'offered' ? (
-            <Button
-              key="new-task-clear"
-              label="Handoff and clear"
-              variant={offered.effort === undefined ? 'primary' : undefined}
-              onPress={() => handoffThenClear($, offered, false)}
-            />
-          ) : null}
-          {offered.stage === 'offered' ? (
-            <Button key="new-task-here" label="Keep going here" onPress={() => keepGoing($)} />
-          ) : null}
-          <Button key="new-task-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissOffer($)} />
-        </Box>,
-      )
-    } else if (running !== null) {
-      lines.push(
-        <Box key="chain">
-          <Text dimColor>{stageLine(running)} </Text>
-          <Button key="chain-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissChain($)} />
-        </Box>,
-      )
-    } else if (past && now !== null) {
-      lines.push(
-        <Box key="figure">
-          <Text dimColor>{figureLine(now, grewBy, chainOn)} </Text>
-          <Button key="context-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissFigure($)} />
-        </Box>,
-      )
-    }
-    if (coldAt !== 0) {
-      lines.push(
-        <Box key="cold">
-          <Text dimColor>{coldLine(coldAt)} </Text>
-          <Button key="cold-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissCold($)} />
-        </Box>,
-      )
-    }
-    for (const w of limits) {
-      lines.push(
-        <Box key={`limit-${w.kind}`}>
-          <Text dimColor>{limitLine(w)} </Text>
-          <Button key={`limit-dismiss-${w.kind}`} label="Dismiss" role="dismiss" onPress={() => dismissLimit($, w)} />
-        </Box>,
-      )
-    }
-
-    return (
-      <Box flexDirection="column">
-        {lines}
-        {below}
-      </Box>
-    )
   }).catch(($, e, next) => next(e))
 
   on('prompt.submit', async ($, e, next) => {
@@ -1087,6 +986,8 @@ export const register: Register = (on, options) => {
     answeredOver = null
     landed = 0
     await measureTurn($)
+    await recordTurn($, e.durationMs)
+    await refreshStatus($)
     if (!chainOn) {
       return next(e)
     }
@@ -1103,11 +1004,16 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  if (!chainOn) {
-    return
-  }
-
   on('session.start', async ($, e, next) => {
+    // The command is a convenience: an engine without it must not cost the tools below.
+    try {
+      await registerKitCommand($)
+    } catch {
+      // Nothing to tell: the pane is reachable by no command then, and the band and the status line stand.
+    }
+    if (!chainOn) {
+      return next(e)
+    }
     await $.tool.register({
       name: TOOL_NAME,
       description: TOOL_DESCRIPTION,
@@ -1147,6 +1053,11 @@ export const register: Register = (on, options) => {
 
     return next(e)
   }).catch(($, e, next) => next(e))
+
+  if (!chainOn) {
+    return
+  }
+
 
   // A turn starting uses the cache again, so the timer counts from its end instead.
   on('turn.start', async ($, e, next) => {

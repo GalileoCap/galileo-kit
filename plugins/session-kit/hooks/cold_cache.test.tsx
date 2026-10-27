@@ -218,17 +218,17 @@ test('the band names when the chain runs, above the band beneath it, and Dismiss
   await personsTurn($, clock, 't1')
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
-    const row = await ui.find({ type: 'Text', text: /before the cache goes cold/ })
-    expect(row?.text).toMatch(/writes the handoff and compacts at \d\d:\d\d/)
+    const row = await ui.find({ type: 'Text', text: /before it goes cold/ })
+    expect(row?.text).toMatch(/handoff and compact at \d\d:\d\d/)
     // The context figure's line is there too, and the band beneath.
-    expect((await ui.find({ type: 'Text', text: /Context 300,000/ }))?.text).toMatch(/clear_point/)
+    expect((await ui.find({ type: 'Text', text: /300k \/ 1M/ }))?.text).toBe('300k / 1M  30%')
     expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
     await ui.unmount()
   }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await ui.press({ key: 'cold-dismiss' })
-  expect(await ui.find({ type: 'Text', text: /before the cache goes cold/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /before it goes cold/ })).toBeUndefined()
   await ui.unmount()
   await clock.advance(180 * MINUTE)
   expect(asked).toEqual([])

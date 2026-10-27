@@ -7,7 +7,7 @@ import type { ContextMemoryFile, On, SessionContextBreakdown, TurnCompleteInput 
 
 const HOME = '/home/me'
 const DIR = `${HOME}/.claude/session-kit/measure`
-const CONCERNS = ['facts', 'context', 'test_log', 'doc_length', 'nudge', 'checkout', 'suppressions']
+const CONCERNS = ['facts', 'context', 'band', 'pane', 'test_log', 'doc_length', 'nudge', 'checkout', 'suppressions']
 const CLAUDE_MD: ContextMemoryFile = { path: '/proj/CLAUDE.md', type: 'Project', tokens: 900 }
 const HANDOFF: ContextMemoryFile = { path: '/proj/CLAUDE.local.md', type: 'Local', tokens: 1500 }
 const USAGE = { input_tokens: 10, output_tokens: 300, cache_read_input_tokens: 110_000, cache_creation_input_tokens: 9_990, model: 'claude-fable-5-1' }

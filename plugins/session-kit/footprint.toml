@@ -7,9 +7,10 @@ engine = "2.1.308"
 
 [validator]
 "./kit.tsx calls" = [
-  "$.clock.after (via handoffThenClear, holdColdTimer, stepChain, stepOffer)",
+  "$.clock.after (via handoffThenClear, holdColdTimer, later, stepChain, stepOffer)",
   "$.clock.now",
-  "$.command.run (via clearThenResend, compactByCommand, runHandoff, runHandoffBeforeClear, setEffort)",
+  "$.command.register (via registerKitCommand)",
+  "$.command.run (via clearThenResend, compactByCommand, handoffByPerson, runHandoff, runHandoffBeforeClear, setEffort)",
   "$.env.get",
   "$.fs.exists (via handoffState)",
   "$.fs.read (via indexOf, journalLine, ownerTask, past, projectRunners, writeFacts)",
@@ -28,8 +29,11 @@ engine = "2.1.308"
   "$.state.set",
   "$.tool.register",
   "$.ui.log",
+  "$.ui.notify (via notifyOwner)",
+  "$.ui.open",
   "$.ui.resolve",
-  "$.ui.toast (via clearThenResend, compactByCommand, moment, resend, runHandoff, runHandoffBeforeClear, setEffort)",
+  "$.ui.status (via refreshStatus)",
+  "$.ui.toast (via moment)",
 ]
 "./kit.tsx env reads" = [
   "HOME",
@@ -38,6 +42,7 @@ engine = "2.1.308"
 "./kit.tsx env writes" = [
 ]
 "./kit.tsx gating hook with .catch" = [
+  "command.run{command=kit}",
   "prompt.submit",
   "prompt.submit{text=/\"\\\\S\"/}",
   "tool.call",
@@ -58,6 +63,7 @@ engine = "2.1.308"
   "tool.call{tool=mcp__session-kit__new_task}",
 ]
 "./kit.tsx hooks" = [
+  "command.run{command=kit}",
   "prompt.submit",
   "prompt.submit{text=/\"\\\\S\"/}",
   "session.end",
@@ -89,6 +95,8 @@ engine = "2.1.308"
   "turn.start{turnId=/\".\"/}",
   "turn.step",
   "ui.render{component=AbovePrompt}",
+  "ui.render{component=Pane, requestId=kit}",
+  "ui.render{component=TurnDuration}",
 ]
 "./kit.tsx state reads" = [
   "session-kit.cacheMinutes",
@@ -98,6 +106,7 @@ engine = "2.1.308"
   "session-kit.contextDismissedAt",
   "session-kit.contextFigure",
   "session-kit.contextWarnedAt",
+  "session-kit.failure",
   "session-kit.freshContext",
   "session-kit.lastPrompt",
   "session-kit.lastPromptAt",
@@ -106,8 +115,10 @@ engine = "2.1.308"
   "session-kit.newTask",
   "session-kit.rateLimits",
   "session-kit.sessionEffort",
+  "session-kit.stages",
   "session-kit.testRetry",
   "session-kit.turnEndTokens",
+  "session-kit.turnFigures",
   "session-kit.turnGrowth",
 ]
 "./kit.tsx state writes" = [
@@ -118,6 +129,7 @@ engine = "2.1.308"
   "session-kit.contextDismissedAt",
   "session-kit.contextFigure",
   "session-kit.contextWarnedAt",
+  "session-kit.failure",
   "session-kit.freshContext",
   "session-kit.lastPrompt",
   "session-kit.lastPromptAt",
@@ -126,8 +138,10 @@ engine = "2.1.308"
   "session-kit.newTask",
   "session-kit.rateLimits",
   "session-kit.sessionEffort",
+  "session-kit.stages",
   "session-kit.testRetry",
   "session-kit.turnEndTokens",
+  "session-kit.turnFigures",
   "session-kit.turnGrowth",
 ]
 "types ./types/index.d.ts declares on $" = [
@@ -140,6 +154,7 @@ engine = "2.1.308"
   "session-kit.contextDismissedAt",
   "session-kit.contextFigure",
   "session-kit.contextWarnedAt",
+  "session-kit.failure",
   "session-kit.freshContext",
   "session-kit.lastPrompt",
   "session-kit.lastPromptAt",
@@ -148,15 +163,18 @@ engine = "2.1.308"
   "session-kit.newTask",
   "session-kit.rateLimits",
   "session-kit.sessionEffort",
+  "session-kit.stages",
   "session-kit.testRetry",
   "session-kit.turnEndTokens",
+  "session-kit.turnFigures",
   "session-kit.turnGrowth",
 ]
 
 [why]
 "$.clock.after" = "Defers the chain's and the offer's next stage until the turn lets go, and arms the cold-cache timer."
 "$.clock.now" = "Stamps the chain file's lines, the test log's runs, the person's last prompt and the handoff's facts, and dates the cold-cache deadline."
-"$.command.run" = "Runs the handoff command, /compact for the chain's compaction, and /clear after the new-task offer's press, then /effort when the person chose the effort the model proposed."
+"$.command.register" = "Registers /kit, the command that opens the kit's pane."
+"$.command.run" = "Runs the handoff command (for the chain, and for the band's Handoff button), /compact for the chain's compaction, and /clear after the new-task offer's press, then /effort when the person chose the effort the model proposed."
 "$.env.get" = "TMPDIR for the chain file and the test log, HOME for the timeline's directory."
 "$.fs.exists" = "Whether CLAUDE.local.md exists, for the checkout's handoff advice."
 "$.fs.read" = "The chain file before a line is added, the Task section of CLAUDE.local.md for the judge, CLAUDE.local.md before its facts are added, a document's length after an edit, the suppressions index, and test_commands in .claude/claude-kit.json."
@@ -175,8 +193,12 @@ engine = "2.1.308"
 "$.state.set" = "The kit's own state under session-kit.*, declared in types/index.d.ts."
 "$.tool.register" = "The clear_point and new_task tools."
 "$.ui.log" = "One dim transcript line per chain stage, the uncommitted-work line, the failed or stale test run at a turn's end, and facts that could not be added to the handoff."
-"$.ui.resolve" = "The components the band above the prompt is drawn with."
-"$.ui.toast" = "A failure of the chain or the offer, and a moment where no band is drawn."
+"$.ui.notify" = "Tells the person away from the screen that a chain ended with the next step theirs, or failed."
+"$.ui.open" = "Opens the kit's pane when the person runs /kit, and never by itself."
+"$.ui.resolve" = "The components the band above the prompt, the turn line and the pane are drawn with."
+"$.ui.status" = "Pins the status line under the prompt: the context figure, the usage windows and when the cold-cache timer compacts, rewritten only when its text changes."
+"$.ui.toast" = "A moment where no band is drawn, a failure of the chain or the offer included."
+"command.run" = "Opens the kit's pane when the person runs /kit."
 "prompt.submit" = "Records the person's own prompt and its time, for the new-task resend and the handoff's facts, starts the chain's steps over, and gives the first prompt of a context the checkout's handoff advice."
 "session.end" = "Writes the timeline's last lines when the session ends."
 "session.measure" = "The engine's context figure and the plan's usage windows, for the band and the warning."
@@ -185,4 +207,4 @@ engine = "2.1.308"
 "turn.complete" = "Adds the facts to a handoff the turn wrote, before the chain's compaction, runs the chain's and the offer's next stage, arms the cold-cache timer, reads the growth per turn, hands the context figure back to the engine's, names uncommitted work and a failed or stale test run, and writes the timeline."
 "turn.start" = "Disarms the cold-cache timer and opens the timeline's turn."
 "turn.step" = "Reads each main-loop request's usage, the engine's measurement of the context, which the warning's projection counts on from. Every chunk passes on unchanged."
-"ui.render" = "The band above the prompt: the context figure, the usage windows, the chain and the offer, drawn above the bands beneath."
+"ui.render" = "The band above the prompt (failures, the offer, the chain, the context figure, the cold-cache timer, a usage window at 95%) drawn above the bands beneath, the turn line with the context percent its turn ended at, and the kit's pane."
