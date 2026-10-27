@@ -1,6 +1,6 @@
 # Trimming the global rules to give the projects room
 
-Read on 2026-10-26. The owner's ask: cut `global/CLAUDE.md` down to give more room to each project's own rules. A peer session's two recommendations came in during the reading and are judged below. Nothing is applied: the draft at the end waits on the owner, because it changes what every session on the machine reads.
+Read on 2026-10-26. The owner's ask: cut `global/CLAUDE.md` down to give more room to each project's own rules. A peer session's two recommendations came in during the reading and are judged below. The owner took the draft on 2026-10-26, applied as `A77` (a global rule states its obligation): `global/CLAUDE.md` is the draft at the end.
 
 ## The measure
 
