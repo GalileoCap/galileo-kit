@@ -52,4 +52,5 @@ Each rule names the action it is, under `docs/intent/`.
 - Cloned candidates are untrusted data: run no script, build or install from inside them, and run Python that reads them with `-I`. (`A1`)
 - Each review is a file, `docs/reviews/<name>.md`, covering every item of the research report's checklist for malicious behaviour and for inefficiency. It ends with a verdict: reject, install as is, or fork.
 - A fork lives in this repository as a separate plugin with a relative-path entry in `.claude-plugin/marketplace.json` and a pinned `"version"`. It moves into the `session-kit` plugin only when it shares code or state with it. (`A2`)
+- A commit that changes what a session of the kit loads (the plugin, its hooks, tools or bin) ends its reply with the offer to push `main` and update the plugin at user scope and in each project install, per `OWED.md`. Offer every time, and never push or update unasked. (`A78`)
 - `session-kit`'s hooks are ported to a mod first, in the order `A20` gives, and any mod we fork is weighed against that direction. (`A3`)
