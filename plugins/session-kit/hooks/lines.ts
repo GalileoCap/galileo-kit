@@ -27,6 +27,20 @@ export function compact(n: number): string {
   return n >= 1000 ? `${Math.round(n / 1000)}k` : String(n)
 }
 
+/** A span as the status line writes it: `<1m`, `12m`, `2h05m`, `3d4h`. */
+export function elapsed(ms: number): string {
+  const minutes = Math.floor(Math.max(0, ms) / 60000)
+  if (minutes < 1) {
+    return '<1m'
+  }
+  if (minutes < 60) {
+    return `${minutes}m`
+  }
+  const hours = Math.floor(minutes / 60)
+
+  return hours < 24 ? `${hours}h${String(minutes % 60).padStart(2, '0')}m` : `${Math.floor(hours / 24)}d${hours % 24}h`
+}
+
 /** A bar of `BAR_CELLS` cells, filled in proportion to `percent`. */
 export function bar(percent: number): string {
   const filled = Math.max(0, Math.min(BAR_CELLS, Math.round((percent * BAR_CELLS) / 100)))
@@ -133,11 +147,16 @@ export function sameWindows(a: SessionRateLimit[], b: SessionRateLimit[]): boole
   return a.length === b.length && a.every((w, i) => w.kind === b[i]?.kind && w.percentUsed === b[i]?.percentUsed && w.resetsAt === b[i]?.resetsAt)
 }
 
-/** What the kit pins under the prompt: the context with its growth, each usage window, and when the cold-cache timer runs; undefined when nothing is known. */
-export function statusText(now: ContextFigure | null, grewBy: number, windows: readonly SessionRateLimit[], coldAt: number): string | undefined {
+/**
+ * What the kit pins under the prompt: the context with its growth and the time
+ * since the person's last message (null when none is known), each usage
+ * window, and when the cold-cache timer runs; undefined when nothing is known.
+ */
+export function statusText(now: ContextFigure | null, grewBy: number, sinceMs: number | null, windows: readonly SessionRateLimit[], coldAt: number): string | undefined {
   const parts: string[] = []
   if (now !== null) {
-    parts.push(`ctx ${now.percent}% ${compact(now.tokens)}${grewBy > 0 ? ` (+${compact(grewBy)})` : ''}`)
+    const since = sinceMs === null ? '' : ` · you ${elapsed(sinceMs)} ago`
+    parts.push(`ctx ${now.percent}% ${compact(now.tokens)}${grewBy > 0 ? ` (+${compact(grewBy)})` : ''}${since}`)
   }
   for (const w of windows) {
     parts.push(`${windowShort(w.kind)} ${w.percentUsed}%${w.percentUsed >= LIMIT_WARN ? resetShort(w) : ''}`)

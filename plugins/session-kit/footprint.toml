@@ -7,7 +7,7 @@ engine = "2.1.308"
 
 [validator]
 "./kit.tsx calls" = [
-  "$.clock.after (via handoffThenClear, holdColdTimer, later, stepChain, stepOffer)",
+  "$.clock.after (via handoffThenClear, holdColdTimer, later, refreshStatus, stepChain, stepOffer)",
   "$.clock.now",
   "$.command.register (via registerKitCommand)",
   "$.command.run (via clearThenResend, compactByCommand, handoffByPerson, runHandoff, runHandoffBeforeClear, setEffort)",

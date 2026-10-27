@@ -94,3 +94,9 @@ The new band, the status line, `/kit`, the turn line, the failure rows and the n
 ### The band's rows: a row gap, centred rows, and a small ✕ at the right
 
 The band's rows drew into each other on the desktop (the Context row's buttons ran into the Cache row), so the column has a row gap, each row centres its children, `Run chain now` is a primary button like `Handoff and compact`, and each Dismiss is a plain ✕ at the row's right edge. It reaches a session as 0.36.0 does. Only the desktop proves the spacing and the ✕: `rowGap` and `flexGrow` there are known only from the engine's declarations.
+
+## At the install of session-kit 0.37.2
+
+### The status line gives the time since your last message
+
+The status line's `ctx` part ends with `you 12m ago`, the time since the last prompt that is the person's own words (an automatic handoff, a notification or a continue does not reset it), redrawn when the minute turns. It reaches a session as 0.36.0 does. Only a real surface shows it: the engine's stand-in clock proves the text and the reset, not the redraw on the desktop's or the terminal's status line.

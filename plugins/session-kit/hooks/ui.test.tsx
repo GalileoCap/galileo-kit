@@ -310,3 +310,27 @@ test('the turn line is the engine\'s plus the context percent recorded at the en
   expect((await line(7777)).map((t) => t.text)).toEqual(['Baked for 8s'])
 })
 
+
+test('the status line gives the time since the person\'s last message, which no automatic prompt resets', { timeoutMs: 3000 }, async ($, on) => {
+  const state = host(312_000)
+  const seen = engine(on, state)
+  await $.session.start(START)
+  await $.turn.start({ text: 'one', turnId: 't1' })
+  await $.turn.complete(turn('t1'))
+  await seen.clock.settle()
+  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k( · compacts|$)/)
+
+  // The stand-in clock starts at 0, which the kit reads as no prompt yet.
+  await seen.clock.advance(MINUTE)
+  await $.prompt.submit({ text: 'build it', wait: false, origin: { kind: 'composer' } })
+  await seen.clock.settle()
+  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k · you <1m ago/)
+
+  await seen.clock.advance(12 * MINUTE + 5000)
+  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k · you 12m ago/)
+
+  await $.prompt.submit({ text: 'a task finished', wait: false, origin: { kind: 'task-notification' } })
+  await seen.clock.settle()
+  await seen.clock.advance(MINUTE)
+  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k · you 13m ago/)
+})

@@ -971,6 +971,7 @@ export const register: Register = (on, options) => {
       await update($, lastPrompt, () => e.text)
       const at = await $.clock.now()
       await update($, lastPromptAt, () => at)
+      await refreshStatus($)
       if (chainOn) {
         await update($, chainSteps, () => NO_STEPS)
       }
