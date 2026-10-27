@@ -6,12 +6,20 @@ How work with agents is directed, in every project of every kind: code, writing,
 
 | Level | What it is | Who writes it | Who approves it | How it changes |
 | --- | --- | --- | --- | --- |
-| Goal | An abstract, high-level need of the owner's. | The owner. Every goal rests on something the owner said or answered in so many words. A session never writes one, though it may ask a question whose answer becomes one. | Nobody: it is the owner's. | It grows and changes with the owner's needs. |
-| Objective | A mid-level aim derived from one or more goals: a change in how someone or something behaves, that could be seen. | The owner, or a session that infers it. | The owner approves every addition and change before it binds. Until then it is a proposal. | Retired or rewritten by the owner when a goal moves. |
-| Action | A specific decision in service of one or more objectives: a rule, a design choice, a piece of the work, a check on it, a step of a plan. It is a hypothesis that the objective moves once it is in place. | A session, on its own, or the owner. | The owner validates it, after the fact. | It can miss the mark. It is verified against its objectives and their goals, and superseded when it does. |
+| Goal | Why the project exists, or a need of the owner's it serves. No piece of the work completes it, and it holds whatever is built. | The owner, in so many words or in answer to a session's question. A session never writes one. | Nobody: it is the owner's. | It grows and changes with the owner's needs. |
+| Objective | A change in how someone or something behaves, seen from outside, that names no mechanism. It serves one or more goals, and two different actions could meet it. | The owner, or a session that infers it. | The owner approves every addition and change before it binds. Until then it is a proposal. | Retired or rewritten by the owner when a goal moves. |
+| Action | The mechanism that serves one or more objectives: a rule, a design choice, a screen or a control, a piece of the work, a check on it, a step of a plan. It can be built or done, and it is a hypothesis that the objective moves once it is in place. | A session, on its own, or the owner. | The owner validates it, after the fact. | It can miss the mark. It is verified against its objectives and their goals, and superseded when it does. |
 | Constraint | A bound on every action, stated as a scenario: when this happens, the work responds so. It comes from the owner and from no goal in particular. | The owner. | Nobody. | Rewritten or retired by the owner. |
 
 The direction of justification is fixed. An action names the objectives it serves, and an objective names the goals it comes from. An action that names no objective, or an objective that names no goal, is a sign that one of the three is missing or wrong. The direction never reverses: a goal is never written to fit an action already taken, and an objective is never reworded to admit one.
+
+## Telling the levels apart
+
+A level is what an entry says, and its source is who said it. The two are independent: the owner can ask for an objective or an action as well as state a goal, and most of what the owner asks for is a change or a mechanism. Ask "why?" of a sentence. When the answer is another sentence the owner would also sign, the first is no goal. Ask "how?". When the answer is "build this", the sentence is an objective, and when the sentence is the thing built, it is an action. A goal is rare: a project has a handful, and a new one is written when the owner's why reaches something the record does not hold.
+
+A request is filed in three steps. Find the goal it serves among the project's active goals. File the request beneath it at its own level, with `source: owner` and the quote in its body, splitting it when it names both a change and a mechanism. When no goal fits, ask the owner why they want it, and write the answer as the goal. An objective the owner asked for in so many words is approved by the asking, and an action the owner asked for is the owner's decision.
+
+Gallery's record shows the misfiling this prevents: from its sixth goal on, each was one request copied into a goal file ("back to the camera fast from any screen", "three presets and one on auto"), and every objective beneath one also named the real goal. The reading is `docs/analyses/intent-levels.md` in `galileo-kit`.
 
 ## One ladder per project
 
@@ -61,7 +69,7 @@ An id is never reused. The four levels are the default: a project may name its o
 
 ## Verification
 
-- When an action is proposed, the session names the objectives it serves and checks that each traces to a stated goal. An action with no trace is not taken. The gap is put to the owner as a question.
+- When an action is proposed, the session names the objectives it serves and checks that each traces to a stated goal. An action with no trace is not taken. The gap is put to the owner as the question of why they want it, and the answer becomes the goal. The request itself is filed below it.
 - When an objective is approved, it has at least one action or says "no action yet". When an action is decided it names what implements it, and when it is validated, what proved it.
 - When an action misfires (it costs more than expected, fires at the wrong moment, or is worked around), the error is fixed at the level that holds it. An action wrong for a right objective is superseded by the session. An objective that produces wrong actions is put to the owner. The consequences field names the result that undoes the action, so the undoing is argued once, when it is decided.
 - When a piece of the work is changed or released, the actions it carries are re-read against their objectives. A piece whose objective was retired goes with it. The actions that name a part of a tool's interface are re-read when that interface changes.
@@ -96,6 +104,8 @@ Ids are per project, so this project's `G1` has nothing to do with `session-kit`
 - `A1` A candidate is reviewed from a clone at a recorded commit and never loaded before its review is written. From `O1`. Kind: behaviour, a rule of the project. Context: a plugin runs code at load, so the review has to come first. Consequences: a review costs a session before any candidate is tried. Implemented by: the rules of engagement in `CLAUDE.md`. Proven by: `reviews/cache-tax.md` was written from a clone that was never loaded. Session, decided 2026-10-24.
 - `A2` A fork lives in `galileo-kit` with a pinned version, by default as a separate plugin. From `O2`. Kind: behaviour. Options: install as is (serves nothing when the source moves), fork into `session-kit` itself (serves `O2`, and couples unrelated code), fork beside it (serves `O2`). Consequences: every upstream fix is merged by hand. Undone if the merges cost more than the reviews they save. Implemented by: the rules of engagement in `CLAUDE.md`. Proven by: unproven, no fork made yet. Session, decided 2026-10-24, awaiting validation.
 - `A3` `session-kit` is ported first, documented through this ladder, and mods are weighed against it after. From `O1` and `O2`. Kind: behaviour, a step of the plan. Context: the owner reordered the work, since a mod we fork may duplicate what the port gives. Consequences: `cache-tax` waits. Implemented by: `PLAN.md`. Owner, decided 2026-10-24.
+
+Suppose the owner later asks for "a command that shows me which installed plugins have a review". The request names a mechanism, so it is filed as the next action, under `O1`, with the owner as its source and the quote in its body. No goal is written for it, since `G1` already says why.
 
 ## Open questions for the owner
 

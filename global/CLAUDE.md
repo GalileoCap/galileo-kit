@@ -19,9 +19,10 @@ These come from `session-kit` (`global/CLAUDE.md`). A project's `CLAUDE.md` adds
 
 ## Intent
 
-The record of why a project is what it is, one file per entry under `docs/intent/`. The process is `goals-objectives-actions.md` beside this file: read it before writing an entry. A goal is the owner's words and an objective needs the owner's approval. A session decides actions, which the owner validates after the fact.
+The record of why a project is what it is, one file per entry under `docs/intent/`. The process is `goals-objectives-actions.md` beside this file: read it before writing an entry. Only the owner states a goal, and an objective needs the owner's approval. A session decides actions, which the owner validates after the fact.
 
 - **What is kept gets an entry.** A rule, a design choice, a plan of several phases or a decision a later session relies on. A one-off task writes nothing.
+- **An entry is filed at the level it is.** A goal is why the project exists, and no piece of the work completes it. An objective is a change seen from outside that names no mechanism. An action is the mechanism. A request of the owner's goes at its own level with the owner as its source, and when no goal fits it, ask the owner why they want it.
 - **Links go upward only, and nothing is deleted.** A validated action is never rewritten: a new action supersedes it and the old one is retired.
 - **The tools hold the record.** `session-intent next <level>` gives an id, `index` regenerates `INDEX.md`, and `check` is the gate.
 - **An id carries its name.** Any id (an entry, an issue, a ticket) is written with its name at its first mention in a reply and in each section of a document the owner decides from. `session-intent names` prints them.
