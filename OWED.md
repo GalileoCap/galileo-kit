@@ -99,4 +99,10 @@ The band's rows drew into each other on the desktop (the Context row's buttons r
 
 ### The status line gives the time since your last message
 
-The status line's `ctx` part ends with `you 12m ago`, the time since the last prompt that is the person's own words (an automatic handoff, a notification or a continue does not reset it), redrawn when the minute turns. It reaches a session as 0.36.0 does. Only a real surface shows it: the engine's stand-in clock proves the text and the reset, not the redraw on the desktop's or the terminal's status line.
+The status line's `ctx` part ends with `you 12m`, the time since the last prompt that is the person's own words (an automatic handoff, a notification or a continue does not reset it), redrawn when the minute turns. It reaches a session as 0.36.0 does. Only a real surface shows it: the engine's stand-in clock proves the text and the reset, and the redraw on the desktop's and the terminal's status line is unproven.
+
+## At the install of session-kit 0.37.3
+
+### One context row when the cold timer is set, and a shorter status line
+
+The Context row and the Cache row offered the same chain (`Handoff and compact`, `Run chain now`), so with the `chain` option on the context row ends "runs itself at <hh:mm>" and the Cache row is drawn only when no context row is. The context row's ✕ stops the timer as well. The status line drops the parentheses and "ago" (`ctx 30% 302k +5k · you 12m · 5h 31%`) and writes the timer as `compacts <hh:mm>`, so the usage window should fit on the desktop. It reaches a session as 0.36.0 does. Only the desktop proves that the usage window now fits and that one row reads clearly.

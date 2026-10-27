@@ -155,14 +155,14 @@ export function sameWindows(a: SessionRateLimit[], b: SessionRateLimit[]): boole
 export function statusText(now: ContextFigure | null, grewBy: number, sinceMs: number | null, windows: readonly SessionRateLimit[], coldAt: number): string | undefined {
   const parts: string[] = []
   if (now !== null) {
-    const since = sinceMs === null ? '' : ` · you ${elapsed(sinceMs)} ago`
-    parts.push(`ctx ${now.percent}% ${compact(now.tokens)}${grewBy > 0 ? ` (+${compact(grewBy)})` : ''}${since}`)
+    const since = sinceMs === null ? '' : ` · you ${elapsed(sinceMs)}`
+    parts.push(`ctx ${now.percent}% ${compact(now.tokens)}${grewBy > 0 ? ` +${compact(grewBy)}` : ''}${since}`)
   }
   for (const w of windows) {
     parts.push(`${windowShort(w.kind)} ${w.percentUsed}%${w.percentUsed >= LIMIT_WARN ? resetShort(w) : ''}`)
   }
   if (coldAt !== 0) {
-    parts.push(`compacts at ${clockTime(new Date(coldAt))}`)
+    parts.push(`compacts ${clockTime(new Date(coldAt))}`)
   }
 
   return parts.length === 0 ? undefined : parts.join(' · ')
@@ -201,4 +201,9 @@ export function newTaskLine(state: NewTaskState): string {
 /** The cold-cache row's words: when the kit runs the handoff and the compaction on its own. */
 export function coldText(at: number): string {
   return `handoff and compact at ${clockTime(new Date(at))}, before it goes cold`
+}
+
+/** The same deadline as a clause of the context row, which offers the same chain. */
+export function coldClause(at: number): string {
+  return `runs itself at ${clockTime(new Date(at))}`
 }

@@ -324,13 +324,13 @@ test('the status line gives the time since the person\'s last message, which no 
   await seen.clock.advance(MINUTE)
   await $.prompt.submit({ text: 'build it', wait: false, origin: { kind: 'composer' } })
   await seen.clock.settle()
-  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k · you <1m ago/)
+  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k · you <1m/)
 
   await seen.clock.advance(12 * MINUTE + 5000)
-  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k · you 12m ago/)
+  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k · you 12m/)
 
   await $.prompt.submit({ text: 'a task finished', wait: false, origin: { kind: 'task-notification' } })
   await seen.clock.settle()
   await seen.clock.advance(MINUTE)
-  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k · you 13m ago/)
+  expect(seen.statuses.at(-1)).toMatch(/^ctx 31% 312k · you 13m/)
 })

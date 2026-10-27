@@ -1,6 +1,7 @@
 // The band above the prompt and the line that closes a turn. The band keeps
 // only what needs the person: a failure, the offer or the chain or the context
-// figure past its threshold, the cold-cache timer that will act on its own, and
+// figure past its threshold, the cold-cache timer that will act on its own (a
+// clause of the context row when that row offers the same chain), and
 // a usage window at 95% (at 80% when the kit keeps no status line). Each row is
 // a bold label, the figures, and the buttons that do the thing. The kit's rows
 // draw above whatever the plugins beneath drew, so no band of theirs is hidden.
@@ -26,7 +27,7 @@ import {
   retryFailure,
   runColdNow,
 } from './context'
-import { LIMIT_FIRM, LIMIT_WARN, coldText, compact, limitLine, newTaskLine, showsLimit, stageLine } from './lines'
+import { LIMIT_FIRM, LIMIT_WARN, coldClause, coldText, compact, limitLine, newTaskLine, showsLimit, stageLine } from './lines'
 import { readOptions, triggerTokens, withinStep } from './options'
 
 const NO_WINDOWS: SessionRateLimit[] = []
@@ -104,7 +105,8 @@ function chainRow($: EngineInterface, d: Draw, running: ChainState) {
   )
 }
 
-function figureRow($: EngineInterface, d: Draw, now: ContextFigure, grewBy: number, tier: number) {
+/** The context row; `coldAt` is the cold-cache deadline when the row carries it, since its chain button is the one that timer would run. */
+function figureRow($: EngineInterface, d: Draw, now: ContextFigure, grewBy: number, tier: number, coldAt: number) {
   const { Box, Button, Text } = d.p
 
   return (
@@ -114,7 +116,13 @@ function figureRow($: EngineInterface, d: Draw, now: ContextFigure, grewBy: numb
       {grewBy > 0 ? <Text dimColor>{`+${compact(grewBy)} last turn`}</Text> : null}
       {d.isWorking ? null : <Button key="context-handoff" label="Handoff" variant={d.chainOn ? undefined : 'primary'} onPress={() => handoffByPerson($)} />}
       {d.isWorking || !d.chainOn ? null : <Button key="context-chain" label="Handoff and compact" variant="primary" onPress={() => chainByPerson($)} />}
-      {dismissButton(d, 'context-dismiss', () => dismissFigure($))}
+      {coldAt === 0 ? null : <Text dimColor>{coldClause(coldAt)}</Text>}
+      {dismissButton(d, 'context-dismiss', () => {
+        dismissFigure($)
+        if (coldAt !== 0) {
+          dismissCold($)
+        }
+      })}
     </Box>
   )
 }
@@ -165,6 +173,8 @@ export const register: Register = (on, options) => {
     }
     const { Box, Button, Text } = $.ui.resolve(e)
     const d: Draw = { p: { Box, Button, Text }, isWorking: e.props.isWorking, chainOn }
+    // The context row offers the same chain the cache row would, so it takes the timer in.
+    const foldsCold = chainOn && offered === null && running === null && past
     const rows = []
     if (held !== null) {
       rows.push(failureRow($, d, held))
@@ -174,9 +184,9 @@ export const register: Register = (on, options) => {
     } else if (running !== null) {
       rows.push(chainRow($, d, running))
     } else if (past && now !== null) {
-      rows.push(figureRow($, d, now, grewBy, adviceTier(now.tokens, trigger)))
+      rows.push(figureRow($, d, now, grewBy, adviceTier(now.tokens, trigger), foldsCold ? coldAt : 0))
     }
-    if (coldAt !== 0) {
+    if (coldAt !== 0 && !foldsCold) {
       rows.push(coldRow($, d, coldAt))
     }
     for (const w of limits) {

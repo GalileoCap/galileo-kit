@@ -210,7 +210,7 @@ test('a subagent\'s result that wrote a 5-minute cache replaces the hour the opt
   expect(asked).toEqual([])
 })
 
-test('the band names when the chain runs, above the band beneath it, and Dismiss stops it until the next turn ends', { options: { chain: true } }, async ($, on) => {
+test('the band gives when the chain runs inside the context row, above the band beneath it, and Dismiss stops it until the next turn ends', { options: { chain: true } }, async ($, on) => {
   const clock = mock.clock(on)
   const asked = engine(on, { percent: 30 })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
@@ -218,17 +218,17 @@ test('the band names when the chain runs, above the band beneath it, and Dismiss
   await personsTurn($, clock, 't1')
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
-    const row = await ui.find({ type: 'Text', text: /before it goes cold/ })
-    expect(row?.text).toMatch(/handoff and compact at \d\d:\d\d/)
-    // The context figure's line is there too, and the band beneath.
+    // One row offers the chain and says when it runs by itself; no second row repeats it.
+    expect((await ui.find({ type: 'Text', text: /runs itself at/ }))?.text).toMatch(/runs itself at \d\d:\d\d/)
+    expect(await ui.find({ type: 'Text', text: /before it goes cold/ })).toBeUndefined()
     expect((await ui.find({ type: 'Text', text: /300k \/ 1M/ }))?.text).toBe('300k / 1M  30%')
     expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
     await ui.unmount()
   }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  await ui.press({ key: 'cold-dismiss' })
-  expect(await ui.find({ type: 'Text', text: /before it goes cold/ })).toBeUndefined()
+  await ui.press({ key: 'context-dismiss' })
+  expect(await ui.find({ type: 'Text', text: /runs itself at/ })).toBeUndefined()
   await ui.unmount()
   await clock.advance(180 * MINUTE)
   expect(asked).toEqual([])
