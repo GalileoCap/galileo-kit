@@ -55,7 +55,8 @@
   },
   "suppressions": {
     "skip": [
-      ".claude-plugin"
+      ".claude-plugin",
+      "worktrees"
     ]
   },
   "footprint": {
