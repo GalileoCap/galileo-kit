@@ -46,3 +46,9 @@ Each of these ran in the engine's tests alone: the facts section after a handoff
 ### main, C2 and A67: the hooks the security default skips removed
 
 The kit hooks neither `classic.PostToolUse`, `classic.PostToolUseFailure`, `classic.PostModelSwitch` nor `session.compact`, events the organization's security default sends past it (`C2`, `A67` the kit hooks no event the security default sends past it). It reaches a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.1. Until then every session on 0.35.1 shows a skip notice once for each of those events it meets.
+
+## At the install of session-kit 0.36.0
+
+### A75: Swift projects regenerate their layers
+
+`A75` (the layers pack holds Swift) reaches a project only through the marketplace: `main` pushed on the owner's word, then the plugin updated as for 0.35.2. brain-dumping then adds a `swift` block under `layers` in its `.claude/claude-kit.json` (`core`, `shell`, `tests`, `core_module`), runs `session-codeintel layers`, and retires its hand-written `lint/ast-grep/` rules and tests, which the generated files replace (the command refuses a file it did not write, so the old ones are removed first).

@@ -102,10 +102,16 @@ the gate that holds the pure-core shape. The block names `rules` and
 core's parent by default) and `unwinds` (files that may raise). Under
 `typescript`, it names `core` and `effects` (directories) and `outside` (import
 prefixes the core may not use, beyond `react`, `react-dom` and
-`@tanstack/`). It writes one rule and one test file per rule
+`@tanstack/`). Under `swift`, it names `core` and `shell` (directories),
+`tests` (the tests directory), `core_module` (the one module a test may
+import beyond `Testing`) and `source` (the tree `throw` is refused in, the
+core's parent by default), and the block is read only when all four paths
+are named. It writes one rule and one test file per rule
 (`py-core-no-io`, `py-core-sync`, `py-shell-declares-effects`,
 `py-no-raise`, `ts-effects-declared`, `ts-core-no-effects`,
-`ts-core-imports-only-core`, each only for the layers named), a
+`ts-core-imports-only-core`, `swift-core-imports-nothing`,
+`swift-shell-declares-effects`, `swift-no-throw`,
+`swift-tests-import-only-the-core`, each only for the layers named), a
 `ruff.toml` in the Python core banning the effect modules and extending
 the nearest ruff or pyproject config above it, and `sgconfig.yml` at the
 root when there is none. Each file starts with a header naming the

@@ -28,6 +28,12 @@ SETTINGS = {
             "effects": "frontend/src/effects",
             "outside": ["@/effects/"],
         },
+        "swift": {
+            "core": "ios/Sources/AppCore",
+            "shell": "ios/Sources/app",
+            "tests": "ios/Tests",
+            "core_module": "AppCore",
+        },
     }
 }
 
@@ -49,6 +55,11 @@ PLANTED = {
         "export function now(): number { return Date.now() }\n"
         "/** @effects clock */\nexport function then(): number { return Date.now() }\n"
     ),
+    "ios/Sources/AppCore/pure.swift": "import Foundation\nfunc f() throws -> Int { 1 }\n",
+    "ios/Sources/app/main.swift": (
+        "func g() {}\n/// Effects: prints.\nfunc h() { _ = try? call() }\n"
+    ),
+    "ios/Tests/AppTests/t.swift": "import Testing\n@testable import AppCore\nimport AppKit\n",
 }
 
 
@@ -73,6 +84,8 @@ def test_the_pack_is_written_once_and_a_foreign_file_is_refused(
     assert settings is not None
     assert settings.python is not None
     assert settings.python.source == "backend/src/app"
+    assert settings.swift is not None
+    assert settings.swift.source == "ios/Sources"
     assert main(["layers", str(root)]) == 0
     out = capsys.readouterr().out
     rules = sorted(p.name for p in (root / "lint/ast-grep/rules").glob("*.yml"))
@@ -81,6 +94,10 @@ def test_the_pack_is_written_once_and_a_foreign_file_is_refused(
         "py-core-sync.yml",
         "py-no-raise.yml",
         "py-shell-declares-effects.yml",
+        "swift-core-imports-nothing.yml",
+        "swift-no-throw.yml",
+        "swift-shell-declares-effects.yml",
+        "swift-tests-import-only-the-core.yml",
         "ts-core-imports-only-core.yml",
         "ts-core-no-effects.yml",
         "ts-effects-declared.yml",
@@ -92,6 +109,9 @@ def test_the_pack_is_written_once_and_a_foreign_file_is_refused(
     assert (root / "sgconfig.yml").read_text(encoding="utf-8").startswith(HEADER)
     ruff_toml = (root / "backend/src/app/core/ruff.toml").read_text(encoding="utf-8")
     assert 'extend = "../../../pyproject.toml"' in ruff_toml
+    assert "ios/Sources/**" in (root / "lint/ast-grep/rules/swift-no-throw.yml").read_text(
+        encoding="utf-8"
+    )
     assert "backend/src/app/core/result.py" in (
         root / "lint/ast-grep/rules/py-no-raise.yml"
     ).read_text(encoding="utf-8")
@@ -120,6 +140,11 @@ def test_the_rules_pass_their_own_cases_and_target_the_layers(tmp_path: Path) ->
         ("py-core-no-io", "backend/src/app/core/pure.py", 5),
         ("py-no-raise", "backend/src/app/core/pure.py", 6),
         ("py-shell-declares-effects", "backend/src/app/shell/io.py", 1),
+        ("swift-core-imports-nothing", "ios/Sources/AppCore/pure.swift", 1),
+        ("swift-no-throw", "ios/Sources/AppCore/pure.swift", 2),
+        ("swift-no-throw", "ios/Sources/app/main.swift", 3),
+        ("swift-shell-declares-effects", "ios/Sources/app/main.swift", 1),
+        ("swift-tests-import-only-the-core", "ios/Tests/AppTests/t.swift", 3),
         ("ts-core-imports-only-core", "frontend/src/core/a.ts", 1),
         ("ts-core-no-effects", "frontend/src/core/a.ts", 2),
         ("ts-effects-declared", "frontend/src/effects/b.ts", 1),

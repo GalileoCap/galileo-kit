@@ -32,7 +32,8 @@ structural search and rewrite, import boundaries as a gate, and complete
   settings, and `session-codeintel layers` writes the ast-grep rules
   that hold the shape (no I/O, clock, randomness or `await` in the
   core, every shell function naming its effects, no `raise` outside the
-  file that unwinds, the core importing only the core), a test per
+  file that unwinds, the core importing only the core; in Swift, no import in the core, no
+  `throw`, `throws`, `try?` or `try!`, tests importing only the core), a test per
   rule, and the core's `ruff.toml`. The rules carry the project's paths,
   so they are generated from the settings and never edited.
 - Measures the code. `session-codeintel measure` gives, per area
