@@ -83,3 +83,8 @@ read-aloud was parked and removed (`A70`, read-aloud parked and removed from the
 
 The new band, the status line, `/kit`, the turn line, the failure rows and the notices (`A71` the band draws by urgency, `A72` the band's buttons act, `A73` the kit's numbers on a status line, a turn line and a pane, `A74` failures stay on the band) reach a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.3. Only a real session proves how they look and act, and none has been seen yet: the colours in the desktop theme and the terminal's, the status line beside the person's own `statusLine` command, `Handoff and compact` and `Run chain now` running the handoff and `/compact` from a press, the turn line finding its turn by duration, `$.ui.notify` reaching the OS, `/kit` opening the pane on each surface, and the failed row's `Try again`. The `statusLine` option turns the status line off if it collides.
 
+## At the install of session-kit 0.37.0
+
+### A75: Swift projects regenerate their layers
+
+`A75` (the layers pack holds Swift) reaches a project only through the marketplace: `main` pushed on the owner's word, then the plugin updated as for 0.36.0. brain-dumping then adds a `swift` block under `layers` in its `.claude/claude-kit.json` (`core`, `shell`, `tests`, `core_module`), runs `session-codeintel layers`, and retires its hand-written `lint/ast-grep/` rules and tests, which the generated files replace (the command refuses a file it did not write, so the old ones are removed first).

@@ -5,11 +5,16 @@ A project that takes the shape names its layers under ``layers`` in
 ``source`` (the tree ``raise`` is refused in, the core's parent by default)
 and ``unwinds`` (the files that may raise, where ``fail`` unwinds to its
 ``attempt``); for TypeScript, ``core`` and ``effects`` directories and
-``outside``, import prefixes the core may not import beyond the frameworks.
+``outside``, import prefixes the core may not import beyond the frameworks;
+for Swift, ``core`` and ``shell`` directories, ``tests`` (the tests directory),
+``core_module`` (the one module a test may import beyond ``Testing``) and
+``source`` (the tree ``throw`` is refused in, the core's parent by default).
 ``session-codeintel layers`` writes the ast-grep rules that hold the shape
 (no I/O, clock, randomness or ``await`` in the core, every shell function
 naming its effects, no ``raise`` outside the unwinding files, the core
-importing only the core), one test file per rule, a ``ruff.toml`` in the
+importing only the core; in Swift, no import in the core, no ``throw``,
+``throws``, ``try?`` or ``try!`` in the source, tests importing only the
+core), one test file per rule, a ``ruff.toml`` in the
 Python core banning the effect modules, and an ``sgconfig.yml`` when the
 project has none. Every file carries a header naming this command, and a
 file without it is never replaced.
@@ -73,6 +78,17 @@ class TypeScript:
 
 
 @dataclass(frozen=True, slots=True)
+class Swift:
+    """The Swift layers."""
+
+    core: str
+    shell: str
+    tests: str
+    core_module: str
+    source: str
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     """The ``layers`` block."""
 
@@ -80,6 +96,7 @@ class Settings:
     tests: str = "lint/ast-grep/tests"
     python: Python | None = None
     typescript: TypeScript | None = None
+    swift: Swift | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +118,7 @@ def read_settings(root: Path) -> Settings | None:
         tests=text(block, "tests") or "lint/ast-grep/tests",
         python=_python(block.get("python")),
         typescript=_typescript(block.get("typescript")),
+        swift=_swift(block.get("swift")),
     )
 
 
@@ -123,6 +141,17 @@ def _typescript(block: object) -> TypeScript | None:
     return TypeScript(core=core, effects=effects, outside=strings(block.get("outside")))
 
 
+def _swift(block: object) -> Swift | None:
+    if not is_record(block):
+        return None
+    core, shell, tests = text(block, "core"), text(block, "shell"), text(block, "tests")
+    module = text(block, "core_module")
+    if core is None or shell is None or tests is None or module is None:
+        return None
+    source = text(block, "source") or core.rsplit("/", 1)[0]
+    return Swift(core=core, shell=shell, tests=tests, core_module=module, source=source)
+
+
 def render(root: Path, settings: Settings) -> dict[str, str]:
     """Every file the pack writes, keyed by its path from the root."""
     files: dict[str, str] = {}
@@ -131,6 +160,8 @@ def render(root: Path, settings: Settings) -> dict[str, str]:
         files[f"{settings.python.core}/ruff.toml"] = _ruff(root, settings.python.core)
     if settings.typescript:
         files.update(_typescript_rules(settings.typescript, settings))
+    if settings.swift:
+        files.update(_swift_rules(settings.swift, settings))
     if not (root / "sgconfig.yml").exists():
         config = f"ruleDirs:\n  - {settings.rules}\ntestConfigs:\n  - testDir: {settings.tests}\n"
         files["sgconfig.yml"] = HEADER + config
@@ -169,6 +200,24 @@ def _typescript_rules(ts: TypeScript, settings: Settings) -> dict[str, str]:
     files.update(_rule(settings, "ts-effects-declared", TS_EFFECTS.format(**at), TS_EFFECTS_CASES))
     files.update(_rule(settings, "ts-core-no-effects", no_effects, TS_CORE_NO_EFFECTS_CASES))
     files.update(_rule(settings, "ts-core-imports-only-core", imports, TS_CORE_IMPORTS_CASES))
+    return files
+
+
+def _swift_rules(sw: Swift, settings: Settings) -> dict[str, str]:
+    at = {"core": sw.core, "shell": sw.shell, "tests": sw.tests, "module": sw.core_module}
+    no_throw = SWIFT_NO_THROW.format(source=sw.source)
+    files: dict[str, str] = {}
+    files.update(
+        _rule(settings, "swift-core-imports-nothing", SWIFT_CORE.format(**at), SWIFT_CORE_CASES)
+    )
+    files.update(
+        _rule(settings, "swift-shell-declares-effects", SWIFT_SHELL.format(**at), SWIFT_SHELL_CASES)
+    )
+    files.update(_rule(settings, "swift-no-throw", no_throw, SWIFT_NO_THROW_CASES))
+    tests_cases = SWIFT_TESTS_CASES.replace("@MODULE@", sw.core_module)
+    files.update(
+        _rule(settings, "swift-tests-import-only-the-core", SWIFT_TESTS.format(**at), tests_cases)
+    )
     return files
 
 
@@ -411,4 +460,114 @@ valid:
 invalid:
   - "import {{ useState }} from 'react'"
   - "import {{ queryOptions }} from '@tanstack/react-query'"
+"""
+SWIFT_CORE = """\
+language: swift
+severity: error
+message: >-
+  `{core}` imports nothing: read the value in `{shell}` and pass it in.
+files:
+  - {core}/**
+rule:
+  kind: import_declaration
+"""
+SWIFT_CORE_CASES = """\
+valid:
+  - "func pure(_ a: Int) -> Int { a + 1 }"
+invalid:
+  - "import Foundation"
+  - "@preconcurrency import Darwin"
+"""
+SWIFT_SHELL = """\
+language: swift
+severity: error
+message: >-
+  A function in `{shell}` ends its doc comment with a `/// Effects:` line naming
+  what it touches. A function with none belongs in `{core}`.
+files:
+  - {shell}/**
+rule:
+  kind: function_declaration
+  not:
+    follows:
+      kind: comment
+      regex: '^///\\s*Effects:'
+      stopBy: neighbor
+"""
+SWIFT_SHELL_CASES = """\
+valid:
+  - |
+    /// Write the note.
+    /// Effects: writes a file.
+    func write() {}
+  - |
+    final class Panel {
+        /// Effects: shows a window.
+        override func present() {}
+    }
+invalid:
+  - "func write() {}"
+  - |
+    /// Write the note.
+    func write() {}
+  - |
+    /// Effects: writes a file.
+    /// Then renames it.
+    func write() {}
+  - |
+    final class Panel {
+        // Effects: a plain comment is not a doc comment.
+        private func present() {}
+    }
+"""
+SWIFT_NO_THROW = """\
+language: swift
+severity: error
+message: >-
+  Return a `Result` instead. Catch a throwing system call in a do/catch where
+  it is made; `try?` drops the failure and `try!` crashes on it.
+files:
+  - {source}/**
+rule:
+  any:
+    - kind: throw_keyword
+    - kind: throws
+    - kind: try_operator
+      regex: '^try[?!]$'
+"""
+SWIFT_NO_THROW_CASES = """\
+valid:
+  - |
+    func make() -> Result<Int, Failure> {
+        do { try system() } catch { return .failure(.failed) }
+        return .success(1)
+    }
+invalid:
+  - "func make() throws -> Int { 1 }"
+  - "func make() -> Int { throw Failure.failed }"
+  - "func make() -> Int? { try? system() }"
+  - "func make() -> Int { try! system() }"
+"""
+SWIFT_TESTS = """\
+language: swift
+severity: error
+message: >-
+  A test in `{tests}` imports `Testing` and `{module}` and nothing else, so it
+  reaches the pure core and no effect.
+files:
+  - {tests}/**
+rule:
+  kind: import_declaration
+  not:
+    regex: '^(@testable\\s+)?import\\s+(Testing|{module})$'
+"""
+SWIFT_TESTS_CASES = """\
+valid:
+  - "import Testing"
+  - "import @MODULE@"
+  - "@testable import @MODULE@"
+invalid:
+  - "import AppKit"
+  - "import XCTest"
+  - "@testable import other"
 """

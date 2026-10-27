@@ -6,6 +6,14 @@ the command line, which is the public surface in [`api.md`](api.md), is
 a major bump, and its entry says what a consumer has to change. Before
 1.0, a minor bump may break.
 
+## 0.9.0, 2026-10-26
+
+- `layers`: a `swift` block (`core`, `shell`, `tests`, `core_module`,
+  `source`) writes four rules, `swift-core-imports-nothing`,
+  `swift-shell-declares-effects`, `swift-no-throw` and
+  `swift-tests-import-only-the-core`, each with its test file
+  ([`api.md`](api.md)).
+
 ## 0.8.0, 2026-10-26
 
 - `review DIR [--into FILE] [--claude PATH]`: what a program can read off
