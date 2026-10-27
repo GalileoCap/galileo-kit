@@ -1,12 +1,15 @@
 """The owner's listening samples: the same two paragraphs in every voice measured.
 
-    /usr/bin/python3 -I samples.py <base> <corpus.json> <out folder>
+    /usr/bin/python3 -I samples.py <base> <corpus.json> <out folder> [<say voice>...]
 
 The paragraphs are the first two utterances of the corpus's `medium-1`. Each
 voice's WAV is the two read one after the other with half a second between.
+System voices named after the folder are read by `say` alone, and the neural
+voices are then left out.
 """
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -48,7 +51,8 @@ def main() -> None:
     sample_corpus = work / "corpus.json"
     sample_corpus.write_text(json.dumps({"readings": [{"id": "sample", "utterances": paragraphs}]}))
 
-    for name, engine, model, voice in VOICES:
+    say_voices = sys.argv[4:]
+    for name, engine, model, voice in [] if say_voices else VOICES:
         spec = {
             "engine": engine,
             "model": str(base / "models" / model),
@@ -66,13 +70,17 @@ def main() -> None:
         join(sorted((work / name).glob("sample-*.wav")), out / f"{name}.wav")
         print(out / f"{name}.wav", flush=True)
 
-    parts = []
-    for index, text in enumerate(paragraphs):
-        part = work / f"say-{index}.wav"
-        subprocess.run(["say", "--file-format=WAVE", "--data-format=LEI16@22050", "-o", str(part), text], check=True)
-        parts.append(part)
-    join(parts, out / "say-default.wav")
-    print(out / "say-default.wav", flush=True)
+    for voice in say_voices or [""]:
+        named = ["-v", voice] if voice else []
+        parts = []
+        for index, text in enumerate(paragraphs):
+            part = work / f"say-{index}.wav"
+            subprocess.run(["say", *named, "--file-format=WAVE", "--data-format=LEI16@22050", "-o", str(part), text], check=True)
+            parts.append(part)
+        slug = re.sub(r"\W+", "-", voice).strip("-").lower() or "default"
+        target = out / f"say-{slug}.wav"
+        join(parts, target)
+        print(target, flush=True)
 
 
 main()

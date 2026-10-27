@@ -8,7 +8,8 @@ configuration runs bench.py under `/usr/bin/time -l` twice over: one process per
 reading for three readings (the model loaded at each press), and one process
 for all ten (a resident server). The system voice reads every utterance with
 `say -o`. The results file holds every figure the report's tables are drawn
-from. Names given run those configurations alone, without the system voice.
+from. Names given run those configurations alone, without the system voice,
+and a name `say:<voice>` measures `say` in that voice.
 """
 
 import json
@@ -153,20 +154,21 @@ def wav_seconds(path: Path) -> float:
         return audio.getnframes() / audio.getframerate()
 
 
-def say_baseline(corpus: Path, out: Path) -> dict:
+def say_baseline(corpus: Path, out: Path, voice: "str | None" = None) -> dict:
     out.mkdir(parents=True, exist_ok=True)
+    named = [] if voice is None else ["-v", voice]
     rows = []
     for reading in json.loads(corpus.read_text())["readings"]:
         for index, text in enumerate(reading["utterances"]):
             wav = out / f"{reading['id']}-{index:02d}.wav"
             done = subprocess.run(
-                ["/usr/bin/time", "-l", "say", "--file-format=WAVE", "--data-format=LEI16@22050", "-o", str(wav), text],
+                ["/usr/bin/time", "-l", "say", *named, "--file-format=WAVE", "--data-format=LEI16@22050", "-o", str(wav), text],
                 capture_output=True,
                 text=True,
                 check=True,
             )
             figures = time_l(done.stderr)
-            rows.append({"reading": reading["id"], "index": index, "synth_s": figures["real_s"], "cpu_s": figures["cpu_s"], "audio_s": wav_seconds(wav), "peak_footprint_mb": figures["peak_footprint_mb"]})
+            rows.append({"reading": reading["id"], "index": index, "synth_s": figures["real_s"], "cpu_s": figures["cpu_s"], "audio_s": wav_seconds(wav), "peak_footprint_mb": figures["peak_footprint_mb"], "max_rss_mb": figures["max_rss_mb"]})
     audio = sum(row["audio_s"] for row in rows)
 
     return {
@@ -175,6 +177,8 @@ def say_baseline(corpus: Path, out: Path) -> dict:
         "realtime_factor": audio / sum(row["synth_s"] for row in rows),
         "audio_s": audio,
         "peak_footprint_mb": max(row["peak_footprint_mb"] for row in rows),
+        "max_rss_mb": max(row["max_rss_mb"] for row in rows),
+        "cpu_s_by_reading": {reading: sum(row["cpu_s"] for row in rows if row["reading"] == reading) for reading in COLD},
     }
 
 
@@ -187,6 +191,11 @@ def main() -> None:
     if only is None:
         results["say"] = say_baseline(corpus, work / "say")
         print(f"  say: {results['say']}", flush=True)
+    for name in [one for one in only or [] if one.startswith("say:")]:
+        voice = name[len("say:"):]
+        results.setdefault("say_voices", {})[voice] = say_baseline(corpus, work / re.sub(r"\W+", "-", name), voice)
+        print(f"  {name}: {results['say_voices'][voice]}", flush=True)
+        results_path.write_text(json.dumps(results, indent=2))
     for config in [one for one in CONFIGS if only is None or one[0] in only]:
         slug = re.sub(r"\W+", "-", config[0])
         cold = [run_bench(base, corpus, config, [reading], work / f"{slug}-cold-{reading}") for reading in COLD]
