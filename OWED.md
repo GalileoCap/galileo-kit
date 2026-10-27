@@ -70,3 +70,9 @@ A new plugin of the marketplace (`A69`, the final answer read aloud by its own p
 ### main, A69: the stop is immediate
 
 read-aloud speaks each paragraph through a `/usr/bin/say` it spawns, and a stop kills it (`A69`, the final answer read aloud by its own plugin), by the owner's ask. It replaces the 0.1.0 install above, which never ran: the same command and the same removal of the mods-folder link, and in the check the stop button ends the voice at once, mid-sentence.
+
+## At the removal of read-aloud
+
+### main, A70: nothing is owed
+
+read-aloud was parked and removed (`A70`, read-aloud parked and removed from the kit), so the two entries above are void: `claude plugin install read-aloud@galileo-kit` is not to be run, and the desktop check of the immediate stop is not owed. Optional: delete `~/.local/share/read-aloud/` (about 1.1 GB of Kokoro and Piper environments, weights and samples).

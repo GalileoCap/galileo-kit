@@ -60,8 +60,7 @@
   },
   "footprint": {
     "plugins": [
-      "plugins/session-kit",
-      "plugins/read-aloud"
+      "plugins/session-kit"
     ]
   }
 }

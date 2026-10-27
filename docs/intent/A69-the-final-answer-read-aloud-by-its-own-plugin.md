@@ -2,9 +2,9 @@
 id: A69
 from: [O4]
 source: owner
-status: decided 2026-10-26
+status: retired 2026-10-26
 kind: tool
-implemented_by: [plugins/read-aloud/hooks/read_aloud.tsx, plugins/read-aloud/hooks/speech.ts, plugins/read-aloud/.claude-plugin/plugin.json, plugins/read-aloud/types/index.d.ts, plugins/read-aloud/footprint.toml, .claude-plugin/marketplace.json]
+implemented_by: []
 proven_by: []
 supersedes: []
 ---

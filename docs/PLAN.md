@@ -85,6 +85,7 @@
 - 2026-10-26: M27 of the mod analysis, by the owner's ask before the install. An effort for the new task carried by the offer (`A65`): `new_task` takes an optional `effort` with its reason, kept when it differs from the session's, and the band's "Handoff, clear, effort <level>" runs `/effort <level>` after the clear and before the prompt is sent again. The owner also dropped M12 (a fork handoff). session-kit 0.35.0.
 - 2026-10-26: by the owner's ask, the final answer read aloud by its own plugin (`A69`): `read-aloud` keeps the main session's final answer at each turn's end and reads it with the system's voice on a press of the row above the prompt, on `/read-aloud`, or at every turn's end with auto-read on, prose only, a stop taking effect after the paragraph being spoken. Its eight blind tests passed on the terminal and the desktop and were removed. read-aloud 0.1.0.
 - 2026-10-26: by the owner's ask, a stop in `read-aloud` ends the voice at once (`A69`): each paragraph is a `/usr/bin/say` spawned through `$.process.spawn`, killed when a stop closes its stream, in place of `$.audio.speak`, which cannot be cut short. Seven blind tests passed and were removed. read-aloud 0.2.0.
+- 2026-10-26: by the owner's ask, the speech work is parked and `read-aloud` removed from the kit (`A70`, `A69` retired); the analysis, the Kokoro and Piper reviews and the measurements stay as notes for a return.
 
 ## Candidates
 
