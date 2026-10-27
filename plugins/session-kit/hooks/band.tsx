@@ -49,15 +49,26 @@ type Parts = Pick<ElementTable<'desktop'>, 'Box' | 'Button' | 'Text'>
 /** What a row needs to draw: the elements, whether a turn runs, and whether the chain is on. */
 type Draw = { p: Parts; isWorking: boolean; chainOn: boolean }
 
+/** A small ✕ at the row's right edge: the spacer takes the free width, and the glyph stands alone as a plain control. */
+function dismissButton(d: Draw, key: string, onPress: () => void) {
+  const { Box, Button } = d.p
+
+  return (
+    <Box key={`${key}-end`} flexGrow={1} justifyContent="flex-end">
+      <Button key={key} label="✕" plain dimColor onPress={onPress} />
+    </Box>
+  )
+}
+
 function failureRow($: EngineInterface, d: Draw, held: Failure) {
   const { Box, Button, Text } = d.p
 
   return (
-    <Box key="failure" gap={1}>
+    <Box key="failure" gap={1} alignItems="center">
       <Text bold color="error">Failed</Text>
       <Text>{`${held.text}.`}</Text>
       {held.retry === undefined ? null : <Button key="failure-retry" label="Try again" onPress={() => retryFailure($)} />}
-      <Button key="failure-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissFailure($)} />
+      {dismissButton(d, 'failure-dismiss', () => dismissFailure($))}
     </Box>
   )
 }
@@ -67,7 +78,7 @@ function offerRow($: EngineInterface, d: Draw, offered: NewTaskState) {
   const isOffered = offered.stage === 'offered'
 
   return (
-    <Box key="offer" gap={1}>
+    <Box key="offer" gap={1} alignItems="center">
       <Text>{newTaskLine(offered)}</Text>
       {isOffered && offered.effort !== undefined ? (
         <Button key="new-task-clear-effort" label={`Handoff, clear, effort ${offered.effort.level}`} variant="primary" onPress={() => handoffThenClear($, offered, true)} />
@@ -76,7 +87,7 @@ function offerRow($: EngineInterface, d: Draw, offered: NewTaskState) {
         <Button key="new-task-clear" label="Handoff and clear" variant={offered.effort === undefined ? 'primary' : undefined} onPress={() => handoffThenClear($, offered, false)} />
       ) : null}
       {isOffered ? <Button key="new-task-here" label="Keep going here" onPress={() => keepGoing($)} /> : null}
-      <Button key="new-task-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissOffer($)} />
+      {dismissButton(d, 'new-task-dismiss', () => dismissOffer($))}
     </Box>
   )
 }
@@ -85,10 +96,10 @@ function chainRow($: EngineInterface, d: Draw, running: ChainState) {
   const { Box, Button, Text } = d.p
 
   return (
-    <Box key="chain" gap={1}>
+    <Box key="chain" gap={1} alignItems="center">
       <Text bold color={running.stage === 'waiting' && running.stopped !== undefined ? 'warning' : 'subtle'}>Chain</Text>
       <Text>{stageLine(running)}</Text>
-      <Button key="chain-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissChain($)} />
+      {dismissButton(d, 'chain-dismiss', () => dismissChain($))}
     </Box>
   )
 }
@@ -97,13 +108,13 @@ function figureRow($: EngineInterface, d: Draw, now: ContextFigure, grewBy: numb
   const { Box, Button, Text } = d.p
 
   return (
-    <Box key="figure" gap={1}>
+    <Box key="figure" gap={1} alignItems="center">
       <Text bold color={tier === 0 ? 'warning' : 'error'}>Context</Text>
       <Text tabular>{`${compact(now.tokens)} / ${compact(now.window)}  ${now.percent}%`}</Text>
       {grewBy > 0 ? <Text dimColor>{`+${compact(grewBy)} last turn`}</Text> : null}
       {d.isWorking ? null : <Button key="context-handoff" label="Handoff" variant={d.chainOn ? undefined : 'primary'} onPress={() => handoffByPerson($)} />}
       {d.isWorking || !d.chainOn ? null : <Button key="context-chain" label="Handoff and compact" variant="primary" onPress={() => chainByPerson($)} />}
-      <Button key="context-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissFigure($)} />
+      {dismissButton(d, 'context-dismiss', () => dismissFigure($))}
     </Box>
   )
 }
@@ -112,11 +123,11 @@ function coldRow($: EngineInterface, d: Draw, at: number) {
   const { Box, Button, Text } = d.p
 
   return (
-    <Box key="cold" gap={1}>
+    <Box key="cold" gap={1} alignItems="center">
       <Text bold color="subtle">Cache</Text>
       <Text>{coldText(at)}</Text>
-      {d.isWorking ? null : <Button key="cold-run" label="Run chain now" onPress={() => runColdNow($)} />}
-      <Button key="cold-dismiss" label="Dismiss" role="dismiss" onPress={() => dismissCold($)} />
+      {d.isWorking ? null : <Button key="cold-run" label="Run chain now" variant="primary" onPress={() => runColdNow($)} />}
+      {dismissButton(d, 'cold-dismiss', () => dismissCold($))}
     </Box>
   )
 }
@@ -125,9 +136,9 @@ function limitRow($: EngineInterface, d: Draw, w: SessionRateLimit) {
   const { Box, Button, Text } = d.p
 
   return (
-    <Box key={`limit-${w.kind}`} gap={1}>
+    <Box key={`limit-${w.kind}`} gap={1} alignItems="center">
       <Text color={w.percentUsed >= LIMIT_FIRM ? 'error' : 'warning'}>{limitLine(w)}</Text>
-      <Button key={`limit-dismiss-${w.kind}`} label="Dismiss" role="dismiss" onPress={() => dismissLimit($, w)} />
+      {dismissButton(d, `limit-dismiss-${w.kind}`, () => dismissLimit($, w))}
     </Box>
   )
 }
@@ -173,7 +184,7 @@ export const register: Register = (on, options) => {
     }
 
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" rowGap="xs">
         {rows}
         {below}
       </Box>

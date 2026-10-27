@@ -88,3 +88,9 @@ The new band, the status line, `/kit`, the turn line, the failure rows and the n
 ### A75: Swift projects regenerate their layers
 
 `A75` (the layers pack holds Swift) reaches a project only through the marketplace: `main` pushed on the owner's word, then the plugin updated as for 0.36.0. brain-dumping then adds a `swift` block under `layers` in its `.claude/claude-kit.json` (`core`, `shell`, `tests`, `core_module`), runs `session-codeintel layers`, and retires its hand-written `lint/ast-grep/` rules and tests, which the generated files replace (the command refuses a file it did not write, so the old ones are removed first).
+
+## At the install of session-kit 0.37.1
+
+### The band's rows: a row gap, centred rows, and a small ✕ at the right
+
+The band's rows drew into each other on the desktop (the Context row's buttons ran into the Cache row), so the column has a row gap, each row centres its children, `Run chain now` is a primary button like `Handoff and compact`, and each Dismiss is a plain ✕ at the row's right edge. It reaches a session as 0.36.0 does. Only the desktop proves the spacing and the ✕: `rowGap` and `flexGrow` there are known only from the engine's declarations.

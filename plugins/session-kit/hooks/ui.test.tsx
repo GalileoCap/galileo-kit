@@ -227,7 +227,7 @@ test('a handoff that does not run stops the chain and leaves a Failed row above 
     expect(label?.props.color).toBe('error')
     expect(textOf(drawn.texts, /the handoff did not run \(.+\), so the chain stopped/)).toBeDefined()
     expect(buttonOf(drawn, 'failure-retry')?.text).toBe('Try again')
-    expect(buttonOf(drawn, 'failure-dismiss')?.text).toBe('Dismiss')
+    expect(buttonOf(drawn, 'failure-dismiss')?.text).toBe('✕')
     expect(textOf(drawn.texts, /^session-kit is writing/)).toBeUndefined()
     expect(drawn.texts.findIndex((t) => t.text === 'Failed')).toBeLessThan(drawn.texts.findIndex((t) => t.text === 'engine'))
   }
