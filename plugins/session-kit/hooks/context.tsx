@@ -7,9 +7,13 @@
 // after which the band offers the handoff and a clear, or to keep going here,
 // and sends the person's prompt again. In a context that holds no task yet
 // (new, or just cleared) `new_task` offers nothing: there is nothing to clear.
-// Each band has a Dismiss button: the figure's stays away for a `step`, and
-// the chain's and the offer's stop what is left of them. The kit's line draws
-// above whatever the plugins beneath drew. A chain goes on by itself, and at
+// The band itself is drawn in band.tsx, the status line in status.ts and the
+// pane in pane.tsx. This file keeps the state they read and the actions their
+// buttons run: `Handoff` and `Handoff and compact` (the person's own signal,
+// which starts the chain with the next step theirs), `Run chain now`, and
+// `Try again` on a failure that stays on the band until dismissed. A chain's
+// failure and the end of a compaction with the next step the owner's also go
+// to the person's notifications. A chain goes on by itself, and at
 // the third, the fifth and every signal from the seventh since the person's
 // last prompt a Haiku judge reads the owner's task, the steps so far, the
 // commits between and the step proposed. When the session is going round, or

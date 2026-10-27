@@ -76,3 +76,10 @@ read-aloud speaks each paragraph through a `/usr/bin/say` it spawns, and a stop 
 ### main, A70: nothing is owed
 
 read-aloud was parked and removed (`A70`, read-aloud parked and removed from the kit), so the two entries above are void: `claude plugin install read-aloud@galileo-kit` is not to be run, and the desktop check of the immediate stop is not owed. Optional: delete `~/.local/share/read-aloud/` (about 1.1 GB of Kokoro and Piper environments, weights and samples).
+
+## At the install of session-kit 0.36.0
+
+### main, A71 to A74: the band, the status line, the pane and the failures
+
+The new band, the status line, `/kit`, the turn line, the failure rows and the notices (`A71` the band draws by urgency, `A72` the band's buttons act, `A73` the kit's numbers on a status line, a turn line and a pane, `A74` failures stay on the band) reach a session only after `main` is pushed on the owner's word and the plugin is updated at user scope and in each project install, as for 0.35.3. Only a real session proves how they look and act, and none has been seen yet: the colours in the desktop theme and the terminal's, the status line beside the person's own `statusLine` command, `Handoff and compact` and `Run chain now` running the handoff and `/compact` from a press, the turn line finding its turn by duration, `$.ui.notify` reaching the OS, `/kit` opening the pane on each surface, and the failed row's `Try again`. The `statusLine` option turns the status line off if it collides.
+

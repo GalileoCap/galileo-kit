@@ -1,6 +1,6 @@
 # How the kit surfaces in the UI, and how to improve it
 
-Read on 2026-10-26 from `plugins/session-kit/hooks/` (`context.tsx`, `checkout.ts`, `facts.ts`) and the engine's API types (build 2.1.308). Nothing was run: no band was seen on a screen in this pass, so every finding about looks comes from the code and the types. The owner's ask: the bands are lackluster.
+Read on 2026-10-26 from `plugins/session-kit/hooks/` (`context.tsx`, `checkout.ts`, `facts.ts`) and the engine's API types (build 2.1.308). Nothing was run: no band was seen on a screen in this pass, so every finding about looks comes from the code and the types. The owner's ask: the bands are lackluster. All seven proposals were built on 2026-10-26 as `A71` (the band draws by urgency and keeps only what needs a decision), `A72` (the band's buttons act and a press is the person's signal), `A73` (the kit's numbers always on a status line, a turn line and a pane) and `A74` (failures stay on the band and an unattended end is notified). The answers taken to its open questions: a press may start the chain, and the stage rows of the transcript keep their wording.
 
 ## What the kit draws today
 
