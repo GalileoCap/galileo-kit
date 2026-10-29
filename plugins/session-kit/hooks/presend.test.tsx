@@ -71,7 +71,7 @@ async function press($: EngineInterface, key: string) {
   await ui.unmount()
 }
 
-test('a ?? message Haiku finds something in is held and put back in the box, and Send as is sends the box once, unchecked', async ($, on) => {
+test('a ?? message Haiku finds something in is held and put back in the box, and Send as is sends it as held, once, unchecked', async ($, on) => {
   const w = world(on)
   const e = engine(on)
   e.answer = FOUND
@@ -87,11 +87,10 @@ test('a ?? message Haiku finds something in is held and put back in the box, and
   expect(drawn.texts).toMatch(/M27 has no name/)
   expect(drawn.buttons).toEqual(expect.arrayContaining(['presend-send', 'presend-rewrite', 'presend-dismiss']))
 
-  e.box.text = 'Do M27 before installing, as planned'
   await press($, 'presend-send')
   await w.clock.settle()
   expect(e.asked.length).toBe(1)
-  expect(e.reached).toEqual(['Do M27 before installing, as planned'])
+  expect(e.reached).toEqual(['Do M27 before installing'])
   expect(e.box.text).toBe('')
   expect((await band($)).texts).not.toMatch(/M27 has no name/)
 })
@@ -150,4 +149,28 @@ test('a Send as is whose message would not trigger the check lets no later ?? me
   const again = await $.prompt.submit(typed('?? Do M27 before installing'))
   expect(e.asked.length).toBe(2)
   expect(again.drop).toMatch(/Held by the pre-send check/)
+})
+
+test('the hook never loses what the person has in the box: the held message goes back above it, the rewrite takes its place alone, and Send as is takes out only it', async ($, on) => {
+  const w = world(on)
+  const e = engine(on)
+  e.answer = FOUND
+  await $.session.start(START)
+
+  await $.prompt.submit(typed('?? Do M27 before installing'))
+  // A message prepared while Haiku read the held one.
+  e.box.text = 'prepared for later'
+  await w.clock.settle()
+  expect(e.box.text).toBe('Do M27 before installing\n\nprepared for later')
+  await press($, 'presend-rewrite')
+  await w.clock.settle()
+  expect(e.box.text).toBe('Do: M27 (the timeline) before installing\n\nprepared for later')
+
+  e.box.text = 'prepared for later'
+  await $.prompt.submit(typed('?? Do M27 before installing'))
+  await w.clock.settle()
+  await press($, 'presend-send')
+  await w.clock.settle()
+  expect(e.reached).toEqual(['Do M27 before installing'])
+  expect(e.box.text).toBe('prepared for later')
 })

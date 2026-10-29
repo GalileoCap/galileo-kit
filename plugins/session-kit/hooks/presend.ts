@@ -1,12 +1,15 @@
 // The pre-send check (`A85`): a message of the person's that starts with `??`,
 // or holds four bullets or more of its own, is read by Haiku against the
 // owner's rules before it is sent. When Haiku finds something, the message is
-// held, put back in the box, and the band shows up to three findings with
-// Send as is, Use the rewrite and a dismissal. Nothing is rewritten without a
-// press. A message Haiku finds nothing in, a check that fails or times out,
-// and a surface that draws no band let the message through as written, the
-// `??` taken off. A press of Send as is or Use the rewrite lets the text it
-// sent or prepared through unchecked, and that text alone.
+// held, put back in the box above whatever the person has typed there since,
+// and the band shows up to three findings with Send as is, Use the rewrite and
+// a dismissal. Nothing is rewritten without a press, and no text the person
+// has in the box is lost: Send as is sends the held message and takes only it
+// out of the box, and Use the rewrite swaps only it. A message Haiku finds
+// nothing in, a check that fails or times out, and a surface that draws no
+// band let the message through as written, the `??` taken off. A press of Send
+// as is or Use the rewrite lets the text it sent or prepared through
+// unchecked, and that text alone.
 
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
@@ -52,6 +55,26 @@ export function bulletCount(text: string): number {
   const lines = text.split('\n')
 
   return ownLines(lines).filter((i) => BULLET.test(lines[i] ?? '')).length
+}
+
+/** The box with the held message put back above what the person typed there since. */
+export function withHeld(box: string, text: string): string {
+  return box.trim() === '' ? text : `${text}\n\n${box}`
+}
+
+/** The box with the held message, where it stands unchanged, replaced by `by`; the rest of the box is kept. */
+export function swapHeld(box: string, text: string, by: string): string {
+  const at = box.indexOf(text)
+  if (at < 0) {
+    return by === '' ? box : withHeld(box, by)
+  }
+  const before = box.slice(0, at)
+  const after = box.slice(at + text.length)
+  if (by !== '') {
+    return before + by + after
+  }
+
+  return [before.trimEnd(), after.replace(/^\s+/, '')].filter((part) => part !== '').join('\n\n')
 }
 
 /** The findings and the rewrite in Haiku's answer; null when it names no finding or cannot be read. */
@@ -142,7 +165,7 @@ function later($: EngineInterface, run: () => Promise<void>): void {
   })
 }
 
-/** Sends what the box holds, the held message when it is empty, and lets it through unchecked. */
+/** Sends the held message as it was held, unchecked, and takes it out of the box where it stands unchanged; the rest of the box stays. */
 export async function sendAsIs($: EngineInterface): Promise<void> {
   const kept = await read($, held)
   await update($, held, () => null)
@@ -151,14 +174,13 @@ export async function sendAsIs($: EngineInterface): Promise<void> {
   }
   later($, async () => {
     const box = (await $.prompt.read()).text
-    const text = box.trim() === '' ? kept.text : box
-    await update($, pass, () => text)
-    await $.prompt.fill({ text: '', mode: 'replace' })
-    await $.prompt.submit({ text, asUser: true })
+    await update($, pass, () => kept.text)
+    await $.prompt.fill({ text: swapHeld(box, kept.text, ''), mode: 'replace' })
+    await $.prompt.submit({ text: kept.text, asUser: true })
   })
 }
 
-/** Puts Haiku's rewrite in the box for the person to edit and send, unchecked. */
+/** Puts Haiku's rewrite in the box in the held message's place, for the person to edit and send, unchecked; the rest of the box stays. */
 export async function useRewrite($: EngineInterface): Promise<void> {
   const kept = await read($, held)
   await update($, held, () => null)
@@ -168,7 +190,8 @@ export async function useRewrite($: EngineInterface): Promise<void> {
   const { rewrite } = kept
   await update($, pass, () => rewrite)
   later($, async () => {
-    await $.prompt.fill({ text: rewrite, mode: 'replace' })
+    const box = (await $.prompt.read()).text
+    await $.prompt.fill({ text: swapHeld(box, kept.text, rewrite), mode: 'replace' })
   })
 }
 
@@ -205,7 +228,8 @@ export const register: Register = (on) => {
     const kept: PresendHeld = { text, findings: found.findings, rewrite: found.rewrite }
     await update($, held, () => kept)
     later($, async () => {
-      await $.prompt.fill({ text, mode: 'replace' })
+      const box = (await $.prompt.read()).text
+      await $.prompt.fill({ text: withHeld(box, text), mode: 'replace' })
     })
 
     return { drop: `Held by the pre-send check: ${found.findings.length === 1 ? 'one finding' : `${found.findings.length} findings`} on the band, and the message is back in the box.` }

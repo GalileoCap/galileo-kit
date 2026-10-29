@@ -19,7 +19,7 @@ engine = "2.1.308"
   "$.model.complete (via judgeChain, review)",
   "$.process.run (via gitOutput, intentNames, lastCommitMs, uncommitted)",
   "$.prompt.fill",
-  "$.prompt.read (via sendAsIs)",
+  "$.prompt.read",
   "$.prompt.submit",
   "$.session.cwd",
   "$.session.id",
@@ -210,8 +210,8 @@ engine = "2.1.308"
 "$.fs.write" = "The chain file and the test log under the temporary directory, the timeline's files under ~/.claude/session-kit/measure/, and the facts section of CLAUDE.local.md, after the model's text."
 "$.model.complete" = "Haiku reads the unattended chain at its third, fifth and every later signal for a loop or a step beyond the task, and reads a ?? message or one of four bullets against the owner's rules before it is sent, on the session's own credentials."
 "$.process.run" = "git log and git status for the checkout checks, the test log's tree print and the handoff's facts, and git cat-file for the commit ids a handoff names, with the repository's own config unable to run code, and session-intent names for the pre-send check."
-"$.prompt.fill" = "Puts a message the pre-send check held back in the box, puts Haiku's rewrite there on Use the rewrite, and empties the box on Send as is."
-"$.prompt.read" = "Reads the box on Send as is, so the person's edits to a held message are what is sent."
+"$.prompt.fill" = "Puts a message the pre-send check held back in the box above what the person typed, puts Haiku's rewrite in its place on Use the rewrite, and takes it out on Send as is, keeping every other text (C3)."
+"$.prompt.read" = "Reads the box before each write to it, so no text the person has there is lost (C3)."
 "$.prompt.submit" = "The continue prompt after the chain's compaction, the person's prompt sent again after the new-task offer's clear, one prompt per tagged item a reply left without a line, and a held message on Send as is, as the person's."
 "$.session.cwd" = "The checkout the session runs in, for git, CLAUDE.local.md and the settings."
 "$.session.id" = "Names the chain file, the test log and the timeline's directory after the session."
