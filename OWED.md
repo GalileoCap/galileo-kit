@@ -157,6 +157,12 @@ Seen by the owner on 2026-10-29 on the desktop: "It worked".
 
 `A87` (the kit's pane is shown and hidden by a chip, and kept across sessions), by the owner's word on 2026-10-29. A `kit` chip beside the footer's mode labels shows and hides the pane, as `/kit` now does, and the next session starts with the pane as the last press left it. To see on the desktop: the chip at the right of the prompt's footer, a press each way, then a new session after leaving it open. If the desktop draws no chip there, the chip moves to the hint line. It reaches a session as 0.36.0 does.
 
+## At the install of session-kit 0.42.0
+
+### main: the kit's pane is the session's dashboard
+
+`A89` (the kit's pane is the session's dashboard), by the owner's word on 2026-10-29: six sections (Items, Session, Next, Context, Usage, Chain), each left out when empty, with SVG gauges on the desktop. To see on the desktop: the pane opened from the `kit` chip, in a session with commits, uncommitted files and a handoff. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
