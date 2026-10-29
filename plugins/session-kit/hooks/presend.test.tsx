@@ -39,6 +39,8 @@ function engine(on: On): Engine {
   on('prompt.read', () => ({ value: { text: made.box.text, cursor: made.box.text.length } }))
   on('session.surfaces', () => ({ value: made.surfaces }))
   on('session.messages', () => ({ value: [] }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('turn.complete', (_, e) => ({ text: e.answer }))
   on('process.run', () => ({ value: { exitCode: 1, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }))
   on('ui.log', () => ({ value: undefined }))
   on('ui.render', ($, e) => {
@@ -105,7 +107,7 @@ test('Use the rewrite fills the box with it, and the next message goes through u
   await press($, 'presend-rewrite')
   await w.clock.settle()
   expect(e.box.text).toBe('Do: M27 (the timeline) before installing')
-  await $.prompt.submit(typed('?? Do: M27 (the timeline) before installing'))
+  await $.prompt.submit(typed(e.box.text))
   expect(e.asked.length).toBe(1)
   expect(e.reached).toEqual(['Do-1: M27 (the timeline) before installing'])
 })
@@ -130,4 +132,22 @@ test('four bullets are checked and three are not; nothing found, a failing Haiku
   await $.prompt.submit(typed('?? Do M27'))
   expect(e.asked.length).toBe(2)
   expect(e.reached.at(-1)).toBe('Do M27')
+})
+
+test('a Send as is whose message would not trigger the check lets no later ?? message through unchecked', async ($, on) => {
+  const w = world(on)
+  const e = engine(on)
+  e.answer = FOUND
+  await $.session.start(START)
+
+  await $.prompt.submit(typed('?? Do M27 before installing'))
+  await w.clock.settle()
+  await press($, 'presend-send')
+  await w.clock.settle()
+  await $.turn.start({ text: 'Do M27 before installing', turnId: 't1' })
+  await $.turn.complete({ answer: 'ok', durationMs: 10, isAborted: false, turnId: 't1', reason: 'answer' })
+
+  const again = await $.prompt.submit(typed('?? Do M27 before installing'))
+  expect(e.asked.length).toBe(2)
+  expect(again.drop).toMatch(/Held by the pre-send check/)
 })

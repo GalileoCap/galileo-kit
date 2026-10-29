@@ -5,8 +5,8 @@
 // Send as is, Use the rewrite and a dismissal. Nothing is rewritten without a
 // press. A message Haiku finds nothing in, a check that fails or times out,
 // and a surface that draws no band let the message through as written, the
-// `??` taken off. A press of Send as is or Use the rewrite lets the next
-// message of the person's through unchecked.
+// `??` taken off. A press of Send as is or Use the rewrite lets the text it
+// sent or prepared through unchecked, and that text alone.
 
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
@@ -24,7 +24,7 @@ const ASKS_SHOWN = 1500
 const NAMES_SHOWN = 3000
 
 const held = atom({ plugin: 'session-kit', key: 'presendHeld' } as const, null)
-const pass = atom({ plugin: 'session-kit', key: 'presendPass' } as const, false)
+const pass = atom({ plugin: 'session-kit', key: 'presendPass' } as const, '')
 
 const ASKED = /^\s*\?\?\s*/
 const BULLET = /^[ \t]*(?:[-*+]|\d+[.)])\s/
@@ -152,7 +152,7 @@ export async function sendAsIs($: EngineInterface): Promise<void> {
   later($, async () => {
     const box = (await $.prompt.read()).text
     const text = box.trim() === '' ? kept.text : box
-    await update($, pass, () => true)
+    await update($, pass, () => text)
     await $.prompt.fill({ text: '', mode: 'replace' })
     await $.prompt.submit({ text, asUser: true })
   })
@@ -166,7 +166,7 @@ export async function useRewrite($: EngineInterface): Promise<void> {
     return
   }
   const { rewrite } = kept
-  await update($, pass, () => true)
+  await update($, pass, () => rewrite)
   later($, async () => {
     await $.prompt.fill({ text: rewrite, mode: 'replace' })
   })
@@ -183,10 +183,13 @@ export const register: Register = (on) => {
     }
     const asked = ASKED.test(e.text)
     const text = asked ? e.text.replace(ASKED, '') : e.text
-    if (await read($, pass)) {
-      await update($, pass, () => false)
-
-      return next({ ...e, text })
+    // The pass holds the text a press sent or prepared, and the next message the hook sees spends it either way.
+    const passed = await read($, pass)
+    if (passed !== '') {
+      await update($, pass, () => '')
+      if (e.text === passed) {
+        return next({ ...e, text })
+      }
     }
     if ((!asked && bulletCount(text) < BULLETS) || !(await bandHere($))) {
       return next({ ...e, text })
@@ -207,4 +210,5 @@ export const register: Register = (on) => {
 
     return { drop: `Held by the pre-send check: ${found.findings.length === 1 ? 'one finding' : `${found.findings.length} findings`} on the band, and the message is back in the box.` }
   }).catch(($, e, next) => next(e))
+
 }

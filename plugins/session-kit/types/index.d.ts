@@ -162,8 +162,8 @@ declare module 'claude-code' {
       lastTest: TestRun | null
       /** The message the pre-send check holds for the person's decision; null while none is. */
       presendHeld: PresendHeld | null
-      /** True after Send as is or Use the rewrite, so the person's next message goes through unchecked. */
-      presendPass: boolean
+      /** The text Send as is sent or Use the rewrite prepared, let through unchecked once; empty while none is. */
+      presendPass: string
       /** Per tag, the last number given to an item in this session; a clear starts them over. */
       tagCounts: Record<string, number>
       /** The owner's tagged items not yet reported done, decided, parked or answered, oldest first. */

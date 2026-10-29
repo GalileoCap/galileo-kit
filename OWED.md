@@ -119,6 +119,12 @@ A prompt of the person's with `Do:`, `Decide:`, `Ask:` or `Later:` lines reaches
 
 A tagged message reaches the model with `Do-1:` where the person typed `Do:` (`A84`, the ids stand in the owner's message), and a message that starts with `??` or holds four bullets or more is read by Haiku first and held on the band when it finds something (`A85`, a pre-send check by Haiku, held on the band). It reaches a session as 0.36.0 does. Only a real session proves whether the desktop draws the rewritten message or the typed one, how long the owner waits on Haiku, whether `$.prompt.fill` puts the held message back in the desktop's box, and whether `session-intent` is on the PATH the engine runs it with.
 
+## At the install of session-kit 0.39.1
+
+### main: a press of Send as is passes its own text alone
+
+Seen in this session's trial on 2026-10-29: a `??` message was held, the person sent the refilled text, and their next `??` message went through unchecked, since the pass Send as is set waited for a message the check's matcher would show it. The pass now holds the exact text the press sent or prepared, and the next message the hook sees spends it. The same trial showed the desktop drawing the text the person typed, with the `??` still in it, while the model read the text the hook wrote: the ids of `A84` (the ids stand in the owner's message) reach the model and never the person's bubble. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
