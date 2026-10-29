@@ -67,6 +67,7 @@ test('a runner named only in quoted text, a heredoc or an argument is no test ru
     'cd /proj/tagents-platform; grep -n "^def test\\|^async def test\\|^FORMS\\|^    pytest.param\\|id=" tests/test_knowledge_wording.py | head -40',
     "cd /proj && python3 -I - <<'EOF'\nfrom pathlib import Path\nprint('scripts/test all' in Path('docs/timing.md').read_text())\nEOF",
     "cd /proj/tagents-platform && wc -l scripts/test && grep -n -E '^\\s*(all|unit|landing)' scripts/test",
+    "cd /proj; cat > docs/a.md <<'EOF'\nProven by `scripts/test` and `uv run pytest`.\nEOF",
   ]) {
     await $.tool.call({ tool: 'Bash', command })
   }

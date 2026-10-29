@@ -6,7 +6,8 @@
 // nothing to say is left out. Each section is a card: its title, which folds
 // the card to its first line and is kept folded across sessions, and the figure
 // that sums it up on one line, then its body, the fact that matters in full
-// weight and its context dim. The desktop draws the gauges and the
+// weight and its context dim. A list longer than its card's window scrolls in
+// it by ▴ and ▾, so a card grows to that window and no further. The desktop draws the gauges and the
 // curve as SVG, the terminal as cells. A `kit` chip in the footer's mode labels
 // shows and hides the pane, as `/kit` does, and the next session starts with
 // the pane as the last press left it; the pane's own close mark hides it for
@@ -44,6 +45,7 @@ const turnFigures = atom({ plugin: 'session-kit', key: 'turnFigures' } as const,
 const openItems = atom({ plugin: 'session-kit', key: 'openItems' } as const, NO_ITEMS)
 const lastTest = atom({ plugin: 'session-kit', key: 'lastTest' } as const, null)
 const paneFolded = atom({ plugin: 'session-kit', key: 'paneFolded' } as const, null)
+const paneScroll = atom({ plugin: 'session-kit', key: 'paneScroll' } as const, {})
 
 export const PANE = 'kit'
 export const PANE_TITLE = 'session-kit'
@@ -74,6 +76,10 @@ type Parts = Pick<ElementTable<'desktop'>, 'Box' | 'Button' | 'Text'> & {
   folded: readonly string[]
   /** Folds an open section or opens a folded one. */
   fold: (title: string) => Promise<void>
+  /** Per list, the first item its window shows. */
+  scrolled: Readonly<Record<string, number>>
+  /** Moves a list's window to start at an item. */
+  scroll: (list: string, from: number) => Promise<void>
 }
 type Svg = ElementTable<'desktop'>['Svg'] | null
 
@@ -222,12 +228,49 @@ export function commandShown(command: string): string {
     .join('; ')
 }
 
-/** Up to `SHOWN` lines, then `+n more`. */
-function capped<T>(p: Parts, all: readonly T[], draw: (item: T, i: number) => RenderChildren) {
-  const { Text } = p
-  const shown = all.slice(0, SHOWN).map(draw)
+/** A list in a window of `size` items, under it the place of the window and ▴ ▾ to move it a window's length. */
+function windowed<T>(p: Parts, list: string, all: readonly T[], draw: (item: T, i: number) => RenderChildren, size = SHOWN): RenderChildren[] {
+  const { Box, Button, Text } = p
+  if (all.length <= size) {
+    return all.map(draw)
+  }
+  const from = Math.max(0, Math.min(p.scrolled[list] ?? 0, all.length - size))
+  const to = Math.min(all.length, from + size)
+  const move = (key: string, mark: string, at: number | null) =>
+    at === null ? (
+      <Text dimColor>{' '}</Text>
+    ) : (
+      <Button key={`${key}-${list}`} plain onPress={() => p.scroll(list, at)}>
+        <Text dimColor>{mark}</Text>
+      </Button>
+    )
 
-  return all.length > SHOWN ? [...shown, <Text dimColor>{`+${all.length - SHOWN} more`}</Text>] : shown
+  return [
+    ...all.slice(from, to).map((item, i) => draw(item, from + i)),
+    <Box justifyContent="space-between" gap={1}>
+      <Text size="footnote" dimColor tabular>{`${from + 1}–${to} of ${all.length}`}</Text>
+      <Box gap={1}>
+        {move('up', '▴', from > 0 ? Math.max(0, from - size) : null)}
+        {move('down', '▾', to < all.length ? to : null)}
+      </Box>
+    </Box>,
+  ]
+}
+
+/** A row of a numbered or labelled list: the label in a column of its own width, the text hanging beside it, both from the top. */
+function labelled(p: Parts, width: number, label: RenderChildren, text: RenderChildren) {
+  const { Box } = p
+
+  return (
+    <Box gap={1} alignItems="flex-start">
+      <Box width={width} flexShrink={0}>
+        {label}
+      </Box>
+      <Box flexGrow={1} flexShrink={1}>
+        {text}
+      </Box>
+    </Box>
+  )
 }
 
 function gauge(p: Parts, svg: Svg, percent: number, tone: Tone, marks: readonly number[], alt: string) {
@@ -284,6 +327,10 @@ export const register: Register = (on, options) => {
         await update($, paneFolded, () => titles)
         await $.store.set(KEPT_FOLDED, titles)
       },
+      scrolled: await read($, paneScroll),
+      scroll: async (list, from) => {
+        await update($, paneScroll, (at) => ({ ...at, [list]: from }))
+      },
     }
     const svg: Svg = 'Svg' in table ? table.Svg : null
     const { Box, Button, Text } = p
@@ -308,32 +355,37 @@ export const register: Register = (on, options) => {
           p,
           'Your items',
           <Text dimColor>{`${items.length} open`}</Text>,
-          capped(p, items, (item) => (
-            <Box gap={1}>
+          windowed(p, 'items', items, (item) =>
+            labelled(
+              p,
+              Math.max(...items.map((i) => i.id.length)),
               <Text weight="semibold" color="claude">
                 {item.id}
-              </Text>
-              <Text>{item.text}</Text>
-            </Box>
-          )),
+              </Text>,
+              <Text>{item.text}</Text>,
+            ),
+          ),
         ),
       )
     }
 
     const session: RenderChildren[] = []
     session.push(
-      ...facts.commits.slice(0, COMMITS_SHOWN).map((c) => (
-        <Box gap={1}>
-          <Text mono dimColor>
-            {c.slice(0, c.indexOf(' '))}
-          </Text>
-          <Text wrap="truncate-end">{headline(c.slice(c.indexOf(' ') + 1))}</Text>
-        </Box>
-      )),
+      ...windowed(
+        p,
+        'commits',
+        facts.commits,
+        (c) => (
+          <Box gap={1}>
+            <Text mono dimColor>
+              {c.slice(0, c.indexOf(' '))}
+            </Text>
+            <Text wrap="truncate-end">{headline(c.slice(c.indexOf(' ') + 1))}</Text>
+          </Box>
+        ),
+        COMMITS_SHOWN,
+      ),
     )
-    if (facts.commits.length > COMMITS_SHOWN) {
-      session.push(<Text size="footnote" dimColor>{`and ${facts.commits.length - COMMITS_SHOWN} earlier`}</Text>)
-    }
     if (facts.files.length > 0) {
       session.push(
         <Box gap={1}>
@@ -378,14 +430,14 @@ export const register: Register = (on, options) => {
         </Box>,
       )
       ahead.push(
-        ...capped(p, facts.questions, (q, i) => (
-          <Box gap={1}>
-            <Text dimColor tabular>{`${i + 1}.`}</Text>
-            <Box flexGrow={1} flexShrink={1}>
-              <Markdown key={`question-${i}`} text={q} />
-            </Box>
-          </Box>
-        )),
+        ...windowed(p, 'questions', facts.questions, (q, i) =>
+          labelled(
+            p,
+            `${facts.questions.length}.`.length,
+            <Text dimColor tabular>{`${i + 1}.`}</Text>,
+            <Markdown key={`question-${i}`} text={q} />,
+          ),
+        ),
       )
     }
     const handoffTone = facts.handoff === 'current' ? 'subtle' : 'warning'
@@ -452,7 +504,7 @@ export const register: Register = (on, options) => {
       sections.push(
         card(p, 'Chain', <Text color={held !== null ? 'error' : 'subtle'}>{held !== null ? 'failed' : offered !== null ? 'offer' : 'running'}</Text>, [
           head,
-          ...journal.map((st) => (
+          ...windowed(p, 'journal', journal, (st) => (
             <Box gap={1}>
               <Text mono dimColor>
                 {clockTime(new Date(st.at))}

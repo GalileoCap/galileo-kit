@@ -62,8 +62,9 @@ const RUNS = /\$\(|`/
 export function bare(command: string): string {
   const unlessItRuns = (blank: string) => (text: string) => (RUNS.test(text) ? text : blank)
 
+  // A quoted delimiter (<<'EOF') keeps the body literal, so a backtick in it never runs.
   return command
-    .replace(HEREDOC, unlessItRuns(' '))
+    .replace(HEREDOC, (text: string, quote: string) => (quote === '' ? unlessItRuns(' ')(text) : ' '))
     .replace(SINGLE_QUOTED, "''")
     .replace(DOUBLE_QUOTED, unlessItRuns('""'))
 }

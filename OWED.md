@@ -181,6 +181,12 @@ Seen by the owner on 2026-10-29 on the desktop: "It worked".
 
 `A89` (the kit's pane is the session's dashboard), by the owner's look at 0.42.2: This session shows three commits and a count of the rest, the uncommitted files on one line, and a test command's first line. Next has small headings, numbered questions with hanging lines, and markdown text. To see on the desktop: both cards, and the backticks drawn as code. It reaches a session as 0.36.0 does.
 
+## At the install of session-kit 0.42.4
+
+### main: the pane's lists scroll in their cards, and their labels align
+
+`A89` (the kit's pane is the session's dashboard), by the owner's look at 0.42.3: a list longer than its card's window (six items, three commits) scrolls in it by ▴ and ▾ under a `1–6 of 9` mark, in place of `+n more`; an item's id and a question's number sit in a column of their own width, at the top of their text. The guard and the test log read a quoted heredoc's body (`<<'EOF'`) as text that never runs, backticks included. To see on the desktop: the scroll marks, the aligned ids and numbers, and no STALE after a file written by a heredoc. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

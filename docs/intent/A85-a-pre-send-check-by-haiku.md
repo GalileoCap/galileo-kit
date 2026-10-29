@@ -24,6 +24,7 @@ The proposal counted 96 messages of four bullets or more in the live sessions, w
 - Haiku inside `prompt.submit`, holding the message (taken).
 - A check after the message is sent, as a note on the reply. Rejected: the item it would catch is already lost by then.
 - The secret hold, which needs no model. Left out of this action: it serves no approved objective yet.
+- A guard in Haiku's system prompt against instructions inside the message. Not taken, by the owner on 2026-10-29: the owner is the only person who sends the messages it reads.
 
 ## Consequences
 

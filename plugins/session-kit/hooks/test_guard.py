@@ -70,6 +70,7 @@ CASES: list[tuple[dict, str, str]] = [
     (bash("git stash drop"), ALLOW, "stash drop"),
     (bash("pytest &> /tmp/t.log"), ALLOW, "test output to a file"),
     (bash("cat > s.sh <<'EOF'\ntimeout 30 foo\nEOF"), ALLOW, "timeout inside a script body"),
+    (bash("cat > n.md <<'EOF'\nNever run `git reset --hard`.\nEOF"), ALLOW, "backticks inside a quoted heredoc's body, which never runs"),
     (bash("git commit --amend"), ALLOW, "amending an unpublished commit"),
     (bash("echo '{\"deny\": \"x; git reset --hard\"}' > rules.json"), ALLOW, "a command named inside quoted text, after a separator in it"),
     (bash("grep -n pytest file | head"), ALLOW, "a grep that names a runner, piped"),

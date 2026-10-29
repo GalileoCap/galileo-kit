@@ -1,6 +1,6 @@
 # Everything session-kit shows, and what the pane should hold
 
-Read on 2026-10-29 from `plugins/session-kit/hooks/` at session-kit 0.41.0. The first part lists every place the kit puts something in front of the person, by surface. The second part reads the pane against that list and proposes its new content. What reaches the model is listed in `docs/what-reaches-the-model.md`, and only summed up here.
+Read on 2026-10-29 from `plugins/session-kit/hooks/` at session-kit 0.41.0; the band is unchanged through 0.42.4. The first part lists every place the kit puts something in front of the person, by surface. The second part reads the pane against that list and proposes its new content. What reaches the model is listed in `docs/what-reaches-the-model.md`, and only summed up here.
 
 ## 1. What the person sees
 

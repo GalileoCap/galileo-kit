@@ -162,6 +162,8 @@ declare module 'claude-code' {
       lastTest: TestRun | null
       /** The titles of the pane's folded sections; null until the first fold of the session, when the store's are read. */
       paneFolded: string[] | null
+      /** Per list of the pane, the first item its window shows; a list left out starts at its top. */
+      paneScroll: Record<string, number>
       /** The message the pre-send check holds for the person's decision; null while none is. */
       presendHeld: PresendHeld | null
       /** The text Send as is sent or Use the rewrite prepared, let through unchecked once; empty while none is. */

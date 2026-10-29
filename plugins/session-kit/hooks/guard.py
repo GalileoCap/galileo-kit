@@ -10,7 +10,8 @@ and the carve-outs are honoured: `git stash push -u -m` is allowed,
 allowed. The rules read the command as the shell runs it: quoted text and
 heredoc bodies are blanked first, so a commit message or a JSON string that
 names a command is not taken for one, unless it holds a `$(...)` or a
-backtick, which runs.
+backtick, which runs. The body of a heredoc whose delimiter is quoted
+(`<<'EOF'`) never runs, and is always blanked.
 
 A project adds its own test runners to the lists below in
 `.claude/claude-kit.json`:
@@ -55,9 +56,14 @@ def _unless_it_runs(blank: str):
     return replace
 
 
+def _heredoc(match: re.Match[str]) -> str:
+    # A quoted delimiter (<<'EOF') keeps the body literal, so a backtick in it never runs.
+    return " " if match.group(1) else _unless_it_runs(" ")(match)
+
+
 def bare(cmd: str) -> str:
     """The command as the shell runs it: heredoc bodies and quoted text blanked, except one holding a substitution."""
-    cmd = HEREDOC.sub(_unless_it_runs(" "), cmd)
+    cmd = HEREDOC.sub(_heredoc, cmd)
     cmd = SINGLE_QUOTED.sub("''", cmd)
     return DOUBLE_QUOTED.sub(_unless_it_runs('""'), cmd)
 
