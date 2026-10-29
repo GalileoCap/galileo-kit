@@ -103,10 +103,11 @@ class Waste:
 
 @dataclass
 class Ask:
-    """One of the person's own prompts. Its words are printed only with ``--quote``."""
+    """One of the person's own prompts and the folder it was typed in. Its words are printed only with ``--quote``."""
 
     at: datetime | None
     text: str
+    cwd: str | None = None
 
 
 @dataclass
@@ -350,8 +351,9 @@ def note_ask(session: Session, r: dict[str, object], content: object, at: dateti
     origin = r.get("origin")
     kind = origin.get("kind") if isinstance(origin, dict) else None
     text = text_blocks(content).strip()
+    cwd = r.get("cwd")
     if kind in PERSON and text and not text.startswith("<"):
-        session.asks.append(Ask(at, text))
+        session.asks.append(Ask(at, text, cwd if isinstance(cwd, str) else None))
 
 
 def note_use(reading: Reading, block: dict[str, object]) -> None:

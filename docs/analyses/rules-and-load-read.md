@@ -106,7 +106,7 @@ The owner's order is the defect, then focus and the off-window friction, then th
 
 1. The defect (`C4`), now, its regression test shown. Then the session registry, which 2a needs.
 2. The hold probe, run on 2026-10-29 (section 1): a hook waiting on a process keeps the prompt as it was.
-3. 2a's measured core, before Friday's review can run: the window and the project kinds in `~/.claude/session-kit/`, the hold with its reason and the log, the 30-minute pass, and `session-transcripts week` with the 2b bar. The four-week clock starts when the hold goes live, and the first Friday review reads every day of the log since.
+3. 2a's measured core, built on 2026-10-29 as `A92` and `A93`, before Friday's review can run: the window and the project kinds in `~/.claude/session-kit/`, the hold with its reason and the log, the 30-minute pass, and `session-transcripts week` with the 2b bar. The four-week clock starts when the hold goes live, and the first Friday review reads every day of the log since.
 4. The rest of 2a: the focus list and its tags, the countdown and the close, the concurrent-session friction, the streak, the morning list. They share the registry from step 1.
 5. The rule fixes, cheapest first: R20's one number, the nudge cut, the pyright notice, the tells once per session. Then the turn-end line (the person-only lines, background tasks, R24's first version, trialled in one project). Then R18's programs. Then the audit's port and the trial rule.
 

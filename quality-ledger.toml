@@ -1722,3 +1722,66 @@ count = 2
 class = "declared"
 disposition = "keep"
 why = "an empty list is said as nothing, as the validator says it"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "bar_section"
+form = "if-none"
+code = "off / len(week) if week else 0.0"
+class = "declared"
+disposition = "keep"
+why = "a week with no message has none off the window, which meets the bar"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "days_table"
+form = "if-none"
+code = "clock(ms[-1].at, d) if ms else '-'"
+class = "spoken"
+disposition = "keep"
+why = "a day with no message prints a dash, which the owner reads as none"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "days_table"
+form = "if-none"
+code = "clock(ms[0].at, d) if ms else '-'"
+class = "spoken"
+disposition = "keep"
+why = "a day with no message prints a dash, which the owner reads as none"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "folder_of"
+form = "or"
+code = "cwd or '?'"
+class = "spoken"
+disposition = "keep"
+why = "a prompt from before the engine wrote its folder prints as ? on its own row"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "holds_of"
+form = "except-returns"
+code = "except ValueError: continue"
+class = "silent"
+disposition = "keep"
+why = "a line cut by a write in flight is skipped, and the next review reads it whole"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "holds_table"
+form = "if-none"
+code = "'-' if h.get('reason') is None else ' '.join(str(h['reason']).split()).replace('|', '\\\\|')"
+class = "spoken"
+disposition = "keep"
+why = "a prompt with no reason, from the phone or put back, prints a dash"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "report"
+form = "get"
+code = "settings.get('watch', [])"
+class = "declared"
+disposition = "keep"
+why = "settings without a watch list mark no folder"

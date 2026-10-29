@@ -9,12 +9,14 @@ and the cold sends), ``compactions`` (by trigger, with the context each ran
 over), ``hooks`` (each settings hook's fires by name), ``chains`` (the
 sessions a clear, a resume, a fork or one running cost joined), ``waste`` (what
 a session read or ran again, a compaction's price in reads among it),
-``asks`` (the person's asks that recur), and ``report`` (those tables but
-the asks written to a markdown file under ``docs/measurements/``).
+``asks`` (the person's asks that recur), ``report`` (those tables but
+the asks written to a markdown file under ``docs/measurements/``), and
+``week`` (the owner's week against their window, ``week.py``).
 
 It prints counts, sizes, names of hooks and tools, and the hooks' own text.
 It prints no prompt and no answer unless ``asks --quote`` is asked for, and
-writes nothing outside the file ``report`` is given.
+writes nothing outside the file ``report`` is given and the review ``week``
+writes beside the hold's settings, of which it prints the path alone.
 """
 
 from __future__ import annotations
@@ -25,10 +27,11 @@ import os
 import re
 import sys
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from fractions import Fraction
 from pathlib import Path
 
+import week
 from records import COLD_GAP_MINUTES, COLD_SHARE, Ask, Compaction, Session, Waste, read_all
 
 MEASURE_DIR = Path.home() / ".claude" / "session-kit" / "measure"
@@ -429,7 +432,7 @@ def full_report(sessions: list[Session], roots: list[Path], since: datetime | No
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="The reader over the sessions' transcripts.")
-    parser.add_argument("command", choices=("list", "session", "warnings", "cache", "compactions", "hooks", "chains", "waste", "asks", "report"))
+    parser.add_argument("command", choices=("list", "session", "warnings", "cache", "compactions", "hooks", "chains", "waste", "asks", "report", "week"))
     parser.add_argument("id", nargs="?", help="the session id, for `session`")
     parser.add_argument("--root", default=os.path.expanduser("~/.claude/projects"))
     parser.add_argument("--archive", action="append", default=[], help="a directory of archived sessions, `<project>/<id>.tar.xz`, read beside the root; repeatable")
@@ -439,6 +442,8 @@ def main() -> int:
     parser.add_argument("--top", type=int, default=20, help="for `asks`: how many asks to rank")
     parser.add_argument("--quote", action="store_true", help="for `asks`: print each ask's words, which are the person's own")
     parser.add_argument("--out", help="for `report`: the file to write; default docs/measurements/sessions-<date>.md")
+    parser.add_argument("--week", help="for `week`: the last day of the review (YYYY-MM-DD), its Monday the first; default today")
+    parser.add_argument("--load-dir", default=str(week.LOAD_DIR), help="for `week`: the hold's settings and log, where the review is written")
     args = parser.parse_args()
     roots = [Path(args.root)] + [Path(a) for a in args.archive]
     for root in roots:
@@ -458,6 +463,9 @@ def main() -> int:
             return 1
         print(session_report(matches[0], everyone))
         return 0
+    if args.command == "week":
+        as_of = date.fromisoformat(args.week) if args.week else date.today()
+        return week.write(read_all(roots, args.project, None, measure), Path(args.load_dir).expanduser(), as_of, str(Path.home()))
     sessions = read_all(roots, args.project, since, measure)
     if args.command == "list":
         print(list_table(sessions))
