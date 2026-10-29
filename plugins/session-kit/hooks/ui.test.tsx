@@ -212,7 +212,7 @@ test('Handoff and compact is the person\'s own signal: the handoff, then when it
   expect(seen.ran).toEqual([HANDOFF, 'compact'])
 })
 
-test('a handoff that does not run stops the chain and leaves a Failed row above the others, with Try again and Dismiss, until dismissed', { timeoutMs: 3000 }, async ($, on) => {
+test('a handoff that does not run stops the chain and leaves a Failed row above the others, the only one coloured, with Try again and Dismiss, until dismissed', { timeoutMs: 3000 }, async ($, on) => {
   const state = host(312_000)
   const seen = engine(on, state)
   state.failing = { command: HANDOFF, reason: 'boom' }
@@ -225,6 +225,9 @@ test('a handoff that does not run stops the chain and leaves a Failed row above 
     const label = textOf(drawn.texts, /^Failed$/)
     expect(label?.props.bold).toBe(true)
     expect(label?.props.color).toBe('error')
+    // The row that leads alone has a colour and a filled button: the context row beneath it is drawn plain.
+    expect(textOf(drawn.texts, /^Context$/)?.props.color).toBe('subtle')
+    expect(drawn.buttons.filter((b) => b.props.variant === 'primary').map((b) => b.key)).toEqual(['failure-retry'])
     expect(textOf(drawn.texts, /the handoff did not run \(.+\), so the chain stopped/)).toBeDefined()
     expect(buttonOf(drawn, 'failure-retry')?.text).toBe('Try again')
     expect(buttonOf(drawn, 'failure-dismiss')?.text).toBe('✕')

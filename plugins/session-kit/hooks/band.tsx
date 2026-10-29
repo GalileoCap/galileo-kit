@@ -1,12 +1,14 @@
 // The band above the prompt and the line that closes a turn. The band keeps
 // only what needs the person: a failure, a message the pre-send check held,
-// the owner's tagged items a reply left without a line, the offer or the chain or the context
-// figure past its threshold, the cold-cache timer that will act on its own (a
-// clause of the context row when that row offers the same chain), and
-// a usage window at 95% (at 80% when the kit keeps no status line). Each row is
-// a bold label, the figures, and the buttons that do the thing. The kit's rows
-// draw above whatever the plugins beneath drew, so no band of theirs is hidden.
-// The turn line gets the context percent the turn ended at, found by the turn's
+// the owner's tagged items a reply left without a line, the offer or the chain
+// or the context figure from its firmer tier, the cold-cache timer that will
+// act on its own (a line under the context row when that row offers the same
+// chain), and a usage window at 95% (at 80% when the kit keeps no status
+// line). The band is a ledger (`A86`): each row is a label in a fixed column,
+// its text, then its buttons and its ✕ at the right, and only the row that
+// leads has a coloured label and a filled button. The kit's rows draw above
+// whatever the plugins beneath drew, so no band of theirs is hidden. The turn
+// line gets the context percent the turn ended at, found by the turn's
 // duration, so an old line never shows a later figure.
 
 import { atom, read } from 'claude-code'
@@ -28,7 +30,7 @@ import {
   retryFailure,
   runColdNow,
 } from './context'
-import { LIMIT_FIRM, LIMIT_WARN, coldClause, coldText, compact, limitLine, newTaskLine, showsLimit, stageLine } from './lines'
+import { LIMIT_FIRM, LIMIT_WARN, coldClause, coldText, compact, limitFigures, newTaskBody, showsLimit, stageLine } from './lines'
 import { readOptions, triggerTokens, withinStep } from './options'
 import { dismissHeld, sendAsIs, useRewrite } from './presend'
 import { dismissMissed } from './tags'
@@ -56,138 +58,193 @@ type Parts = Pick<ElementTable<'desktop'>, 'Box' | 'Button' | 'Text'>
 /** What a row needs to draw: the elements, whether a turn runs, and whether the chain is on. */
 type Draw = { p: Parts; isWorking: boolean; chainOn: boolean }
 
-/** A small ✕ at the row's right edge: the spacer takes the free width, and the glyph stands alone as a plain control. */
-function dismissButton(d: Draw, key: string, onPress: () => void) {
-  const { Box, Button } = d.p
+type Tone = 'error' | 'warning' | 'subtle'
+
+/** A button of a row; `main` marks the one that is filled when its row leads the band. */
+type Action = { key: string; label: string; main?: boolean; onPress: () => void }
+
+/** A piece of a row's text or of a line beneath it. */
+type Piece = { text: string; dim?: boolean; tabular?: boolean }
+
+/** A row of the ledger: its label and the colour it takes when it leads, its text, its buttons, the lines beneath it and its ✕. */
+type Row = { key: string; label: string; tone: Tone; text: Piece[]; actions: Action[]; details: Piece[]; dismiss: Action }
+
+// Wide enough for the longest label, `New task`.
+const LABEL_WIDTH = 8
+
+/** The label column, empty on a line beneath a row, so every row's text starts at the same place. */
+function labelCell(d: Draw, row: Row, isLead: boolean, label: boolean) {
+  const { Box, Text } = d.p
 
   return (
-    <Box key={`${key}-end`} flexGrow={1} justifyContent="flex-end">
-      <Button key={key} label="✕" plain dimColor onPress={onPress} />
+    <Box width={LABEL_WIDTH} flexShrink={0}>
+      {label ? <Text bold color={isLead ? row.tone : 'subtle'}>{row.label}</Text> : null}
     </Box>
   )
 }
 
-function failureRow($: EngineInterface, d: Draw, held: Failure) {
+/** A row as the ledger draws it: the label, the text taking the free width, then the buttons and the ✕ together at the right. */
+function ledgerRow(d: Draw, row: Row, isLead: boolean) {
   const { Box, Button, Text } = d.p
 
   return (
-    <Box key="failure" gap={1} alignItems="center">
-      <Text bold color="error">Failed</Text>
-      <Text>{`${held.text}.`}</Text>
-      {held.retry === undefined ? null : <Button key="failure-retry" label="Try again" onPress={() => retryFailure($)} />}
-      {dismissButton(d, 'failure-dismiss', () => dismissFailure($))}
-    </Box>
-  )
-}
-
-/** The message the pre-send check held, its findings one per line, and what the person can do with it. */
-function heldRow($: EngineInterface, d: Draw, kept: PresendHeld) {
-  const { Box, Button, Text } = d.p
-
-  return (
-    <Box key="presend" flexDirection="column">
+    <Box key={row.key} flexDirection="column">
       <Box gap={1} alignItems="center">
-        <Text bold color="warning">Held</Text>
-        <Text>Your message is back in the box. Haiku found:</Text>
-        <Button key="presend-send" label="Send as is" onPress={() => sendAsIs($)} />
-        {kept.rewrite === null ? null : <Button key="presend-rewrite" label="Use the rewrite" onPress={() => useRewrite($)} />}
-        {dismissButton(d, 'presend-dismiss', () => dismissHeld($))}
+        {labelCell(d, row, isLead, true)}
+        <Box flexGrow={1} gap={1}>
+          {row.text.map((t, i) => (
+            <Text key={`${row.key}-text-${i}`} dimColor={t.dim} tabular={t.tabular}>
+              {t.text}
+            </Text>
+          ))}
+        </Box>
+        {row.actions.map((a) => (
+          <Button key={a.key} label={a.label} variant={isLead && a.main === true ? 'primary' : undefined} onPress={a.onPress} />
+        ))}
+        <Button key={row.dismiss.key} label="✕" plain dimColor onPress={row.dismiss.onPress} />
       </Box>
-      {kept.findings.map((f, i) => (
-        <Text key={`presend-finding-${i}`}>{`  · ${f}`}</Text>
+      {row.details.map((t, i) => (
+        <Box key={`${row.key}-detail-${i}`} gap={1}>
+          {labelCell(d, row, isLead, false)}
+          <Text dimColor={t.dim}>{t.text}</Text>
+        </Box>
       ))}
     </Box>
   )
 }
 
+function failureRow($: EngineInterface, held: Failure): Row {
+  return {
+    key: 'failure',
+    label: 'Failed',
+    tone: 'error',
+    text: [{ text: `${held.text}.` }],
+    actions: held.retry === undefined ? [] : [{ key: 'failure-retry', label: 'Try again', main: true, onPress: () => retryFailure($) }],
+    details: [],
+    dismiss: { key: 'failure-dismiss', label: '✕', onPress: () => dismissFailure($) },
+  }
+}
+
+/** The message the pre-send check held, its findings one per line beneath, and what the person can do with it. */
+function heldRow($: EngineInterface, kept: PresendHeld): Row {
+  const send = { key: 'presend-send', label: 'Send as is', main: kept.rewrite === null, onPress: () => sendAsIs($) }
+
+  return {
+    key: 'presend',
+    label: 'Held',
+    tone: 'warning',
+    text: [{ text: 'Your message is back in the box.' }],
+    actions: kept.rewrite === null ? [send] : [send, { key: 'presend-rewrite', label: 'Use the rewrite', main: true, onPress: () => useRewrite($) }],
+    details: kept.findings.map((f) => ({ text: `· ${f}` })),
+    dismiss: { key: 'presend-dismiss', label: '✕', onPress: () => dismissHeld($) },
+  }
+}
+
 /** The owner's tagged items the last reply left without a closing line. */
-function missedRow($: EngineInterface, d: Draw, missed: readonly TaggedItem[]) {
-  const { Box, Text } = d.p
-
-  return (
-    <Box key="missed" gap={1} alignItems="center">
-      <Text bold color="warning">No line</Text>
-      <Text>{missed.map((i) => `${i.id} "${i.text}"`).join(' · ')}</Text>
-      {dismissButton(d, 'missed-dismiss', () => dismissMissed($))}
-    </Box>
-  )
+function missedRow($: EngineInterface, missed: readonly TaggedItem[]): Row {
+  return {
+    key: 'missed',
+    label: 'No line',
+    tone: 'warning',
+    text: [{ text: missed.map((i) => `${i.id} "${i.text}"`).join(' · ') }],
+    actions: [],
+    details: [],
+    dismiss: { key: 'missed-dismiss', label: '✕', onPress: () => dismissMissed($) },
+  }
 }
 
-function offerRow($: EngineInterface, d: Draw, offered: NewTaskState) {
-  const { Box, Button, Text } = d.p
-  const isOffered = offered.stage === 'offered'
+function offerRow($: EngineInterface, offered: NewTaskState): Row {
+  const actions: Action[] = []
+  if (offered.stage === 'offered') {
+    if (offered.effort !== undefined) {
+      actions.push({ key: 'new-task-clear-effort', label: `Handoff, clear, effort ${offered.effort.level}`, main: true, onPress: () => handoffThenClear($, offered, true) })
+    }
+    actions.push({ key: 'new-task-clear', label: 'Handoff and clear', main: offered.effort === undefined, onPress: () => handoffThenClear($, offered, false) })
+    actions.push({ key: 'new-task-here', label: 'Keep going here', onPress: () => keepGoing($) })
+  }
 
-  return (
-    <Box key="offer" gap={1} alignItems="center">
-      <Text>{newTaskLine(offered)}</Text>
-      {isOffered && offered.effort !== undefined ? (
-        <Button key="new-task-clear-effort" label={`Handoff, clear, effort ${offered.effort.level}`} variant="primary" onPress={() => handoffThenClear($, offered, true)} />
-      ) : null}
-      {isOffered ? (
-        <Button key="new-task-clear" label="Handoff and clear" variant={offered.effort === undefined ? 'primary' : undefined} onPress={() => handoffThenClear($, offered, false)} />
-      ) : null}
-      {isOffered ? <Button key="new-task-here" label="Keep going here" onPress={() => keepGoing($)} /> : null}
-      {dismissButton(d, 'new-task-dismiss', () => dismissOffer($))}
-    </Box>
-  )
+  return {
+    key: 'offer',
+    label: 'New task',
+    tone: 'warning',
+    text: [{ text: newTaskBody(offered) }],
+    actions,
+    details: [],
+    dismiss: { key: 'new-task-dismiss', label: '✕', onPress: () => dismissOffer($) },
+  }
 }
 
-function chainRow($: EngineInterface, d: Draw, running: ChainState) {
-  const { Box, Button, Text } = d.p
-
-  return (
-    <Box key="chain" gap={1} alignItems="center">
-      <Text bold color={running.stage === 'waiting' && running.stopped !== undefined ? 'warning' : 'subtle'}>Chain</Text>
-      <Text>{stageLine(running)}</Text>
-      {dismissButton(d, 'chain-dismiss', () => dismissChain($))}
-    </Box>
-  )
+function chainRow($: EngineInterface, running: ChainState): Row {
+  return {
+    key: 'chain',
+    label: 'Chain',
+    tone: running.stage === 'waiting' && running.stopped !== undefined ? 'warning' : 'subtle',
+    text: [{ text: stageLine(running) }],
+    actions: [],
+    details: [],
+    dismiss: { key: 'chain-dismiss', label: '✕', onPress: () => dismissChain($) },
+  }
 }
 
 /** The context row; `coldAt` is the cold-cache deadline when the row carries it, since its chain button is the one that timer would run. */
-function figureRow($: EngineInterface, d: Draw, now: ContextFigure, grewBy: number, tier: number, coldAt: number) {
-  const { Box, Button, Text } = d.p
+function figureRow($: EngineInterface, d: Draw, now: ContextFigure, grewBy: number, tier: number, coldAt: number): Row {
+  const actions: Action[] = []
+  if (!d.isWorking) {
+    actions.push({ key: 'context-handoff', label: 'Handoff', main: !d.chainOn, onPress: () => handoffByPerson($) })
+    if (d.chainOn) {
+      actions.push({ key: 'context-chain', label: 'Handoff and compact', main: true, onPress: () => chainByPerson($) })
+    }
+  }
 
-  return (
-    <Box key="figure" gap={1} alignItems="center">
-      <Text bold color={tier === 0 ? 'warning' : 'error'}>Context</Text>
-      <Text tabular>{`${compact(now.tokens)} / ${compact(now.window)}  ${now.percent}%`}</Text>
-      {grewBy > 0 ? <Text dimColor>{`+${compact(grewBy)} last turn`}</Text> : null}
-      {d.isWorking ? null : <Button key="context-handoff" label="Handoff" variant={d.chainOn ? undefined : 'primary'} onPress={() => handoffByPerson($)} />}
-      {d.isWorking || !d.chainOn ? null : <Button key="context-chain" label="Handoff and compact" variant="primary" onPress={() => chainByPerson($)} />}
-      {coldAt === 0 ? null : <Text dimColor>{coldClause(coldAt)}</Text>}
-      {dismissButton(d, 'context-dismiss', () => {
+  return {
+    key: 'figure',
+    label: 'Context',
+    tone: tier >= 2 ? 'error' : 'warning',
+    text: [{ text: `${compact(now.tokens)} / ${compact(now.window)}  ${now.percent}%`, tabular: true }, ...(grewBy > 0 ? [{ text: `+${compact(grewBy)} last turn`, dim: true }] : [])],
+    actions,
+    details: coldAt === 0 ? [] : [{ text: coldClause(coldAt), dim: true }],
+    dismiss: {
+      key: 'context-dismiss',
+      label: '✕',
+      onPress: () => {
         dismissFigure($)
         if (coldAt !== 0) {
           dismissCold($)
         }
-      })}
-    </Box>
-  )
+      },
+    },
+  }
 }
 
-function coldRow($: EngineInterface, d: Draw, at: number) {
-  const { Box, Button, Text } = d.p
-
-  return (
-    <Box key="cold" gap={1} alignItems="center">
-      <Text bold color="subtle">Cache</Text>
-      <Text>{coldText(at)}</Text>
-      {d.isWorking ? null : <Button key="cold-run" label="Run chain now" variant="primary" onPress={() => runColdNow($)} />}
-      {dismissButton(d, 'cold-dismiss', () => dismissCold($))}
-    </Box>
-  )
+function coldRow($: EngineInterface, d: Draw, at: number): Row {
+  return {
+    key: 'cold',
+    label: 'Cache',
+    tone: 'subtle',
+    text: [{ text: coldText(at) }],
+    actions: d.isWorking ? [] : [{ key: 'cold-run', label: 'Run chain now', main: true, onPress: () => runColdNow($) }],
+    details: [],
+    dismiss: { key: 'cold-dismiss', label: '✕', onPress: () => dismissCold($) },
+  }
 }
 
-function limitRow($: EngineInterface, d: Draw, w: SessionRateLimit) {
-  const { Box, Button, Text } = d.p
+function limitRow($: EngineInterface, w: SessionRateLimit): Row {
+  return {
+    key: `limit-${w.kind}`,
+    label: 'Usage',
+    tone: w.percentUsed >= LIMIT_FIRM ? 'error' : 'warning',
+    text: [{ text: limitFigures(w), tabular: true }],
+    actions: [],
+    details: [],
+    dismiss: { key: `limit-dismiss-${w.kind}`, label: '✕', onPress: () => dismissLimit($, w) },
+  }
+}
 
-  return (
-    <Box key={`limit-${w.kind}`} gap={1} alignItems="center">
-      <Text color={w.percentUsed >= LIMIT_FIRM ? 'error' : 'warning'}>{limitLine(w)}</Text>
-      {dismissButton(d, `limit-dismiss-${w.kind}`, () => dismissLimit($, w))}
-    </Box>
-  )
+/** The row that leads: the first whose own colour is not `subtle`, or the first row when none has one. */
+function leadOf(rows: readonly Row[]): number {
+  const coloured = rows.findIndex((r) => r.tone !== 'subtle')
+
+  return coloured === -1 ? 0 : coloured
 }
 
 export const register: Register = (on, options) => {
@@ -208,7 +265,9 @@ export const register: Register = (on, options) => {
     const marks = await read($, limitsDismissed)
     const limits = (await read($, rateLimits)).filter((w) => showsLimit(w, marks[w.kind], limitFloor))
     const trigger = now === null ? 0 : triggerTokens(thresholdTokens, thresholdPercent, now.window)
-    const past = now !== null && now.tokens >= trigger && !withinStep(dismissedAt, now.tokens, step)
+    const tier = now === null ? 0 : adviceTier(now.tokens, trigger)
+    // Below the firmer tier the figure is the status line's alone: the band keeps what needs a decision.
+    const past = now !== null && now.tokens >= trigger && tier >= 1 && !withinStep(dismissedAt, now.tokens, step)
     if (e.props.hasSurvey || (held === null && kept === null && missed.length === 0 && offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
       return below
     }
@@ -216,33 +275,34 @@ export const register: Register = (on, options) => {
     const d: Draw = { p: { Box, Button, Text }, isWorking: e.props.isWorking, chainOn }
     // The context row offers the same chain the cache row would, so it takes the timer in.
     const foldsCold = chainOn && offered === null && running === null && past
-    const rows = []
+    const rows: Row[] = []
     if (held !== null) {
-      rows.push(failureRow($, d, held))
+      rows.push(failureRow($, held))
     }
     if (kept !== null) {
-      rows.push(heldRow($, d, kept))
+      rows.push(heldRow($, kept))
     }
     if (missed.length > 0) {
-      rows.push(missedRow($, d, missed))
+      rows.push(missedRow($, missed))
     }
     if (offered !== null) {
-      rows.push(offerRow($, d, offered))
+      rows.push(offerRow($, offered))
     } else if (running !== null) {
-      rows.push(chainRow($, d, running))
+      rows.push(chainRow($, running))
     } else if (past && now !== null) {
-      rows.push(figureRow($, d, now, grewBy, adviceTier(now.tokens, trigger), foldsCold ? coldAt : 0))
+      rows.push(figureRow($, d, now, grewBy, tier, foldsCold ? coldAt : 0))
     }
     if (coldAt !== 0 && !foldsCold) {
       rows.push(coldRow($, d, coldAt))
     }
     for (const w of limits) {
-      rows.push(limitRow($, d, w))
+      rows.push(limitRow($, w))
     }
+    const lead = leadOf(rows)
 
     return (
       <Box flexDirection="column" rowGap="xs">
-        {rows}
+        {rows.map((r, i) => ledgerRow(d, r, i === lead))}
         {below}
       </Box>
     )

@@ -2,7 +2,7 @@
 id: A71
 from: [O17]
 source: session
-status: decided 2026-10-26
+status: retired 2026-10-29
 kind: behaviour
 implemented_by: [plugins/session-kit/hooks/band.tsx, plugins/session-kit/hooks/lines.ts, plugins/session-kit/hooks/options.ts, plugins/session-kit/hooks/context.tsx, plugins/session-kit/.claude-plugin/plugin.json]
 proven_by: [plugins/session-kit/hooks/limits.test.tsx, plugins/session-kit/hooks/context.test.tsx, plugins/session-kit/hooks/cold_cache.test.tsx]

@@ -219,7 +219,7 @@ test('the band gives when the chain runs inside the context row, above the band 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
     // One row offers the chain and says when it runs by itself; no second row repeats it.
-    expect((await ui.find({ type: 'Text', text: /runs itself at/ }))?.text).toMatch(/runs itself at \d\d:\d\d/)
+    expect((await ui.find({ type: 'Text', text: /run by themselves at/ }))?.text).toMatch(/run by themselves at \d\d:\d\d/)
     expect(await ui.find({ type: 'Text', text: /before it goes cold/ })).toBeUndefined()
     expect((await ui.find({ type: 'Text', text: /300k \/ 1M/ }))?.text).toBe('300k / 1M  30%')
     expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
@@ -228,7 +228,7 @@ test('the band gives when the chain runs inside the context row, above the band 
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await ui.press({ key: 'context-dismiss' })
-  expect(await ui.find({ type: 'Text', text: /runs itself at/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /run by themselves at/ })).toBeUndefined()
   await ui.unmount()
   await clock.advance(180 * MINUTE)
   expect(asked).toEqual([])

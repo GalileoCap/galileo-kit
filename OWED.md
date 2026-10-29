@@ -129,6 +129,12 @@ Seen in this session's trial on 2026-10-29: a `??` message was held, the person 
 
 On 0.38.0 to 0.39.1 in this repository's session, five things were seen. A tagged message reached the model with its ids and the closing-line forms (`A83`). The reply's closing lines closed their items, so the turn's `answer` holds the text after the desktop's wrap-up. A reply left without `Do-3`'s line drew the kit's single prompt naming it. A `??` message with a bare id was held, and the Held row drew on the desktop with its finding, Send as is and Use the rewrite (`A85`). A `??` message asking the checker to reject it was let through, Haiku saying it found nothing. Not seen: the No line row itself (the owner did not say), pasted text in a tagged message, and the work instance.
 
+## At the install of session-kit 0.40.0
+
+### main: the band is a ledger, and the context row joins it at its firmer tier
+
+`A86` (the band is a ledger, and the context row joins it at its higher tier). Every row draws a label in a fixed column, its text, then its buttons and its ✕ at the right, and only the leading row has a coloured label and a filled button. The context row draws from 300k by default, and below that only the status line shows the figure. To see on the desktop: whether the label column's width of 8 lines the rows up there as it does in the terminal, and how the plain labels read beside the coloured one. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

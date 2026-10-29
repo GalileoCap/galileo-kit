@@ -125,6 +125,13 @@ export function limitLine(w: SessionRateLimit): string {
   return `${limitName(w.kind)} is at ${w.percentUsed}%${resetClause(w)}.`
 }
 
+/** A window as the band's Usage row gives it: `5-hour window 96% · resets 14:30`. */
+export function limitFigures(w: SessionRateLimit): string {
+  const reset = resetShort(w)
+
+  return `${limitName(w.kind).replace(/^The /, '').replace(' usage', '')} ${w.percentUsed}%${reset === '' ? '' : ` ·${reset}`}`
+}
+
 /** 0 below the warning, 1 from 80%, 2 from 95%. */
 export function limitTier(percentUsed: number): number {
   if (percentUsed >= LIMIT_FIRM) {
@@ -187,10 +194,11 @@ function proposal(effort: { level: string; reason: string }): string {
   return effort.reason === '' ? effort.level : `${effort.level}: ${effort.reason}`
 }
 
-export function newTaskLine(state: NewTaskState): string {
+/** The offer as the band's New task row gives it, beside its label. */
+export function newTaskBody(state: NewTaskState): string {
   switch (state.stage) {
     case 'offered':
-      return state.effort === undefined ? `New task: ${state.task}` : `New task: ${state.task}. Proposed effort ${proposal(state.effort)}`
+      return state.effort === undefined ? state.task : `${state.task}. Proposed effort ${proposal(state.effort)}`
     case 'handoff':
       return 'session-kit is writing the handoff before the clear.'
     case 'clearing':
@@ -198,12 +206,16 @@ export function newTaskLine(state: NewTaskState): string {
   }
 }
 
+export function newTaskLine(state: NewTaskState): string {
+  return state.stage === 'offered' ? `New task: ${newTaskBody(state)}` : newTaskBody(state)
+}
+
 /** The cold-cache row's words: when the kit runs the handoff and the compaction on its own. */
 export function coldText(at: number): string {
   return `handoff and compact at ${clockTime(new Date(at))}, before it goes cold`
 }
 
-/** The same deadline as a clause of the context row, which offers the same chain. */
+/** The same deadline as a line under the context row, which offers the same chain. */
 export function coldClause(at: number): string {
-  return `runs itself at ${clockTime(new Date(at))}`
+  return `Handoff and compact run by themselves at ${clockTime(new Date(at))}.`
 }

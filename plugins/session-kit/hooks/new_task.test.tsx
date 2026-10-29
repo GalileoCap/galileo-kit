@@ -75,7 +75,7 @@ test('the signal tells the model to stop, and the band offers the handoff and th
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
-    expect((await ui.find({ type: 'Text', text: /New task/ }))?.text).toMatch(/rewrite the README install section/)
+    expect((await ui.find({ type: 'Text', text: /README/ }))?.text).toMatch(/^rewrite the README install section$/)
     expect(await ui.find({ type: 'Button', text: /Handoff and clear/ })).toBeDefined()
     expect(await ui.find({ type: 'Button', text: /Keep going here/ })).toBeDefined()
     // The offer draws above the band beneath it, never in its place.
@@ -278,7 +278,7 @@ test('an effort the model proposes for the new task is set by the person\'s pres
   asked.length = 0
 
   let ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  expect((await ui.find({ type: 'Text', text: /New task/ }))?.text).toMatch(/effort low.*a mechanical edit/)
+  expect((await ui.find({ type: 'Text', text: /README/ }))?.text).toMatch(/effort low.*a mechanical edit/)
   expect(await ui.find({ type: 'Button', text: /Handoff and clear/ })).toBeDefined()
   await ui.press({ key: 'new-task-clear-effort' })
   await clock.settle()

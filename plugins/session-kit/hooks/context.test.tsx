@@ -156,7 +156,9 @@ test('a dismissed band stays away until the figure moves a step on, and comes ba
   expect(await bandAt(34)).toBe('engine')
   // Compacted: the figure fell below where it was dismissed.
   expect(await bandAt(5)).toBe('engine')
-  expect(await bandAt(26)).toMatch(/^260k \/ 1M/)
+  // Past the trigger and below the firmer tier, the figure is the status line's alone.
+  expect(await bandAt(29)).toBe('engine')
+  expect(await bandAt(30)).toMatch(/^300k \/ 1M/)
 })
 
 // The engine beneath a step of reads: its own figure at 100,000 tokens, which
