@@ -1,15 +1,15 @@
 // The band above the prompt and the line that closes a turn. The band keeps
-// only what needs the person: a failure, a message the pre-send check held,
-// the owner's tagged items a reply left without a line, the offer or the chain
-// or the context figure from its firmer tier, the cold-cache timer that will
-// act on its own (a line under the context row when that row offers the same
-// chain), and a usage window at 95% (at 80% when the kit keeps no status
-// line). The band is a ledger (`A86`): each row is a label in a fixed column,
-// its text, then its buttons and its ✕ at the right, and only the row that
-// leads has a coloured label and a filled button. The kit's rows draw above
-// whatever the plugins beneath drew, so no band of theirs is hidden. The turn
-// line gets the context percent the turn ended at, found by the turn's
-// duration, so an old line never shows a later figure.
+// only what needs the person: a failure, a message the pre-send check held, the
+// owner's tagged items a reply left without a line, the offer or the chain or
+// the context figure from its firmer tier, the cold-cache timer that will act
+// on its own (a line under the context row when that row offers the same
+// chain), and a usage window at 95% (at 80% when the kit keeps no status line).
+// The band is a ledger (`A86`): each row is a label in a column as wide as the
+// longest label shown, its text, then its buttons and its ✕ at the right, and
+// only the row that leads has a coloured label and a filled button. The kit's
+// rows draw above whatever the plugins beneath drew, so no band of theirs is
+// hidden. The turn line gets the context percent the turn ended at, found by
+// the turn's duration, so an old line never shows a later figure.
 
 import { atom, read } from 'claude-code'
 import type { ElementTable, EngineInterface, Register, SessionRateLimit } from 'claude-code'
@@ -55,8 +55,8 @@ const turnGrowth = atom({ plugin: 'session-kit', key: 'turnGrowth' } as const, 0
 
 type Parts = Pick<ElementTable<'desktop'>, 'Box' | 'Button' | 'Text'>
 
-/** What a row needs to draw: the elements, whether a turn runs, and whether the chain is on. */
-type Draw = { p: Parts; isWorking: boolean; chainOn: boolean }
+/** What a row needs to draw: the elements, whether a turn runs, whether the chain is on, and the label column's width. */
+type Draw = { p: Parts; isWorking: boolean; chainOn: boolean; labelWidth: number }
 
 type Tone = 'error' | 'warning' | 'subtle'
 
@@ -69,46 +69,47 @@ type Piece = { text: string; dim?: boolean; tabular?: boolean }
 /** A row of the ledger: its label and the colour it takes when it leads, its text, its buttons, the lines beneath it and its ✕. */
 type Row = { key: string; label: string; tone: Tone; text: Piece[]; actions: Action[]; details: Piece[]; dismiss: Action }
 
-// Wide enough for the longest label, `New task`.
-const LABEL_WIDTH = 8
-
-/** The label column, empty on a line beneath a row, so every row's text starts at the same place. */
+/** The label column, empty on a line beneath a row, as wide as the band's longest label, so every row's text starts at the same place. */
 function labelCell(d: Draw, row: Row, isLead: boolean, label: boolean) {
   const { Box, Text } = d.p
 
   return (
-    <Box width={LABEL_WIDTH} flexShrink={0}>
+    <Box minWidth={d.labelWidth} flexShrink={0}>
       {label ? <Text bold color={isLead ? row.tone : 'subtle'}>{row.label}</Text> : null}
     </Box>
   )
 }
 
-/** A row as the ledger draws it: the label, the text taking the free width, then the buttons and the ✕ together at the right. */
+/**
+ * A row as the ledger draws it: on the left the label and the text, with the
+ * lines beneath indented to the text, and on the right the buttons and the ✕,
+ * centred against all of the left side.
+ */
 function ledgerRow(d: Draw, row: Row, isLead: boolean) {
   const { Box, Button, Text } = d.p
 
   return (
-    <Box key={row.key} flexDirection="column">
-      <Box gap={1} alignItems="center">
-        {labelCell(d, row, isLead, true)}
-        <Box flexGrow={1} gap={1}>
+    <Box key={row.key} gap={1} alignItems="center">
+      <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+        <Box gap={1}>
+          {labelCell(d, row, isLead, true)}
           {row.text.map((t, i) => (
             <Text key={`${row.key}-text-${i}`} dimColor={t.dim} tabular={t.tabular}>
               {t.text}
             </Text>
           ))}
         </Box>
-        {row.actions.map((a) => (
-          <Button key={a.key} label={a.label} variant={isLead && a.main === true ? 'primary' : undefined} onPress={a.onPress} />
+        {row.details.map((t, i) => (
+          <Box key={`${row.key}-detail-${i}`} gap={1}>
+            {labelCell(d, row, isLead, false)}
+            <Text dimColor={t.dim}>{t.text}</Text>
+          </Box>
         ))}
-        <Button key={row.dismiss.key} label="✕" plain dimColor onPress={row.dismiss.onPress} />
       </Box>
-      {row.details.map((t, i) => (
-        <Box key={`${row.key}-detail-${i}`} gap={1}>
-          {labelCell(d, row, isLead, false)}
-          <Text dimColor={t.dim}>{t.text}</Text>
-        </Box>
+      {row.actions.map((a) => (
+        <Button key={a.key} label={a.label} variant={isLead && a.main === true ? 'primary' : undefined} onPress={a.onPress} />
       ))}
+      <Button key={row.dismiss.key} label="✕" plain dimColor onPress={row.dismiss.onPress} />
     </Box>
   )
 }
@@ -272,7 +273,7 @@ export const register: Register = (on, options) => {
       return below
     }
     const { Box, Button, Text } = $.ui.resolve(e)
-    const d: Draw = { p: { Box, Button, Text }, isWorking: e.props.isWorking, chainOn }
+    const d: Draw = { p: { Box, Button, Text }, isWorking: e.props.isWorking, chainOn, labelWidth: 0 }
     // The context row offers the same chain the cache row would, so it takes the timer in.
     const foldsCold = chainOn && offered === null && running === null && past
     const rows: Row[] = []
@@ -299,10 +300,19 @@ export const register: Register = (on, options) => {
       rows.push(limitRow($, w))
     }
     const lead = leadOf(rows)
+    const drawn = { ...d, labelWidth: Math.max(...rows.map((r) => r.label.length)) }
+    // The left inset matches the room the plain ✕ leaves at the right; a gap goes under the kit's rows only when a band beneath follows them.
+    const kit = (
+      <Box flexDirection="column" rowGap="xs" paddingLeft={1}>
+        {rows.map((r, i) => ledgerRow(drawn, r, i === lead))}
+      </Box>
+    )
 
-    return (
+    return below === null || below === undefined ? (
+      kit
+    ) : (
       <Box flexDirection="column" rowGap="xs">
-        {rows.map((r, i) => ledgerRow(d, r, i === lead))}
+        {kit}
         {below}
       </Box>
     )

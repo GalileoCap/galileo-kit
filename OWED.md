@@ -135,6 +135,12 @@ On 0.38.0 to 0.39.1 in this repository's session, five things were seen. A tagge
 
 `A86` (the band is a ledger, and the context row joins it at its higher tier). Every row draws a label in a fixed column, its text, then its buttons and its ✕ at the right, and only the leading row has a coloured label and a filled button. The context row draws from 300k by default, and below that only the status line shows the figure. To see on the desktop: whether the label column's width of 8 lines the rows up there as it does in the terminal, and how the plain labels read beside the coloured one. It reaches a session as 0.36.0 does.
 
+## At the install of session-kit 0.40.1
+
+### main: the band's spacing and alignment on the desktop
+
+Seen by the owner on 2026-10-29 on 0.40.0's Held row: a wide gap after the label, the buttons centred on the first line with the finding hanging below, more space under the row than above it, and a smaller inset on the left than on the right. The label column is now as wide as the longest label shown, the buttons centre against all the row's lines, the gap under the kit's rows goes when nothing follows them, and the rows are inset by one on the left. To see on the desktop: whether the four are gone. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
