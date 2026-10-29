@@ -30,6 +30,16 @@ This is harder than it looks. The kit has two ways to hold a prompt, and neither
    - The origin becomes `plugin`, with the cost above.
 2. Wait inside the hook. The hook does not call `next(e)` until the reason comes, and then passes the prompt on as it arrived: images, mentions, origin and timing all kept. The types say nothing of a time limit on a `prompt.submit` hook, nor of what the prompt box does while one waits. This would be the right way if it holds. It needs a probe first: a dev mod that waits 60 seconds in `prompt.submit`, driven on the terminal and the desktop.
 
+The probe ran on the desktop on 2026-10-29, a dev mod holding a prompt in `prompt.submit`. The owner left the terminal out.
+
+- A hook's budget is 10 seconds of its own time, and the clock stops while a `$` call other than a `$.clock` wait is in flight. No `$` call waits on the person.
+- Held by a 60-second `$.process.run`: the prompt entered when it ended, unchanged, the pasted screenshot attached and the origin `composer`.
+- A prompt typed during the hold queued behind it, and could not overtake it.
+- An interrupt during the hold dropped the held prompt: it never entered, and the owner sent it again.
+- Held by a 15-second `$.clock.sleep`: the engine passed the prompt on at 10 seconds, and the hook's own `next` after its wait never landed.
+
+So the hold is the second way, with a process as its wait: a process that ends when the band writes the reason to a file the kit names. An interrupt during the hold has to put the held text back in the prompt box (`C3`, a hook that writes to the owner's input loses none of it).
+
 The reason is typed into an `Input` on the band. The terminal, desktop and VS Code draw `Input`. The phone draws neither a band nor an `Input`, and the phone is the likeliest off-window channel (`volume.md`: 54% of off-window sittings are three messages or fewer). On the phone a prompt can be passed and logged as "phone, no reason", or refused with a toast that sends the owner to the desktop. The second is the friction the audit asks for, but it blocks an answer the owner may need to give. This is the owner's call.
 
 Nothing of the hold reaches the model under either way: a drop's reason is shown to the person alone, and the band, the status line, toasts and the pane are the person's. The probe also checks that a drop leaves no row in the transcript the model reads.
@@ -95,7 +105,7 @@ The 2b bar is an action under `O22`, written into the kit's settings when 2a goe
 The owner's order is the defect, then focus and the off-window friction, then the rule fixes. This read agrees with the first two and changes the inside of the second:
 
 1. The defect (`C4`), now, its regression test shown. Then the session registry, which 2a needs.
-2. The hold probe, half an hour of work, before any of 2a is built: does a `prompt.submit` hook that waits keep the prompt as it was, on the terminal and the desktop? Its answer decides how every hold of 2a is built.
+2. The hold probe, run on 2026-10-29 (section 1): a hook waiting on a process keeps the prompt as it was.
 3. 2a's measured core, before Friday's review can run: the window and the project kinds in `~/.claude/session-kit/`, the hold with its reason and the log, the 30-minute pass, and `session-transcripts week` with the 2b bar. The four-week clock starts when the hold goes live, and the first Friday review reads every day of the log since.
 4. The rest of 2a: the focus list and its tags, the countdown and the close, the concurrent-session friction, the streak, the morning list. They share the registry from step 1.
 5. The rule fixes, cheapest first: R20's one number, the nudge cut, the pyright notice, the tells once per session. Then the turn-end line (the person-only lines, background tasks, R24's first version, trialled in one project). Then R18's programs. Then the audit's port and the trial rule.
