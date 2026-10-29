@@ -16,6 +16,7 @@ const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, nu
 const rateLimits = atom({ plugin: 'session-kit', key: 'rateLimits' } as const, NO_WINDOWS)
 const lastPromptAt = atom({ plugin: 'session-kit', key: 'lastPromptAt' } as const, 0)
 const turnGrowth = atom({ plugin: 'session-kit', key: 'turnGrowth' } as const, 0)
+const loadPass = atom({ plugin: 'session-kit', key: 'loadPass' } as const, null)
 
 const MINUTE_MS = 60000
 
@@ -40,14 +41,17 @@ export async function refreshStatus($: EngineInterface): Promise<void> {
     return
   }
   const saidAt = await read($, lastPromptAt)
-  const since = saidAt === 0 ? null : (await $.clock.now()) - saidAt
+  const pass = await read($, loadPass)
+  const now = saidAt === 0 && pass === null ? 0 : await $.clock.now()
+  const since = saidAt === 0 ? null : now - saidAt
   if (since !== null && tick === null) {
     tick = $.clock.after(MINUTE_MS - (since % MINUTE_MS), () => {
       tick = null
       void refreshStatus($)
     })
   }
-  const text = statusText(await read($, figure), await read($, turnGrowth), since, await read($, rateLimits), await read($, coldTimerAt))
+  const figures = statusText(await read($, figure), await read($, turnGrowth), since, await read($, rateLimits), await read($, coldTimerAt))
+  const text = pass === null || pass.until <= now ? figures : [figures, `pass until ${pass.label}`].filter((part) => part !== undefined).join(' · ')
   if (text === shown) {
     return
   }

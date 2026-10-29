@@ -117,6 +117,19 @@ export type PresendHeld = {
   rewrite: string | null
 }
 
+/** The owner's prompt held outside its window: the window's kind, the prompt's start, and the file a reason ends the wait by. */
+export type LoadHeld = {
+  kind: 'work' | 'personal'
+  preview: string
+  file: string
+}
+
+/** The pass a reason opens for every session: when it ends, and that time as the status line names it. */
+export type LoadPass = {
+  until: number
+  label: string
+}
+
 /** A button of the next-step box: its label, and the message a press sends as the person's, null for an app action the band cannot run. */
 export type QuestionAction = {
   label: string
@@ -177,6 +190,10 @@ declare module 'claude-code' {
       paneFolded: string[] | null
       /** Per list of the pane, the first item its window shows; a list left out starts at its top. */
       paneScroll: Record<string, number>
+      /** The owner's prompt held outside its window for a reason; null while none is. */
+      loadHeld: LoadHeld | null
+      /** The pass the last reason opened, for the status line; null before any. */
+      loadPass: LoadPass | null
       /** The message the pre-send check holds for the person's decision; null while none is. */
       presendHeld: PresendHeld | null
       /** The text Send as is sent or Use the rewrite prepared, let through unchecked once; empty while none is. */

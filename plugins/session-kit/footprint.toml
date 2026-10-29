@@ -13,12 +13,12 @@ engine = "2.1.308"
   "$.command.register",
   "$.command.run (via clearThenResend, compactByCommand, handoffCommand, runHandoffBeforeClear, setEffort)",
   "$.env.get",
-  "$.fs.exists (via handoffState)",
-  "$.fs.read (via indexOf, journalLine, ownerTask, paneFacts, past, projectRunners, writeFacts)",
+  "$.fs.exists (via handoffState, hold)",
+  "$.fs.read (via hold, indexOf, journalLine, ownerTask, paneFacts, past, projectRunners, writeFacts)",
   "$.fs.stat (via handoffState)",
   "$.fs.write",
   "$.model.complete (via judgeChain, review)",
-  "$.process.run (via gitOutput, intentNames, lastCommitMs, uncommitted)",
+  "$.process.run (via gitOutput, hold, intentNames, lastCommitMs, uncommitted)",
   "$.prompt.fill",
   "$.prompt.read",
   "$.prompt.submit",
@@ -126,6 +126,8 @@ engine = "2.1.308"
   "session-kit.lastPromptAt",
   "session-kit.lastTest",
   "session-kit.limitsDismissed",
+  "session-kit.loadHeld",
+  "session-kit.loadPass",
   "session-kit.newTask",
   "session-kit.openItems",
   "session-kit.paneFolded",
@@ -159,6 +161,8 @@ engine = "2.1.308"
   "session-kit.lastPromptAt",
   "session-kit.lastTest",
   "session-kit.limitsDismissed",
+  "session-kit.loadHeld",
+  "session-kit.loadPass",
   "session-kit.newTask",
   "session-kit.openItems",
   "session-kit.paneFolded",
@@ -194,6 +198,8 @@ engine = "2.1.308"
   "session-kit.lastPromptAt",
   "session-kit.lastTest",
   "session-kit.limitsDismissed",
+  "session-kit.loadHeld",
+  "session-kit.loadPass",
   "session-kit.newTask",
   "session-kit.openItems",
   "session-kit.paneFolded",
@@ -213,19 +219,19 @@ engine = "2.1.308"
 ]
 
 [why]
-"$.clock.every" = "The session registry's beat, a minute apart, so a reader tells a closed session by its record's age."
 "$.clock.after" = "Defers the chain's and the offer's next stage, and the prompt about a tagged item left without a line, until the turn lets go, and arms the cold-cache timer."
+"$.clock.every" = "The session registry's beat, a minute apart, so a reader tells a closed session by its record's age."
 "$.clock.now" = "Stamps the chain file's lines, the test log's runs, the person's last prompt and the handoff's facts, and dates the cold-cache deadline."
 "$.command.register" = "Registers /kit, the command that shows or hides the kit's pane."
 "$.command.run" = "Runs the handoff command (for the chain, and for the band's Handoff button), /compact for the chain's compaction, and /clear after the new-task offer's press, then /effort when the person chose the effort the model proposed."
-"$.env.get" = "TMPDIR for the chain file and the test log, HOME for the timeline's directory and the session registry's."
+"$.env.get" = "TMPDIR for the chain file and the test log, HOME for the timeline's directory, the session registry's and the working window's."
 "$.fs.exists" = "Whether CLAUDE.local.md exists, for the checkout's handoff advice."
 "$.fs.read" = "The chain file before a line is added, the Task section of CLAUDE.local.md for the judge, CLAUDE.local.md before its facts are added, its next step and open questions for the pane, a document's length after an edit, the suppressions index, and test_commands in .claude/claude-kit.json."
 "$.fs.stat" = "When CLAUDE.local.md was last written, against the last commit, for the stale-handoff advice."
-"$.fs.write" = "The chain file and the test log under the temporary directory, the timeline's files under ~/.claude/session-kit/measure/, each session's record under ~/.claude/session-kit/sessions/, and the facts section of CLAUDE.local.md, after the model's text."
+"$.fs.write" = "The chain file and the test log under the temporary directory, the timeline's files under ~/.claude/session-kit/measure/, each session's record under ~/.claude/session-kit/sessions/, and the facts section of CLAUDE.local.md, after the model's text, and the working window's reason, pass and log under ~/.claude/session-kit/load/."
 "$.model.complete" = "Haiku reads the unattended chain at its third, fifth and every later signal for a loop or a step beyond the task, and reads a ?? message or one of four bullets against the owner's rules before it is sent, on the session's own credentials."
-"$.process.run" = "git log and git status for the checkout checks and the pane's session section, the test log's tree print and the handoff's facts, and git cat-file for the commit ids a handoff names, with the repository's own config unable to run code, and session-intent names for the pre-send check."
-"$.prompt.fill" = "Puts a message the pre-send check held back in the box above what the person typed, puts Haiku's rewrite in its place on Use the rewrite, and takes it out on Send as is, keeping every other text (C3)."
+"$.process.run" = "git log and git status for the checkout checks and the pane's session section, the test log's tree print and the handoff's facts, and git cat-file for the commit ids a handoff names, with the repository's own config unable to run code, and session-intent names for the pre-send check, and the working window's wait, a shell loop that ends when the band writes the reason."
+"$.prompt.fill" = "Puts a message the pre-send check held back in the box above what the person typed, puts Haiku's rewrite in its place on Use the rewrite, and takes it out on Send as is, keeping every other text (C3), and puts a prompt held outside the working window back in the box when it is returned."
 "$.prompt.read" = "Reads the box before each write to it, so no text the person has there is lost (C3)."
 "$.prompt.submit" = "The continue prompt after the chain's compaction, the person's prompt sent again after the new-task offer's clear, one prompt per tagged item a reply left without a line, and a held message on Send as is, as the person's."
 "$.session.cwd" = "The checkout the session runs in, for git, CLAUDE.local.md and the settings."
@@ -248,7 +254,7 @@ engine = "2.1.308"
 "$.ui.status" = "Pins the status line under the prompt: the context figure, the usage windows and when the cold-cache timer compacts, rewritten only when its text changes."
 "$.ui.toast" = "A moment where no band is drawn, a failure of the chain or the offer included."
 "command.run" = "Opens the kit's pane when the person runs /kit."
-"prompt.submit" = "Records the person's own prompt and its time, for the new-task resend and the handoff's facts, starts the chain's steps over, gives the first prompt of a context the checkout's handoff advice, lists the person's tagged items with their ids beside a tagged prompt and writes the ids into it, and holds a ?? message or one of four bullets when Haiku finds something in it."
+"prompt.submit" = "Records the person's own prompt and its time, for the new-task resend and the handoff's facts, starts the chain's steps over, gives the first prompt of a context the checkout's handoff advice, lists the person's tagged items with their ids beside a tagged prompt and writes the ids into it, and holds a ?? message or one of four bullets when Haiku finds something in it, and first holds the owner's prompt outside their working window for a reason (A92)."
 "session.end" = "Writes the timeline's last lines when the session ends."
 "session.measure" = "The engine's context figure and the plan's usage windows, for the band and the warning."
 "session.start" = "Registers the two tools, and sets the cold-cache timer again from its deadline."

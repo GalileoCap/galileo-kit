@@ -15,7 +15,7 @@
 import { atom, read } from 'claude-code'
 import type { ElementTable, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { TurnFigure, ChainState, ContextFigure, Failure, NewTaskState, PendingQuestion, PresendHeld, TaggedItem } from '../types'
+import type { TurnFigure, ChainState, ContextFigure, Failure, LoadHeld, NewTaskState, PendingQuestion, PresendHeld, TaggedItem } from '../types'
 import {
   adviceTier,
   chainByPerson,
@@ -33,6 +33,7 @@ import {
 } from './context'
 import { LIMIT_FIRM, LIMIT_WARN, coldClause, coldText, compact, limitFigures, newTaskBody, showsLimit, stageLine } from './lines'
 import { readOptions, triggerTokens, withinStep } from './options'
+import { giveReason, returnHeld } from './load'
 import { dismissHeld, sendAsIs, useRewrite } from './presend'
 import { answerQuestion, dismissQuestion } from './question'
 import { dismissMissed } from './tags'
@@ -45,6 +46,7 @@ const NO_ITEMS: TaggedItem[] = []
 const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const coldTimerAt = atom({ plugin: 'session-kit', key: 'coldTimerAt' } as const, 0)
 const failure = atom({ plugin: 'session-kit', key: 'failure' } as const, null)
+const loadHeld = atom({ plugin: 'session-kit', key: 'loadHeld' } as const, null)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
 const pendingQuestion = atom({ plugin: 'session-kit', key: 'pendingQuestion' } as const, null)
 const presendHeld = atom({ plugin: 'session-kit', key: 'presendHeld' } as const, null)
@@ -56,7 +58,8 @@ const rateLimits = atom({ plugin: 'session-kit', key: 'rateLimits' } as const, N
 const turnFigures = atom({ plugin: 'session-kit', key: 'turnFigures' } as const, NO_TURNS)
 const turnGrowth = atom({ plugin: 'session-kit', key: 'turnGrowth' } as const, 0)
 
-type Parts = Pick<ElementTable<'desktop'>, 'Box' | 'Button' | 'Text'>
+// The phone draws no Input, so a row's field is left out there.
+type Parts = Pick<ElementTable<'desktop'>, 'Box' | 'Button' | 'Text'> & { Input?: ElementTable<'desktop'>['Input'] }
 
 /** What a row needs to draw: the elements, whether a turn runs, whether the chain is on, and the label column's width. */
 type Draw = { p: Parts; isWorking: boolean; chainOn: boolean; labelWidth: number }
@@ -69,8 +72,11 @@ type Action = { key: string; label: string; main?: boolean; onPress: () => void 
 /** A piece of a row's text or of a line beneath it. */
 type Piece = { text: string; dim?: boolean; tabular?: boolean }
 
-/** A row of the ledger: its label and the colour it takes when it leads, its text, its buttons, the lines beneath it and its ✕. */
-type Row = { key: string; label: string; tone: Tone; text: Piece[]; actions: Action[]; details: Piece[]; dismiss: Action }
+/** A text field under a row's lines: its key, its dim hint, what Enter does, and the handler of the text. */
+type Field = { key: string; placeholder: string; submitLabel: string; onSubmit: (value: string) => void }
+
+/** A row of the ledger: its label and the colour it takes when it leads, its text, its buttons, the lines beneath it, a field under them and its ✕. */
+type Row = { key: string; label: string; tone: Tone; text: Piece[]; actions: Action[]; details: Piece[]; field?: Field; dismiss: Action }
 
 /** The label column, empty on a line beneath a row, as wide as the band's longest label, so every row's text starts at the same place. */
 function labelCell(d: Draw, row: Row, isLead: boolean, label: boolean) {
@@ -89,7 +95,8 @@ function labelCell(d: Draw, row: Row, isLead: boolean, label: boolean) {
  * centred against all of the left side.
  */
 function ledgerRow(d: Draw, row: Row, isLead: boolean) {
-  const { Box, Button, Text } = d.p
+  const { Box, Button, Input, Text } = d.p
+  const { field } = row
 
   return (
     <Box key={row.key} gap={1} alignItems="center">
@@ -108,6 +115,12 @@ function ledgerRow(d: Draw, row: Row, isLead: boolean) {
             <Text dimColor={t.dim}>{t.text}</Text>
           </Box>
         ))}
+        {field === undefined || Input === undefined ? null : (
+          <Box key={`${row.key}-field`} gap={1}>
+            {labelCell(d, row, isLead, false)}
+            <Input key={field.key} placeholder={field.placeholder} submitLabel={field.submitLabel} autoFocus onSubmit={(value) => field.onSubmit(value)} />
+          </Box>
+        )}
       </Box>
       {row.actions.map((a) => (
         <Button key={a.key} label={a.label} variant={isLead && a.main === true ? 'primary' : undefined} onPress={a.onPress} />
@@ -158,6 +171,19 @@ function missedRow($: EngineInterface, missed: readonly TaggedItem[]): Row {
 }
 
 /** The session's question, once a handoff took the next-step box's place: a press on a reply sends its message as the person's; an app action is named for the app to run. */
+function loadRow($: EngineInterface, held: LoadHeld): Row {
+  return {
+    key: 'load',
+    label: 'Held',
+    tone: 'warning',
+    text: [{ text: `Outside your ${held.kind} window. A reason sends it on, and opens a pass for every session.` }],
+    actions: [],
+    details: [{ text: held.preview, dim: true }],
+    field: { key: 'load-reason', placeholder: 'why now, in a line', submitLabel: 'send', onSubmit: (value) => giveReason($, held, value) },
+    dismiss: { key: 'load-return', label: '✕', onPress: () => returnHeld($, held) },
+  }
+}
+
 function questionRow($: EngineInterface, q: PendingQuestion): Row {
   const actions: Action[] = []
   const inApp: string[] = []
@@ -282,6 +308,7 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const below = await next(e)
     const held = await read($, failure)
+    const holding = await read($, loadHeld)
     const missed = await read($, itemsMissed)
     const kept = await read($, presendHeld)
     const asked = await read($, pendingQuestion)
@@ -298,14 +325,18 @@ export const register: Register = (on, options) => {
     const tier = now === null ? 0 : adviceTier(now.tokens, trigger)
     // Below the firmer tier the figure is the status line's alone: the band keeps what needs a decision.
     const past = now !== null && now.tokens >= trigger && tier >= 1 && !withinStep(dismissedAt, now.tokens, step)
-    if (e.props.hasSurvey || (held === null && kept === null && carried === null && missed.length === 0 && offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
+    if (e.props.hasSurvey || (held === null && holding === null && kept === null && carried === null && missed.length === 0 && offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
       return below
     }
-    const { Box, Button, Text } = $.ui.resolve(e)
-    const d: Draw = { p: { Box, Button, Text }, isWorking: e.props.isWorking, chainOn, labelWidth: 0 }
+    const table = $.ui.resolve(e)
+    const { Box, Button, Text } = table
+    const d: Draw = { p: { Box, Button, Text, ...('Input' in table ? { Input: table.Input } : {}) }, isWorking: e.props.isWorking, chainOn, labelWidth: 0 }
     // The context row offers the same chain the cache row would, so it takes the timer in.
     const foldsCold = chainOn && offered === null && running === null && past
     const rows: Row[] = []
+    if (holding !== null) {
+      rows.push(loadRow($, holding))
+    }
     if (held !== null) {
       rows.push(failureRow($, held))
     }

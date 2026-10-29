@@ -205,6 +205,12 @@ The guard read the `&` of `2>&1` as the end of a command, so `scripts/test x 2>&
 
 `A91` (the session registry): each session writes `~/.claude/session-kit/sessions/<id>.json` with its state, working or waiting on the owner, whether a question waits, and a beat each minute. Nothing reads it yet. To see: with two sessions open, each has a file there, its `beat` moving each minute, and the one whose turn runs reads `working`. It reaches a session as 0.36.0 does.
 
+## At the install of session-kit 0.45.0
+
+### main: the working window holds the owner's prompt for a reason
+
+`A92` (the working window holds the owner's prompt for a reason). It does nothing until `~/.claude/session-kit/load/settings.json` exists, so write it at the install with `timeZone` `America/Argentina/Buenos_Aires`, `work` (`days` mon to fri, `hours` `06:00-11:00` and `15:00-17:00`), `personal` (every day, `hours` `05:30-22:00`, `folders` `~/devel/galileo`), `passMinutes` 30, and `bar`, the 2b bar, with `live` the install's date, `weeks` 4, `offWindowBelow` 0.40 and `lastMessageBy` `22:00`. To see on the desktop: a prompt in a tagents session after 17:00 waits with a Held row, and a reason sends it with the pass on the status line. A second session's prompt then goes straight on. An interrupt while held puts the text back in the box. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
