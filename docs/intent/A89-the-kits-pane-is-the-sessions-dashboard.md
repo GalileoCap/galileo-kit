@@ -37,7 +37,7 @@ The pane repeats the status line's numbers, now as gauges. Each drawing runs `gi
 
 ## Proof
 
-The owner saw the first version on the desktop on 2026-10-29, sections in the band's ledger look, and asked for visual work: separators, alignment, cards, the relevant text bold against its context. The cards answer it. Then, on 0.42.1: "Looking better, can you make it so I can collapse the sections?", answered by the fold.
+The owner saw the first version on the desktop on 2026-10-29, sections in the band's ledger look, and asked for visual work: separators, alignment, cards, the relevant text bold against its context. The cards answer it. Then, on 0.42.1: "Looking better, can you make it so I can collapse the sections?", answered by the fold. Then, on 0.42.2: "Session" has too much content, and "Next" needs more hierarchy and layout. This session shows its three newest commits and a count of the rest, the uncommitted files as one line of names, and a test command's first line alone. Next gives the next step and the open questions each a small heading, the questions numbered with their wrapped lines hanging under the text, and both drawn as markdown so a path in backticks reads as code.
 
 
 A scaffolding test under `claude plugin test` on 2.1.308 drew the pane on the desktop and the terminal with git and the handoff stubbed: the session's commits and files, the next step, the questions, the handoff's state and the context showed, with one SVG on the desktop and none on the terminal. The test was deleted as blind scaffolding. Not yet seen on the desktop.

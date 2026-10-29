@@ -175,6 +175,12 @@ Seen by the owner on 2026-10-29 on the desktop: "It worked".
 
 `A89` (the kit's pane is the session's dashboard), by the owner's word on 2026-10-29: a press on a card's title folds it to its first line and a second opens it, and a new session starts with the same sections folded. To see on the desktop: a fold and an open, the `▸` and `▾` marks, and the folds kept after a restart. It reaches a session as 0.36.0 does.
 
+## At the install of session-kit 0.42.3
+
+### main: a shorter session card and a laid-out next card
+
+`A89` (the kit's pane is the session's dashboard), by the owner's look at 0.42.2: This session shows three commits and a count of the rest, the uncommitted files on one line, and a test command's first line. Next has small headings, numbered questions with hanging lines, and markdown text. To see on the desktop: both cards, and the backticks drawn as code. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

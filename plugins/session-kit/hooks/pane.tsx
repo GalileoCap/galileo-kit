@@ -56,6 +56,7 @@ const KEPT_FOLDED = 'paneFolded'
 
 const HANDOFF = 'CLAUDE.local.md'
 const SHOWN = 6
+const COMMITS_SHOWN = 3
 const CURVE_TURNS = 24
 // The band's two higher tiers of the context, as multiples of the trigger (`A86`).
 const FIRM_TIER = 1.2
@@ -211,9 +212,11 @@ export function headline(subject: string): string {
   return cut === -1 ? subject : subject.slice(0, cut)
 }
 
-/** A test command without the `cd <dir>;` or `cd <dir> &&` that leads it. */
+/** A test command's first line without the `cd <dir>;` or `cd <dir> &&` that leads it. */
 export function commandShown(command: string): string {
-  return command
+  const first = command.split('\n')[0] ?? ''
+
+  return first
     .split(/\s*(?:;|&&)\s*/)
     .filter((part) => !/^cd\s/.test(part) && part.trim() !== '')
     .join('; ')
@@ -284,6 +287,7 @@ export const register: Register = (on, options) => {
     }
     const svg: Svg = 'Svg' in table ? table.Svg : null
     const { Box, Button, Text } = p
+    const { Markdown } = table
     const items = await read($, openItems)
     const last = await read($, lastTest)
     const now = await read($, figure)
@@ -318,7 +322,7 @@ export const register: Register = (on, options) => {
 
     const session: RenderChildren[] = []
     session.push(
-      ...capped(p, facts.commits, (c) => (
+      ...facts.commits.slice(0, COMMITS_SHOWN).map((c) => (
         <Box gap={1}>
           <Text mono dimColor>
             {c.slice(0, c.indexOf(' '))}
@@ -327,14 +331,17 @@ export const register: Register = (on, options) => {
         </Box>
       )),
     )
+    if (facts.commits.length > COMMITS_SHOWN) {
+      session.push(<Text size="footnote" dimColor>{`and ${facts.commits.length - COMMITS_SHOWN} earlier`}</Text>)
+    }
     if (facts.files.length > 0) {
-      session.push(<Text color="warning">{`${facts.files.length} uncommitted`}</Text>)
       session.push(
-        ...capped(p, facts.files, (f) => (
-          <Text mono dimColor wrap="truncate-start">
-            {f}
+        <Box gap={1}>
+          <Text color="warning">{`${facts.files.length} uncommitted`}</Text>
+          <Text mono dimColor wrap="truncate-end">
+            {facts.files.map((f) => f.slice(f.lastIndexOf('/') + 1)).join(', ')}
           </Text>
-        )),
+        </Box>,
       )
     }
     if (last !== null && facts.verdict !== null) {
@@ -351,21 +358,35 @@ export const register: Register = (on, options) => {
       )
     }
     if (session.length > 0) {
-      const summary = `${facts.commits.length} ${facts.commits.length === 1 ? 'commit' : 'commits'}`
-      sections.push(card(p, 'This session', <Text dimColor>{summary}</Text>, session))
+      const counts = [`${facts.commits.length} ${facts.commits.length === 1 ? 'commit' : 'commits'}`, ...(facts.files.length > 0 ? [`${facts.files.length} uncommitted`] : [])]
+      sections.push(card(p, 'This session', <Text dimColor>{counts.join(' · ')}</Text>, session))
     }
 
     const ahead: RenderChildren[] = []
     if (facts.next !== null) {
-      ahead.push(<Text>{facts.next}</Text>)
+      ahead.push(
+        <Text size="footnote" dimColor>
+          NEXT STEP
+        </Text>,
+      )
+      ahead.push(<Markdown key="next-step" text={facts.next} />)
     }
     if (facts.questions.length > 0) {
       ahead.push(
-        <Text size="footnote" dimColor>
-          Open questions
-        </Text>,
+        <Box marginTop={facts.next === null ? 0 : 1}>
+          <Text size="footnote" dimColor>{`OPEN QUESTIONS · ${facts.questions.length}`}</Text>
+        </Box>,
       )
-      ahead.push(...capped(p, facts.questions, (q) => <Text>{`· ${q}`}</Text>))
+      ahead.push(
+        ...capped(p, facts.questions, (q, i) => (
+          <Box gap={1}>
+            <Text dimColor tabular>{`${i + 1}.`}</Text>
+            <Box flexGrow={1} flexShrink={1}>
+              <Markdown key={`question-${i}`} text={q} />
+            </Box>
+          </Box>
+        )),
+      )
     }
     const handoffTone = facts.handoff === 'current' ? 'subtle' : 'warning'
     sections.push(card(p, 'Next', <Text color={handoffTone}>{`handoff ${facts.handoff}`}</Text>, ahead))
