@@ -149,6 +149,8 @@ Seen by the owner on 2026-10-29 on the desktop, on the Held row alone: "It looks
 
 `C3` (a hook that writes to the owner's input loses none of it), by the owner's word on 2026-10-29: the check replaced the box when it put a held message back, on Use the rewrite and on Send as is, losing messages the owner had prepared there. The held message now goes back above the box's text, the rewrite takes its place alone, and Send as is sends the message as it was held and takes only it out. An edit made to the held message in the box is sent by sending the box, since Send as is sends the held text. To see on the desktop: a hold with a prepared message in the box, then each button. It reaches a session as 0.36.0 does.
 
+Seen by the owner on 2026-10-29 on the desktop: "It worked".
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
