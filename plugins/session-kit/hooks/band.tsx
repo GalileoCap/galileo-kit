@@ -170,7 +170,7 @@ function missedRow($: EngineInterface, missed: readonly TaggedItem[]): Row {
   }
 }
 
-/** The session's question, once a handoff took the next-step box's place: a press on a reply sends its message as the person's; an app action is named for the app to run. */
+/** The owner's prompt held outside its window: a reason in the field sends it on, and the ✕ puts it back in the box. */
 function loadRow($: EngineInterface, held: LoadHeld): Row {
   return {
     key: 'load',
@@ -184,6 +184,7 @@ function loadRow($: EngineInterface, held: LoadHeld): Row {
   }
 }
 
+/** The session's question, once a handoff took the next-step box's place: a press on a reply sends its message as the person's; an app action is named for the app to run. */
 function questionRow($: EngineInterface, q: PendingQuestion): Row {
   const actions: Action[] = []
   const inApp: string[] = []
