@@ -199,6 +199,12 @@ The guard read the `&` of `2>&1` as the end of a command, so `scripts/test x 2>&
 
 `A90` (the kit waits on a pending question): while a `wrap_up` question waits on the owner, the chain does not start and the tagged-lines check sends no prompt. A handoff that runs anyway (the cold-cache timer, or the owner's press) writes the question under Open questions word for word, and the band shows it with its buttons until the owner answers. To see on the desktop: a session that asks in the box and calls `clear_point` in the same turn keeps the box. One left past the cold timer shows a Question row after the compaction, and a press sends the button's message. It reaches a session as 0.36.0 does.
 
+## At the install of session-kit 0.44.0
+
+### main: each session keeps a record of itself
+
+`A91` (the session registry): each session writes `~/.claude/session-kit/sessions/<id>.json` with its state, working or waiting on the owner, whether a question waits, and a beat each minute. Nothing reads it yet. To see: with two sessions open, each has a file there, its `beat` moving each minute, and the one whose turn runs reads `working`. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

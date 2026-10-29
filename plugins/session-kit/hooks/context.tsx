@@ -53,6 +53,7 @@ import { clip, limitLine, limitTier, sameWindows, sentence, stageLine } from './
 import { readOptions, triggerTokens, withinStep } from './options'
 import type { ColdOptions } from './options'
 import { WRAP_UP_TOOL, carryQuestion, noteQuestion } from './question'
+import { markWaiting, markWorking, startRecord } from './registry'
 import { holdStatus, refreshStatus } from './status'
 
 const NO_WINDOWS: SessionRateLimit[] = []
@@ -1015,6 +1016,7 @@ export const register: Register = (on, options) => {
     landed = 0
     await measureTurn($)
     await recordTurn($, e.durationMs)
+    await markWaiting($, (await read($, pendingQuestion)) !== null)
     await refreshStatus($)
     if (!chainOn) {
       return next(e)
@@ -1033,6 +1035,7 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('session.start', async ($, e, next) => {
+    await startRecord($)
     // The pane is a convenience: an engine without it must not cost the tools below.
     try {
       await $.command.register({ name: COMMAND, description: COMMAND_DESCRIPTION })
@@ -1086,19 +1089,23 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
+  // A main-loop turn starting marks the session working, and uses the cache again, so the timer counts from its end instead.
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      await markWorking($)
+      if (chainOn) {
+        await disarmCold($)
+      }
+    }
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
   if (!chainOn) {
     return
   }
 
 
-  // A turn starting uses the cache again, so the timer counts from its end instead.
-  on('turn.start', async ($, e, next) => {
-    if (e.agentId === undefined) {
-      await disarmCold($)
-    }
-
-    return next(e)
-  }).catch(($, e, next) => next(e))
 
   on('tool.call', { tool: NEW_TASK_TOOL }, async ($, e) => {
     const task = typeof e.task === 'string' && e.task.trim() !== '' ? e.task.trim() : ''
