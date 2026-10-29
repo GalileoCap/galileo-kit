@@ -121,5 +121,7 @@
 
 ## Deferred
 
+- Part B of `docs/analyses/proposal-prefixes-and-check-ins.md`, the check-ins: `session-watched`'s new options, `check_in`, the watcher and the detached-run gate. Deferred by the owner on 2026-10-29 so the prefixes go first. The read in `docs/analyses/prefixes-and-check-ins-read.md` holds what it has to answer, the cold-cache timer proven in a real session first.
+
 - `cache-tax`'s fork, to decide against the cold-cache timer (`A49`), which takes its ground. Details in `docs/reviews/cache-tax.md`, under "What could move into `session-kit`".
 - Turn on auto-update for `galileo-kit` once every plugin in it is ours.
