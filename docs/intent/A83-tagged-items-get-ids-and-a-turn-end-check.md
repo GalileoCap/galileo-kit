@@ -5,7 +5,7 @@ source: owner
 status: decided 2026-10-29
 kind: check
 implemented_by: [plugins/session-kit/hooks/tags.ts, plugins/session-kit/hooks/band.tsx]
-proven_by: [plugins/session-kit/hooks/tags.test.tsx]
+proven_by: [plugins/session-kit/hooks/tags.test.tsx, OWED.md]
 supersedes: []
 ---
 

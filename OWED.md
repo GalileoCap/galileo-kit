@@ -125,6 +125,10 @@ A tagged message reaches the model with `Do-1:` where the person typed `Do:` (`A
 
 Seen in this session's trial on 2026-10-29: a `??` message was held, the person sent the refilled text, and their next `??` message went through unchecked, since the pass Send as is set waited for a message the check's matcher would show it. The pass now holds the exact text the press sent or prepared, and the next message the hook sees spends it. The same trial showed the desktop drawing the text the person typed, with the `??` still in it, while the model read the text the hook wrote: the ids of `A84` (the ids stand in the owner's message) reach the model and never the person's bubble. It reaches a session as 0.36.0 does.
 
+### Seen in the owner's trials on 2026-10-29, on the desktop
+
+On 0.38.0 to 0.39.1 in this repository's session: a tagged message reached the model with its ids and the closing-line forms (`A83`); the reply's closing lines closed their items, so the turn's `answer` holds the text after the desktop's wrap-up; a reply left without `Do-3`'s line drew the kit's single prompt naming it; a `??` message with a bare id was held, the Held row drew on the desktop with its finding, Send as is and Use the rewrite (`A85`); and a `??` message asking the checker to reject it was let through, Haiku saying it found nothing. Not seen: the No line row itself (the owner did not say), pasted text in a tagged message, and the work instance.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
