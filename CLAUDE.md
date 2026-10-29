@@ -22,6 +22,7 @@ Goals in the owner's words, the objectives the owner approved under them, and th
 - `G3` Produced code and documents of consistent quality while I review only the relevant parts.
 - `G4` Optimize time and reduce costs.
 - `G5` Minimize the vulnerability surface of installed apps, programs and code.
+- `G6` Controlled working hours.
 - `O1` Only code that has been read runs inside my sessions. From `G5`.
 - `O2` What runs in my sessions changes only when I choose. From `G5`.
 - `O3` Rules are written once in this repository, and a project owns a copy of each entry it needs. From `G1`.
@@ -41,9 +42,16 @@ Goals in the owner's words, the objectives the owner approved under them, and th
 - `O17` The system is observed, analysed and improved over time, from the sessions' transcripts and the hooks' measured effect. From `G1`, `G4`.
 - `O18` Communication with the owner is clear: an id of the intent is never written without its name. From `G1`, `G3`.
 - `O19` The owner's lines are clear, and each has a visible outcome. From `G2`, `G3`.
+- `O20` A rule spreads beyond one project only once its trial shows it works. From `G1`, `G3`.
+- `O21` Nothing a session starts is left running unseen. From `G4`, `G5`.
+- `O22` My work keeps to my working window, and each exception is a choice I make with a reason. From `G6`.
+- `O23` My week's attention goes to the must-haves I name for it. From `G6`.
+- `O24` I run no more sessions at once than I can review. From `G6`.
 - `C1` The kit is never the reason a session fails, the guard excepted. Proposed.
 - `C2` The organization's security default sits outermost: no hook of the kit relies on an event it sends past the plugins a person installs.
 - `C3` A hook that writes to the owner's input loses none of it.
+- `C4` Nothing of the kit's starts a turn or a compaction while a question waits on the owner.
+- `C5` Nothing of the load measures reaches a session.
 
 ## Rules of engagement
 

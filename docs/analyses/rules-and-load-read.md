@@ -86,6 +86,8 @@ Each is an outcome, names no mechanism, and waits on the owner's approval. Most 
 
 `O22` to `O24` are about the owner's own hours, which `G4` (optimize time and reduce costs) holds only if "time" includes the owner's own. If they rest on a goal of the owner's that is not written yet, such as a sustainable working day, that goal is the owner's to state, and these move under it.
 
+The owner approved all seven on 2026-10-29, `O22` to `O24` under a new goal, `G6` (controlled working hours). On the phone, an off-window prompt is passed and logged. The 30-minute pass holds for the sitting, across every session.
+
 The 2b bar is an action under `O22`, written into the kit's settings when 2a goes live, and never an objective.
 
 ## 4. An order
