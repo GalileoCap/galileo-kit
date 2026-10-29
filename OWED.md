@@ -217,6 +217,12 @@ The guard read the `&` of `2>&1` as the end of a command, so `scripts/test x 2>&
 
 `A93` (the owner's week read against the window). Add `"watch": ["~/devel/galileo/misc/galileo-kit"]` to the `settings.json` the 0.45.0 entry writes, so the review marks galileo-kit on its own line. To see: `session-transcripts week` from a terminal prints the path of `~/.claude/session-kit/load/week-<monday>.md`, and the file holds the week to today, the reasons the hold logged, and the 2b bar at week 0. The owner runs it from a terminal, where no session reads its figures. It reaches a session as 0.45.0 does.
 
+## At the install of session-kit 0.47.0
+
+### main: the sessions tagged against the owner's focus list
+
+`A94` (the sessions tagged against the owner's focus list). The owner writes `~/.claude/session-kit/focus.md` each Monday: `# Week of YYYY-MM-DD`, that Monday, then a `- ` line per must-have, its name and its folders as `~/` or `/` paths. To see: the next prompt in a must-have's folder shows "on focus: <name>, N% on this week" on the status line, a prompt elsewhere "off focus", and `session-transcripts week` a Focus section. With no list nothing changes.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

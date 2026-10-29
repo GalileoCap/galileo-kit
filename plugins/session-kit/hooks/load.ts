@@ -10,13 +10,16 @@
 // flight is not (the probe of 2026-10-29). An interrupt, the ✕, or ten
 // minutes with no reason puts the prompt back in the box instead. A prompt
 // from the phone, which draws no band, goes on and is logged with no reason.
-// The hold rides on context.tsx's prompt.submit hook, the kit's outermost.
+// Each prompt that goes on is also matched against the owner's focus list,
+// ~/.claude/session-kit/focus.md, by its folder (A94): logged in
+// prompts-<monday>.jsonl, and named on the status line with the week's share
+// on focus. The hold rides on context.tsx's prompt.submit hook, the kit's outermost.
 // Anything that fails lets the prompt through (C1).
 
 import { atom, update } from 'claude-code'
 import type { EngineInterface, PromptOrigin } from 'claude-code'
 
-import type { LoadHeld, LoadPass } from '../types'
+import type { LoadFocus, LoadHeld, LoadPass } from '../types'
 import { clip } from './lines'
 import { withHeld } from './presend'
 
@@ -28,11 +31,21 @@ export type LoadSettings = { timeZone: string; work: Span; personal: Span & { fo
 
 const loadHeld = atom({ plugin: 'session-kit', key: 'loadHeld' } as const, null)
 const loadPass = atom({ plugin: 'session-kit', key: 'loadPass' } as const, null)
+const loadFocus = atom({ plugin: 'session-kit', key: 'loadFocus' } as const, null)
 
 const MINUTE_MS = 60000
 const WAIT_MS = 10 * MINUTE_MS
 const RETURNED = '\u0000returned'
 const WAIT_SCRIPT = 'while [ ! -s "$0" ]; do sleep 0.3; done'
+// A day runs from 04:00, as the week review counts it.
+const DAY_CUTOFF_MS = 4 * 60 * MINUTE_MS
+const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+/** One must-have of the focus list: its name, and the folders it covers as the owner wrote them. */
+export type FocusItem = { name: string; folders: string[] }
+
+/** The focus list: the Monday its heading names, null without one, and its must-haves. */
+export type FocusList = { week: string | null; items: FocusItem[] }
 
 /** The weekday and the minute of the day at `ms`, in the owner's time zone. */
 export function localTime(ms: number, timeZone: string): { day: string; minute: number } {
@@ -59,14 +72,67 @@ function within(span: Span, at: { day: string; minute: number }): boolean {
   )
 }
 
+/** Whether `cwd` is `folder` or inside it, a leading `~` read as `home`. */
+export function isUnder(folder: string, cwd: string, home: string): boolean {
+  const root = folder.replace(/^~(?=\/|$)/, home).replace(/\/$/, '')
+
+  return cwd === root || cwd.startsWith(`${root}/`)
+}
+
 export function kindOf(settings: LoadSettings, cwd: string, home: string): Kind {
-  const under = (folder: string) => {
-    const root = folder.replace(/^~(?=\/|$)/, home).replace(/\/$/, '')
+  return settings.personal.folders.some((folder) => isUnder(folder, cwd, home)) ? 'personal' : 'work'
+}
 
-    return cwd === root || cwd.startsWith(`${root}/`)
+/** The Monday of the week `ms` falls in, as YYYY-MM-DD in the owner's time zone. */
+export function mondayOf(ms: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).formatToParts(ms - DAY_CUTOFF_MS)
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  const back = WEEKDAYS.indexOf(part('weekday').toLowerCase())
+
+  return new Date(Date.UTC(Number(part('year')), Number(part('month')) - 1, Number(part('day')) - back)).toISOString().slice(0, 10)
+}
+
+/**
+ * Reads the focus list: a heading `# Week of YYYY-MM-DD`, then a `- ` line
+ * per must-have, its name and its folders, each starting with `~/` or `/`.
+ */
+export function parseFocus(text: string): FocusList {
+  const heading = /^#\s*Week of (\d{4}-\d{2}-\d{2})\s*$/m.exec(text)
+  const items = text
+    .split('\n')
+    .filter((line) => /^\s*[-*]\s+/.test(line))
+    .map((line) => {
+      const words = line
+        .replace(/^\s*[-*]\s+/, '')
+        .split(/\s+/)
+        .map((word) => word.replace(/`/g, '').replace(/[,;]$/, ''))
+      const isPath = (word: string) => /^(~|~?\/)/.test(word)
+
+      return {
+        name: words
+          .filter((word) => !isPath(word))
+          .join(' ')
+          .replace(/[\s:,\-–—]+$/, ''),
+        folders: words.filter(isPath),
+      }
+    })
+
+  return { week: heading?.[1] ?? null, items }
+}
+
+/** The name of the first must-have whose folders hold `cwd`; null when none does. */
+export function focusOf(list: FocusList, cwd: string, home: string): string | null {
+  return list.items.find((item) => item.folders.some((folder) => isUnder(folder, cwd, home)))?.name ?? null
+}
+
+/** The focus tag as the status line names it. */
+export function focusLabel(focus: LoadFocus): string {
+  if (focus.tag === 'stale') {
+    return "the focus list is not this week's"
   }
+  const share = `${Math.round((100 * focus.on) / Math.max(focus.total, 1))}% on this week`
 
-  return settings.personal.folders.some(under) ? 'personal' : 'work'
+  return focus.tag === 'on' ? `on focus: ${focus.name}, ${share}` : `off focus, ${share}`
 }
 
 export function inWindow(settings: LoadSettings, kind: Kind, ms: number): boolean {
@@ -92,9 +158,11 @@ export async function hold($: EngineInterface, text: string, origin: PromptOrigi
 
     return text === '' ? null : JSON.parse(text)
   }
-  const appendLog = async (line: object) => {
-    const path = `${dir}/holds.jsonl`
-    await $.fs.write(path, `${await readText(path)}${JSON.stringify(line)}\n`)
+  const append = async (path: string, line: object) => {
+    const text = `${await readText(path)}${JSON.stringify(line)}\n`
+    await $.fs.write(path, text)
+
+    return text
   }
   // Waits for the reason; null when the prompt went back to the box instead.
   const awaitReason = async (file: string): Promise<string | null> => {
@@ -111,6 +179,69 @@ export async function hold($: EngineInterface, text: string, origin: PromptOrigi
       signal.removeEventListener('abort', giveBack)
     }
   }
+  // Holds the prompt outside its window; null lets it on.
+  const gate = async (settings: LoadSettings, line: { at: number; session: string; cwd: string; kind: Kind }): Promise<string | null> => {
+    if (inWindow(settings, line.kind, line.at)) {
+      return null
+    }
+    const pass = (await readJson(`${dir}/pass.json`)) as LoadPass | null // Written by this module alone.
+    if (pass !== null && pass.until > line.at) {
+      await update($, loadPass, () => ({ until: pass.until, label: clockLabel(pass.until, settings.timeZone) }))
+
+      return null
+    }
+    if (origin?.kind === 'bridge') {
+      await append(`${dir}/holds.jsonl`, { ...line, reason: null, via: 'phone', outcome: 'sent' })
+
+      return null
+    }
+    const file = `${dir}/reason-${line.session}`
+    await $.fs.write(file, '')
+    const held: LoadHeld = { kind: line.kind, preview: clip(text, 80), file }
+    await update($, loadHeld, () => held)
+    const reason = await awaitReason(file)
+    await update($, loadHeld, () => null)
+    if (reason === null) {
+      await append(`${dir}/holds.jsonl`, { ...line, reason: null, via: 'band', outcome: 'returned' })
+      const box = (await $.prompt.read()).text
+      await $.prompt.fill({ text: withHeld(box, text), mode: 'replace' })
+
+      return 'Held outside your window: the prompt is back in the box.'
+    }
+    const until = (await $.clock.now()) + settings.passMinutes * MINUTE_MS
+    await append(`${dir}/holds.jsonl`, { ...line, reason, via: 'band', outcome: 'sent' })
+    await $.fs.write(`${dir}/pass.json`, JSON.stringify({ until, session: line.session, reason }))
+    await update($, loadPass, () => ({ until, label: clockLabel(until, settings.timeZone) }))
+
+    return null
+  }
+  // Counts a prompt that goes on against this week's focus list, which is copied beside the log for the week's review.
+  const tally = async (home: string, timeZone: string, line: { at: number; session: string; cwd: string }) => {
+    const listText = await readText(`${home}/.claude/session-kit/focus.md`)
+    if (listText === '') {
+      await update($, loadFocus, () => null)
+
+      return
+    }
+    const monday = mondayOf(line.at, timeZone)
+    const list = parseFocus(listText)
+    if (list.week !== monday) {
+      const stale: LoadFocus = { tag: 'stale', name: null, on: 0, total: 0 }
+      await update($, loadFocus, () => stale)
+
+      return
+    }
+    const copy = `${dir}/focus-${monday}.md`
+    if ((await readText(copy)) !== listText) {
+      await $.fs.write(copy, listText)
+    }
+    const name = focusOf(list, line.cwd, home)
+    const log = await append(`${dir}/prompts-${monday}.jsonl`, { ...line, focus: name })
+    const total = log.split('\n').filter((l) => l !== '').length
+    const off = log.split('"focus":null').length - 1
+    const focus: LoadFocus = { tag: name === null ? 'off' : 'on', name, on: total - off, total }
+    await update($, loadFocus, () => focus)
+  }
   let dir = ''
   try {
     const home = await $.env.get('HOME')
@@ -122,44 +253,13 @@ export async function hold($: EngineInterface, text: string, origin: PromptOrigi
     if (settings === null) {
       return null
     }
-    const now = await $.clock.now()
-    const cwd = await $.session.cwd()
-    const kind = kindOf(settings, cwd, home)
-    if (inWindow(settings, kind, now)) {
-      return null
+    const line = { at: await $.clock.now(), session: await $.session.id(), cwd: await $.session.cwd() }
+    const returned = await gate(settings, { ...line, kind: kindOf(settings, line.cwd, home) })
+    if (returned === null) {
+      await tally(home, settings.timeZone, line)
     }
-    const pass = (await readJson(`${dir}/pass.json`)) as LoadPass | null // Written by this module alone.
-    if (pass !== null && pass.until > now) {
-      await update($, loadPass, () => ({ until: pass.until, label: clockLabel(pass.until, settings.timeZone) }))
 
-      return null
-    }
-    const session = await $.session.id()
-    const line = { at: now, session, cwd, kind }
-    if (origin?.kind === 'bridge') {
-      await appendLog({ ...line, reason: null, via: 'phone', outcome: 'sent' })
-
-      return null
-    }
-    const file = `${dir}/reason-${session}`
-    await $.fs.write(file, '')
-    const held: LoadHeld = { kind, preview: clip(text, 80), file }
-    await update($, loadHeld, () => held)
-    const reason = await awaitReason(file)
-    await update($, loadHeld, () => null)
-    if (reason === null) {
-      await appendLog({ ...line, reason: null, via: 'band', outcome: 'returned' })
-      const box = (await $.prompt.read()).text
-      await $.prompt.fill({ text: withHeld(box, text), mode: 'replace' })
-
-      return 'Held outside your window: the prompt is back in the box.'
-    }
-    const until = (await $.clock.now()) + settings.passMinutes * MINUTE_MS
-    await appendLog({ ...line, reason, via: 'band', outcome: 'sent' })
-    await $.fs.write(`${dir}/pass.json`, JSON.stringify({ until, session, reason }))
-    await update($, loadPass, () => ({ until, label: clockLabel(until, settings.timeZone) }))
-
-    return null
+    return returned
   } catch {
     return null
   }

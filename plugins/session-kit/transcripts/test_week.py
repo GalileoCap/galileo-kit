@@ -43,7 +43,7 @@ def prompt(when: datetime, cwd: str, text: str, n: int) -> dict:
             "timestamp": when.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"), "message": {"role": "user", "content": text}}
 
 
-def run(prompts: list[tuple[datetime, str, str]], holds: list[dict], as_of: str) -> tuple[str, str]:
+def run(prompts: list[tuple[datetime, str, str]], holds: list[dict], as_of: str, focus: dict[str, str] | None = None) -> tuple[str, str]:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp) / "projects" / "-p"
         root.mkdir(parents=True)
@@ -52,6 +52,8 @@ def run(prompts: list[tuple[datetime, str, str]], holds: list[dict], as_of: str)
         load.mkdir()
         (load / "settings.json").write_text(json.dumps(SETTINGS))
         (load / "holds.jsonl").write_text("".join(json.dumps(h) + "\n" for h in holds))
+        for name, text in (focus or {}).items():
+            (Path(tmp) / name).write_text(text)
         out = subprocess.run([sys.executable, TOOL, "week", "--root", str(Path(tmp) / "projects"), "--load-dir", str(load),
                               "--measure-dir", str(Path(tmp) / "none"), "--week", as_of], capture_output=True, text=True, timeout=10)
         assert out.returncode == 0, out.stderr
@@ -73,7 +75,8 @@ def test_week_four_gives_the_verdict_from_the_weeks_figures_and_prints_only_the_
         {"at": int(at(23, "19:00").timestamp() * 1000), "session": "s1", "cwd": LANE, "kind": "work", "reason": "the demo | tomorrow", "via": "band", "outcome": "sent"},
         {"at": int(at(20, "19:00").timestamp() * 1000), "session": "s1", "cwd": LANE, "kind": "work", "reason": "last week", "via": "band", "outcome": "sent"},
     ]
-    stdout, review = run(prompts, holds, "2026-11-27")
+    focus = {"load/focus-2026-11-23.md": "# Week of 2026-11-23\n\n- value metrics (O18): `~/devel/iquall/tagents/lane5`\n"}
+    stdout, review = run(prompts, holds, "2026-11-27", focus)
 
     assert stdout.strip().endswith("load/week-2026-11-23.md") and "\n" not in stdout.strip(), stdout
     # The same text again within two minutes is one message: five in the week, three off the window.
@@ -84,14 +87,18 @@ def test_week_four_gives_the_verdict_from_the_weeks_figures_and_prints_only_the_
     assert "Without the watched folders: 50% of 4" in review, review
     assert "after 22:00: 1 of 2: met" in review, review
     assert "the bar is not met: 2b rolls out" in review, review
-    assert "| `~/devel/galileo/misc/galileo-kit` (watched) | personal | 1 | 1 | 100% |" in review, review
+    assert "| `~/devel/galileo/misc/galileo-kit` (watched) | personal | - | 1 | 1 | 100% |" in review, review
+    # The focus list the hold kept for the week: lane5's three messages of five.
+    assert "3 of 5 messages on focus (60%)" in review, review
+    assert "| `~/devel/iquall/tagents/lane5` | work | value metrics (O18) | 3 | 1 | 33% |" in review, review
     assert "| Mon 23 | 4 | 3 |" in review and "| 09:00 | 23:30 |" in review, review
     assert "the demo \\| tomorrow" in review and "last week" not in review, review
 
 
-def test_before_its_weeks_are_up_the_bar_gives_no_verdict() -> None:
-    _, review = run([(at(3, "09:00"), LANE, "work")], [], "2026-11-06")
+def test_before_its_weeks_are_up_the_bar_gives_no_verdict_and_a_list_of_another_week_is_no_focus_list() -> None:
+    _, review = run([(at(3, "09:00"), LANE, "work")], [], "2026-11-06", {"focus.md": "# Week of 2026-10-26\n\n- lane5 ~/devel/iquall/tagents/lane5\n"})
     assert "Week 1 of 4" in review and "Verdict" not in review, review
+    assert "No focus list for this week." in review, review
 
 
 if __name__ == "__main__":

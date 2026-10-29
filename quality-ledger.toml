@@ -1785,3 +1785,30 @@ code = "settings.get('watch', [])"
 class = "declared"
 disposition = "keep"
 why = "settings without a watch list mark no folder"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "focus_name"
+form = "or"
+code = "items or []"
+class = "declared"
+disposition = "keep"
+why = "a week with no focus list names no must-have for any folder"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "focus_section"
+form = "or"
+code = "', '.join((f'`{f}`' for f in folders)) or '-'"
+class = "spoken"
+disposition = "keep"
+why = "a must-have written with no folder prints a dash, which the owner reads as none to match"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
+where = "folders_table"
+form = "or"
+code = "focus_name(folder, items) or '-'"
+class = "spoken"
+disposition = "keep"
+why = "a folder under no must-have prints a dash, which the owner reads as off focus"

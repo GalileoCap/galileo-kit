@@ -130,6 +130,14 @@ export type LoadPass = {
   label: string
 }
 
+/** The session's tag against the owner's focus list: on a must-have (its name), off every one, or a list not of this week; and the week's prompts on focus out of all. */
+export type LoadFocus = {
+  tag: 'on' | 'off' | 'stale'
+  name: string | null
+  on: number
+  total: number
+}
+
 /** A button of the next-step box: its label, and the message a press sends as the person's, null for an app action the band cannot run. */
 export type QuestionAction = {
   label: string
@@ -194,6 +202,8 @@ declare module 'claude-code' {
       loadHeld: LoadHeld | null
       /** The pass the last reason opened, for the status line; null before any. */
       loadPass: LoadPass | null
+      /** The session's focus tag and the week's share, for the status line; null without a focus list. */
+      loadFocus: LoadFocus | null
       /** The message the pre-send check holds for the person's decision; null while none is. */
       presendHeld: PresendHeld | null
       /** The text Send as is sent or Use the rewrite prepared, let through unchecked once; empty while none is. */

@@ -1,7 +1,8 @@
 // The owner's working window, held for them alone (A92): outside it, the
 // owner's prompt waits on the band for a one-line reason, which sends it on
-// unchanged, logs it and opens a pass for every session for 30 minutes.
-// Nothing of it reaches the model.
+// unchanged, logs it and opens a pass for every session for 30 minutes. Each
+// prompt that goes on is tagged against the owner's focus list (A94). Nothing
+// of it reaches the model.
 
 import { expect, mock, test } from 'claude-code/testing'
 
@@ -30,8 +31,9 @@ const BAND = {
 
 const COMPOSER: PromptOrigin = { kind: 'composer' }
 
-function engine(on: On, options: { now: number; cwd: string; settings?: boolean }) {
-  const files: { [path: string]: string } = options.settings === false ? {} : { [`${LOAD}/settings.json`]: JSON.stringify(SETTINGS) }
+function engine(on: On, options: { now: number; cwd: string; settings?: boolean; files?: { [path: string]: string } }) {
+  const files: { [path: string]: string } = { ...(options.settings === false ? {} : { [`${LOAD}/settings.json`]: JSON.stringify(SETTINGS) }), ...options.files }
+  const status: (string | undefined)[] = []
   const entered: string[] = []
   const box = { text: '' }
   const waiting: { path: string; resolve: () => void }[] = []
@@ -83,7 +85,11 @@ function engine(on: On, options: { now: number; cwd: string; settings?: boolean 
     return { value: undefined }
   })
   on('tool.register', (_, e) => ({ value: { tool: `mcp__session-kit__${e.name}` } }))
-  on('ui.status', () => ({ value: undefined }))
+  on('ui.status', (_, e) => {
+    status.push(e.text)
+
+    return { value: undefined }
+  })
   on('ui.log', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
   on('session.surfaces', () => ({ value: ['desktop'] }))
@@ -99,7 +105,7 @@ function engine(on: On, options: { now: number; cwd: string; settings?: boolean 
       .filter((l) => l !== '')
       .map((l): { [k: string]: unknown } => JSON.parse(l))
 
-  return { clock, entered, files, log, box }
+  return { clock, entered, files, log, box, status }
 }
 
 test('outside its window a work prompt waits for a reason on the band; the reason sends it unchanged, logs it, and opens a pass for every session', async ($, on) => {
@@ -164,4 +170,25 @@ test('a prompt from the phone, which draws no band, goes on and is logged with n
   await $.prompt.submit({ text: 'status?', wait: false, origin: { kind: 'bridge' } })
   expect(entered).toEqual(['status?'])
   expect(log()).toEqual([expect.objectContaining({ kind: 'work', reason: null, via: 'phone', outcome: 'sent' })])
+})
+
+test("each prompt that goes on is tagged against this week's focus list by its folder, the week's share counted from its log; a list of another week tags it stale", async ($, on) => {
+  const focus = '# Week of 2026-10-26\n\n- value metrics (O18): `~/devel/iquall/tagents/lane5`\n- the MAT demo ~/devel/iquall/demo-mat-porting\n'
+  const earlier = `${JSON.stringify({ at: 0, session: 's0', cwd: '/home/me/devel/galileo/brain-dumping', focus: null })}\n`
+  const { entered, files, status } = engine(on, {
+    now: AT_09,
+    cwd: '/home/me/devel/iquall/tagents/lane5/.claude/worktrees/w1',
+    files: { [`${HOME}/.claude/session-kit/focus.md`]: focus, [`${LOAD}/prompts-2026-10-26.jsonl`]: earlier },
+  })
+  await $.session.start({ cwd: '/home/me/devel/iquall/tagents/lane5', surface: 'desktop', isInteractive: true })
+  await $.prompt.submit({ text: 'morning work', wait: false, origin: COMPOSER })
+
+  expect(entered).toEqual(['morning work'])
+  expect(status.at(-1)).toContain('on focus: value metrics (O18), 50% on this week')
+  expect(files[`${LOAD}/focus-2026-10-26.md`]).toBe(focus)
+  expect(files[`${LOAD}/prompts-2026-10-26.jsonl`]?.split('\n').filter((l) => l !== '').at(-1)).toContain('"focus":"value metrics (O18)"')
+
+  files[`${HOME}/.claude/session-kit/focus.md`] = focus.replace('2026-10-26', '2026-10-19')
+  await $.prompt.submit({ text: 'more work', wait: false, origin: COMPOSER })
+  expect(status.at(-1)).toContain("the focus list is not this week's")
 })

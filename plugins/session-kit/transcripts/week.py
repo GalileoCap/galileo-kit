@@ -9,8 +9,8 @@ and the hold's log (``holds.jsonl``). It gives, from Monday to the day asked
 for: the hours and the messages in and out of the work window by day, the
 day's first and last message, the streak, the sittings reopened within an
 hour of the window closing, the messages by folder, with the settings'
-``watch`` folders on lines of their own, the reasons log, and the 2b bar with
-its verdict once its weeks are up. A message in the personal slot counts as
+``watch`` folders on lines of their own, the share on the week's focus list
+(A94), the reasons log, and the 2b bar with its verdict once its weeks are up. A message in the personal slot counts as
 off-window for the bar, as it did in the October baseline.
 """
 
@@ -42,6 +42,12 @@ NOT_TYPED = re.compile(
 )
 
 
+# A focus list's heading, and a word of a must-have's line that names a folder.
+FOCUS_HEADING = re.compile(r"^#\s*Week of (\d{4}-\d{2}-\d{2})\s*$", re.M)
+FOCUS_ITEM = re.compile(r"^\s*[-*]\s+")
+FOCUS_PATH = re.compile(r"^(~|~?/)")
+
+
 @dataclass
 class Message:
     at: datetime
@@ -70,6 +76,33 @@ def folder_of(cwd: str | None, home: str) -> str:
 
 def under(folder: str, roots: list[str]) -> bool:
     return any(folder == r.rstrip("/") or folder.startswith(r.rstrip("/") + "/") for r in roots)
+
+
+def parse_focus(text: str, home: str) -> tuple[str | None, list[tuple[str, list[str]]]]:
+    """The Monday a focus list's heading names, and each must-have's name and folders, the home written as ``~``, as the hold reads it."""
+    heading = FOCUS_HEADING.search(text)
+    items: list[tuple[str, list[str]]] = []
+    for line in text.splitlines():
+        if not FOCUS_ITEM.match(line):
+            continue
+        words = [re.sub(r"[,;]$", "", w.replace("`", "")) for w in FOCUS_ITEM.sub("", line).split()]
+        name = re.sub(r"[\s:,\-–—]+$", "", " ".join(w for w in words if not FOCUS_PATH.match(w)))
+        items.append((name, [folder_of(w, home).rstrip("/") for w in words if FOCUS_PATH.match(w)]))
+    return (heading.group(1) if heading else None), items
+
+
+def focus_list(load_dir: Path, monday: date, home: str) -> list[tuple[str, list[str]]] | None:
+    """The week's focus list: the copy the hold kept beside its log, else the owner's list when its heading is that week."""
+    for path in (load_dir / f"focus-{monday.isoformat()}.md", load_dir.parent / "focus.md"):
+        if path.is_file():
+            week, items = parse_focus(path.read_text(encoding="utf-8"), home)
+            if week == monday.isoformat():
+                return items
+    return None
+
+
+def focus_name(folder: str, items: list[tuple[str, list[str]]] | None) -> str | None:
+    return next((name for name, folders in items or [] if under(folder, folders)), None)
 
 
 def messages_of(sessions: list[Session], settings: dict, home: str) -> list[Message]:
@@ -179,7 +212,7 @@ def days_table(week: list[Message], work: dict, monday: date, until: date) -> tu
     return table(["Day", "Messages", "Off-window", "Hours in", "Hours out", "First", "Last"], rows), lasts
 
 
-def folders_table(week: list[Message], watch: list[str]) -> str:
+def folders_table(week: list[Message], watch: list[str], items: list[tuple[str, list[str]]] | None) -> str:
     by: dict[str, list[Message]] = {}
     for m in week:
         by.setdefault(m.folder, []).append(m)
@@ -187,12 +220,26 @@ def folders_table(week: list[Message], watch: list[str]) -> str:
     for folder, ms in sorted(by.items(), key=lambda kv: -len(kv[1])):
         off = sum(1 for m in ms if not m.inside)
         mark = " (watched)" if under(folder, watch) else ""
-        rows.append([f"`{folder}`{mark}", ms[0].kind, str(len(ms)), str(off), share(off, len(ms))])
+        rows.append([f"`{folder}`{mark}", ms[0].kind, focus_name(folder, items) or "-", str(len(ms)), str(off), share(off, len(ms))])
     for kind in ("work", "personal"):
         ms = [m for m in week if m.kind == kind]
         off = sum(1 for m in ms if not m.inside)
-        rows.append([f"**{kind}**", kind, str(len(ms)), str(off), share(off, len(ms))])
-    return table(["Folder", "Kind", "Messages", "Off-window", "Share off"], rows)
+        rows.append([f"**{kind}**", kind, "", str(len(ms)), str(off), share(off, len(ms))])
+    return table(["Folder", "Kind", "Focus", "Messages", "Off-window", "Share off"], rows)
+
+
+def focus_section(week: list[Message], items: list[tuple[str, list[str]]] | None) -> str:
+    if items is None:
+        return "No focus list for this week."
+    rows: list[list[str]] = []
+    for name, folders in items:
+        ms = [m for m in week if focus_name(m.folder, items) == name]
+        off = sum(1 for m in ms if not m.inside)
+        rows.append([name, ", ".join(f"`{f}`" for f in folders) or "-", str(len(ms)), str(off), share(len(ms), len(week))])
+    rest = [m for m in week if focus_name(m.folder, items) is None]
+    rows.append(["**off focus**", "", str(len(rest)), str(sum(1 for m in rest if not m.inside)), share(len(rest), len(week))])
+    on = len(week) - len(rest)
+    return f"{on} of {len(week)} messages on focus ({share(on, len(week))}).\n\n" + table(["Must-have", "Folders", "Messages", "Off-window", "Share of the week"], rows)
 
 
 def holds_of(path: Path, start: datetime, end: datetime) -> list[dict]:
@@ -257,7 +304,7 @@ def bar_section(bar: dict | None, week: list[Message], lasts: list[tuple[date, d
     return "\n".join(lines)
 
 
-def report(sessions: list[Session], settings: dict, holds_path: Path, as_of: date, home: str) -> str:
+def report(sessions: list[Session], settings: dict, load_dir: Path, as_of: date, home: str) -> str:
     tz = ZoneInfo(settings["timeZone"])
     watch = [w.rstrip("/") for w in settings.get("watch", [])]
     everything = messages_of(sessions, settings, home)
@@ -267,6 +314,7 @@ def report(sessions: list[Session], settings: dict, holds_path: Path, as_of: dat
     week = [m for m in everything if start <= m.at < end]
     days, lasts = days_table(week, settings["work"], monday, as_of)
     off = sum(1 for m in week if not m.inside)
+    items = focus_list(load_dir, monday, home)
     return "\n".join([
         f"# The week of {monday.isoformat()}, to {as_of.isoformat()}",
         "",
@@ -283,11 +331,15 @@ def report(sessions: list[Session], settings: dict, holds_path: Path, as_of: dat
         "",
         "## Folders",
         "",
-        folders_table(week, watch),
+        folders_table(week, watch, items),
+        "",
+        "## Focus",
+        "",
+        focus_section(week, items),
         "",
         "## Reasons",
         "",
-        holds_table(holds_of(holds_path, start, end), tz, home),
+        holds_table(holds_of(load_dir / "holds.jsonl", start, end), tz, home),
         "",
         "## The 2b bar",
         "",
@@ -305,6 +357,6 @@ def write(sessions: list[Session], load_dir: Path, as_of: date, home: str) -> in
     settings = json.loads(settings_path.read_text(encoding="utf-8"))
     monday = as_of - timedelta(days=as_of.weekday())
     out = load_dir / f"week-{monday.isoformat()}.md"
-    out.write_text(report(sessions, settings, load_dir / "holds.jsonl", as_of, home), encoding="utf-8")
+    out.write_text(report(sessions, settings, load_dir, as_of, home), encoding="utf-8")
     print(out)
     return 0

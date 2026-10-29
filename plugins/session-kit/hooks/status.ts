@@ -1,13 +1,14 @@
 // The kit's status line under the prompt: the context figure with the time
-// since the person's last own message, each usage window and the cold-cache
-// timer, kept on every surface so the numbers are in
-// view before the band has anything to say. It is written only when its text
+// since the person's last own message, each usage window, the cold-cache
+// timer, the working window's pass and the focus tag, kept on every surface
+// so the numbers are in view before the band has anything to say. It is written only when its text
 // changes, and never when the `statusLine` option is off.
 
 import { atom, read } from 'claude-code'
 import type { EngineInterface, SessionRateLimit, Timer } from 'claude-code'
 
 import { statusText } from './lines'
+import { focusLabel } from './load'
 
 const NO_WINDOWS: SessionRateLimit[] = []
 
@@ -17,6 +18,7 @@ const rateLimits = atom({ plugin: 'session-kit', key: 'rateLimits' } as const, N
 const lastPromptAt = atom({ plugin: 'session-kit', key: 'lastPromptAt' } as const, 0)
 const turnGrowth = atom({ plugin: 'session-kit', key: 'turnGrowth' } as const, 0)
 const loadPass = atom({ plugin: 'session-kit', key: 'loadPass' } as const, null)
+const loadFocus = atom({ plugin: 'session-kit', key: 'loadFocus' } as const, null)
 
 const MINUTE_MS = 60000
 
@@ -51,7 +53,10 @@ export async function refreshStatus($: EngineInterface): Promise<void> {
     })
   }
   const figures = statusText(await read($, figure), await read($, turnGrowth), since, await read($, rateLimits), await read($, coldTimerAt))
-  const text = pass === null || pass.until <= now ? figures : [figures, `pass until ${pass.label}`].filter((part) => part !== undefined).join(' · ')
+  const focus = await read($, loadFocus)
+  const parts = [figures, pass === null || pass.until <= now ? undefined : `pass until ${pass.label}`, focus === null ? undefined : focusLabel(focus)]
+  const kept = parts.filter((part) => part !== undefined)
+  const text = kept.length === 0 ? undefined : kept.join(' · ')
   if (text === shown) {
     return
   }
