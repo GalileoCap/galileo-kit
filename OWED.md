@@ -127,7 +127,7 @@ Seen in this session's trial on 2026-10-29: a `??` message was held, the person 
 
 ### Seen in the owner's trials on 2026-10-29, on the desktop
 
-On 0.38.0 to 0.39.1 in this repository's session: a tagged message reached the model with its ids and the closing-line forms (`A83`); the reply's closing lines closed their items, so the turn's `answer` holds the text after the desktop's wrap-up; a reply left without `Do-3`'s line drew the kit's single prompt naming it; a `??` message with a bare id was held, the Held row drew on the desktop with its finding, Send as is and Use the rewrite (`A85`); and a `??` message asking the checker to reject it was let through, Haiku saying it found nothing. Not seen: the No line row itself (the owner did not say), pasted text in a tagged message, and the work instance.
+On 0.38.0 to 0.39.1 in this repository's session, five things were seen. A tagged message reached the model with its ids and the closing-line forms (`A83`). The reply's closing lines closed their items, so the turn's `answer` holds the text after the desktop's wrap-up. A reply left without `Do-3`'s line drew the kit's single prompt naming it. A `??` message with a bare id was held, and the Held row drew on the desktop with its finding, Send as is and Use the rewrite (`A85`). A `??` message asking the checker to reject it was let through, Haiku saying it found nothing. Not seen: the No line row itself (the owner did not say), pasted text in a tagged message, and the work instance.
 
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
