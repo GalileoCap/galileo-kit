@@ -113,6 +113,12 @@ The Context row and the Cache row offered the same chain (`Handoff and compact`,
 
 A prompt of the person's with `Do:`, `Decide:`, `Ask:` or `Later:` lines reaches the model with the items' ids (`Do-1`) and the closing-line forms beside it, and a reply that leaves an item without a line draws a "No line" row on the band and sends one prompt per item (`A83`, tagged items get ids from the kit and a turn-end check). It reaches a session as 0.36.0 does. The engine's tests prove the parsing, the ids, the closing and the single prompt. Only a real session proves three things: that the turn's `answer` holds the closing lines when the reply ends after a tool call (the desktop's wrap-up), that the desktop marks pasted text as `<pasted_content>` in the prompt the hook reads, and that the work instance lets the tagged prompt's hook through, as it does the checkout's.
 
+## At the install of session-kit 0.39.0
+
+### main, A84 and A85: the ids in the message, and the pre-send check
+
+A tagged message reaches the model with `Do-1:` where the person typed `Do:` (`A84`, the ids stand in the owner's message), and a message that starts with `??` or holds four bullets or more is read by Haiku first and held on the band when it finds something (`A85`, a pre-send check by Haiku, held on the band). It reaches a session as 0.36.0 does. Only a real session proves whether the desktop draws the rewritten message or the typed one, how long the owner waits on Haiku, whether `$.prompt.fill` puts the held message back in the desktop's box, and whether `session-intent` is on the PATH the engine runs it with.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

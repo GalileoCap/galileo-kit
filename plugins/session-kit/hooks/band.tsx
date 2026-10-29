@@ -1,6 +1,6 @@
 // The band above the prompt and the line that closes a turn. The band keeps
-// only what needs the person: a failure, the owner's tagged items a reply
-// left without a line, the offer or the chain or the context
+// only what needs the person: a failure, a message the pre-send check held,
+// the owner's tagged items a reply left without a line, the offer or the chain or the context
 // figure past its threshold, the cold-cache timer that will act on its own (a
 // clause of the context row when that row offers the same chain), and
 // a usage window at 95% (at 80% when the kit keeps no status line). Each row is
@@ -12,7 +12,7 @@
 import { atom, read } from 'claude-code'
 import type { ElementTable, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { TurnFigure, ChainState, ContextFigure, Failure, NewTaskState, TaggedItem } from '../types'
+import type { TurnFigure, ChainState, ContextFigure, Failure, NewTaskState, PresendHeld, TaggedItem } from '../types'
 import {
   adviceTier,
   chainByPerson,
@@ -30,6 +30,7 @@ import {
 } from './context'
 import { LIMIT_FIRM, LIMIT_WARN, coldClause, coldText, compact, limitLine, newTaskLine, showsLimit, stageLine } from './lines'
 import { readOptions, triggerTokens, withinStep } from './options'
+import { dismissHeld, sendAsIs, useRewrite } from './presend'
 import { dismissMissed } from './tags'
 
 const NO_WINDOWS: SessionRateLimit[] = []
@@ -41,6 +42,7 @@ const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const coldTimerAt = atom({ plugin: 'session-kit', key: 'coldTimerAt' } as const, 0)
 const failure = atom({ plugin: 'session-kit', key: 'failure' } as const, null)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
+const presendHeld = atom({ plugin: 'session-kit', key: 'presendHeld' } as const, null)
 const itemsMissed = atom({ plugin: 'session-kit', key: 'itemsMissed' } as const, NO_ITEMS)
 const figureDismissedAt = atom({ plugin: 'session-kit', key: 'contextDismissedAt' } as const, 0)
 const limitsDismissed = atom({ plugin: 'session-kit', key: 'limitsDismissed' } as const, NO_MARKS)
@@ -74,6 +76,26 @@ function failureRow($: EngineInterface, d: Draw, held: Failure) {
       <Text>{`${held.text}.`}</Text>
       {held.retry === undefined ? null : <Button key="failure-retry" label="Try again" onPress={() => retryFailure($)} />}
       {dismissButton(d, 'failure-dismiss', () => dismissFailure($))}
+    </Box>
+  )
+}
+
+/** The message the pre-send check held, its findings one per line, and what the person can do with it. */
+function heldRow($: EngineInterface, d: Draw, kept: PresendHeld) {
+  const { Box, Button, Text } = d.p
+
+  return (
+    <Box key="presend" flexDirection="column">
+      <Box gap={1} alignItems="center">
+        <Text bold color="warning">Held</Text>
+        <Text>Your message is back in the box. Haiku found:</Text>
+        <Button key="presend-send" label="Send as is" onPress={() => sendAsIs($)} />
+        {kept.rewrite === null ? null : <Button key="presend-rewrite" label="Use the rewrite" onPress={() => useRewrite($)} />}
+        {dismissButton(d, 'presend-dismiss', () => dismissHeld($))}
+      </Box>
+      {kept.findings.map((f, i) => (
+        <Text key={`presend-finding-${i}`}>{`  · ${f}`}</Text>
+      ))}
     </Box>
   )
 }
@@ -176,6 +198,7 @@ export const register: Register = (on, options) => {
     const below = await next(e)
     const held = await read($, failure)
     const missed = await read($, itemsMissed)
+    const kept = await read($, presendHeld)
     const offered = await read($, newTask)
     const running = await read($, chain)
     const now = await read($, figure)
@@ -186,7 +209,7 @@ export const register: Register = (on, options) => {
     const limits = (await read($, rateLimits)).filter((w) => showsLimit(w, marks[w.kind], limitFloor))
     const trigger = now === null ? 0 : triggerTokens(thresholdTokens, thresholdPercent, now.window)
     const past = now !== null && now.tokens >= trigger && !withinStep(dismissedAt, now.tokens, step)
-    if (e.props.hasSurvey || (held === null && missed.length === 0 && offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
+    if (e.props.hasSurvey || (held === null && kept === null && missed.length === 0 && offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
       return below
     }
     const { Box, Button, Text } = $.ui.resolve(e)
@@ -196,6 +219,9 @@ export const register: Register = (on, options) => {
     const rows = []
     if (held !== null) {
       rows.push(failureRow($, d, held))
+    }
+    if (kept !== null) {
+      rows.push(heldRow($, d, kept))
     }
     if (missed.length > 0) {
       rows.push(missedRow($, d, missed))

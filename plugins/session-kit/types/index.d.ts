@@ -110,6 +110,13 @@ export type TaggedItem = {
   text: string
 }
 
+/** A message the pre-send check held: the text as the person wrote it (the `??` taken off), Haiku's findings, and its rewrite when it gave one. */
+export type PresendHeld = {
+  text: string
+  findings: string[]
+  rewrite: string | null
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'session-kit': {
@@ -153,6 +160,10 @@ declare module 'claude-code' {
       turnFigures: TurnFigure[]
       /** The last test run, stamped with the tree it ran on; null before any. */
       lastTest: TestRun | null
+      /** The message the pre-send check holds for the person's decision; null while none is. */
+      presendHeld: PresendHeld | null
+      /** True after Send as is or Use the rewrite, so the person's next message goes through unchecked. */
+      presendPass: boolean
       /** Per tag, the last number given to an item in this session; a clear starts them over. */
       tagCounts: Record<string, number>
       /** The owner's tagged items not yet reported done, decided, parked or answered, oldest first. */

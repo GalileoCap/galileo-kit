@@ -234,7 +234,7 @@ function figureLine(f: ContextFigure, grewBy: number, chainOn: boolean): string 
 }
 
 /** The band is raised on the terminal and desktop surfaces only. */
-function drawsBand(surface: RenderSurface): boolean {
+export function drawsBand(surface: RenderSurface): boolean {
   return surface === 'terminal' || surface === 'desktop'
 }
 

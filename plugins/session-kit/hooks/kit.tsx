@@ -15,6 +15,7 @@ import { register as docLength } from './doc_length'
 import { register as facts } from './facts'
 import { lap, lapBeneath, register as measure } from './measure'
 import { register as nudge } from './nudge'
+import { register as presend } from './presend'
 import { register as pane } from './pane'
 import { register as suppressions } from './suppressions'
 import { register as tags } from './tags'
@@ -26,6 +27,8 @@ export const register: Register = (on, options) => {
   facts(on, options)
   lap(on, options, 'context')
   context(on, options)
+  lap(on, options, 'presend')
+  presend(on, options)
   lap(on, options, 'tags')
   tags(on, options)
   lap(on, options, 'band')

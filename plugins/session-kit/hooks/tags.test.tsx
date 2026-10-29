@@ -84,6 +84,14 @@ test('a tagged message gets an id per item in hidden context, and FYI, pasted, f
       ].join('\n'),
     ),
   )
+  // The message itself reaches the model with each tag written as its id; FYI, fenced and pasted lines keep theirs.
+  const shown = reached.at(-1)?.text ?? ''
+  expect(shown).toMatch(/^Do-1: rename it to Verdict$/m)
+  expect(shown).toMatch(/^- Ask-1: why is this in the styleguide\?$/m)
+  expect(shown).toMatch(/^Decide-1: Q4, refuse to delete$/m)
+  expect(shown).toMatch(/^FYI: the stats row is tight$/m)
+  expect(shown).toMatch(/^Do: an example inside a fence$/m)
+  expect(shown).toMatch(/^Later: a line from a pasted document$/m)
   const context = lastContext(reached)
   expect(context).toMatch(/Do-1 "rename it to Verdict"/)
   expect(context).toMatch(/Ask-1 "why is this in the styleguide\?"/)
