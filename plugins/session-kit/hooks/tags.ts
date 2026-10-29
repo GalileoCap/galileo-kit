@@ -27,6 +27,7 @@ const TEXT_SHOWN = 60
 const tagCounts = atom({ plugin: 'session-kit', key: 'tagCounts' } as const, NO_COUNTS)
 const openItems = atom({ plugin: 'session-kit', key: 'openItems' } as const, NO_ITEMS)
 const itemsMissed = atom({ plugin: 'session-kit', key: 'itemsMissed' } as const, NO_ITEMS)
+const pendingQuestion = atom({ plugin: 'session-kit', key: 'pendingQuestion' } as const, null)
 const itemsPrompted = atom({ plugin: 'session-kit', key: 'itemsPrompted' } as const, NO_IDS)
 const checkDue = atom({ plugin: 'session-kit', key: 'tagCheckDue' } as const, false)
 const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
@@ -200,6 +201,10 @@ export const register: Register = (on) => {
       return next(e)
     }
     const missed = await settle($, e.answer)
+    // A prompt of the kit's would start a turn over the session's question: the band shows the missed items alone.
+    if ((await read($, pendingQuestion)) !== null) {
+      return next(e)
+    }
     const asked = new Set(await read($, itemsPrompted))
     const unasked = missed.filter((i) => !asked.has(i.id))
     if (unasked.length > 0) {

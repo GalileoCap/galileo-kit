@@ -1,5 +1,6 @@
 // The band above the prompt and the line that closes a turn. The band keeps
-// only what needs the person: a failure, a message the pre-send check held, the
+// only what needs the person: a failure, the session's question once a handoff
+// took the next-step box's place, a message the pre-send check held, the
 // owner's tagged items a reply left without a line, the offer or the chain or
 // the context figure from its firmer tier, the cold-cache timer that will act
 // on its own (a line under the context row when that row offers the same
@@ -14,7 +15,7 @@
 import { atom, read } from 'claude-code'
 import type { ElementTable, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { TurnFigure, ChainState, ContextFigure, Failure, NewTaskState, PresendHeld, TaggedItem } from '../types'
+import type { TurnFigure, ChainState, ContextFigure, Failure, NewTaskState, PendingQuestion, PresendHeld, TaggedItem } from '../types'
 import {
   adviceTier,
   chainByPerson,
@@ -33,6 +34,7 @@ import {
 import { LIMIT_FIRM, LIMIT_WARN, coldClause, coldText, compact, limitFigures, newTaskBody, showsLimit, stageLine } from './lines'
 import { readOptions, triggerTokens, withinStep } from './options'
 import { dismissHeld, sendAsIs, useRewrite } from './presend'
+import { answerQuestion, dismissQuestion } from './question'
 import { dismissMissed } from './tags'
 
 const NO_WINDOWS: SessionRateLimit[] = []
@@ -44,6 +46,7 @@ const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const coldTimerAt = atom({ plugin: 'session-kit', key: 'coldTimerAt' } as const, 0)
 const failure = atom({ plugin: 'session-kit', key: 'failure' } as const, null)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
+const pendingQuestion = atom({ plugin: 'session-kit', key: 'pendingQuestion' } as const, null)
 const presendHeld = atom({ plugin: 'session-kit', key: 'presendHeld' } as const, null)
 const itemsMissed = atom({ plugin: 'session-kit', key: 'itemsMissed' } as const, NO_ITEMS)
 const figureDismissedAt = atom({ plugin: 'session-kit', key: 'contextDismissedAt' } as const, 0)
@@ -154,6 +157,30 @@ function missedRow($: EngineInterface, missed: readonly TaggedItem[]): Row {
   }
 }
 
+/** The session's question, once a handoff took the next-step box's place: a press on a reply sends its message as the person's; an app action is named for the app to run. */
+function questionRow($: EngineInterface, q: PendingQuestion): Row {
+  const actions: Action[] = []
+  const inApp: string[] = []
+  q.actions.forEach((a, i) => {
+    if (a.message === null) {
+      inApp.push(a.label)
+    } else {
+      const { message } = a
+      actions.push({ key: `question-${i}`, label: a.label, main: actions.length === 0, onPress: () => answerQuestion($, message) })
+    }
+  })
+
+  return {
+    key: 'question',
+    label: 'Question',
+    tone: 'warning',
+    text: [{ text: q.ask }],
+    actions,
+    details: inApp.length === 0 ? [] : [{ text: `In the app: ${inApp.join(', ')}`, dim: true }],
+    dismiss: { key: 'question-dismiss', label: '✕', onPress: () => dismissQuestion($) },
+  }
+}
+
 function offerRow($: EngineInterface, offered: NewTaskState): Row {
   const actions: Action[] = []
   if (offered.stage === 'offered') {
@@ -257,6 +284,8 @@ export const register: Register = (on, options) => {
     const held = await read($, failure)
     const missed = await read($, itemsMissed)
     const kept = await read($, presendHeld)
+    const asked = await read($, pendingQuestion)
+    const carried = asked !== null && asked.carried ? asked : null
     const offered = await read($, newTask)
     const running = await read($, chain)
     const now = await read($, figure)
@@ -269,7 +298,7 @@ export const register: Register = (on, options) => {
     const tier = now === null ? 0 : adviceTier(now.tokens, trigger)
     // Below the firmer tier the figure is the status line's alone: the band keeps what needs a decision.
     const past = now !== null && now.tokens >= trigger && tier >= 1 && !withinStep(dismissedAt, now.tokens, step)
-    if (e.props.hasSurvey || (held === null && kept === null && missed.length === 0 && offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
+    if (e.props.hasSurvey || (held === null && kept === null && carried === null && missed.length === 0 && offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
       return below
     }
     const { Box, Button, Text } = $.ui.resolve(e)
@@ -279,6 +308,9 @@ export const register: Register = (on, options) => {
     const rows: Row[] = []
     if (held !== null) {
       rows.push(failureRow($, held))
+    }
+    if (carried !== null) {
+      rows.push(questionRow($, carried))
     }
     if (kept !== null) {
       rows.push(heldRow($, kept))

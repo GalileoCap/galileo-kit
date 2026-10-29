@@ -52,6 +52,7 @@ import { COMMAND, COMMAND_DESCRIPTION, KEPT_OPEN, PANE, PANE_TITLE } from './pan
 import { clip, limitLine, limitTier, sameWindows, sentence, stageLine } from './lines'
 import { readOptions, triggerTokens, withinStep } from './options'
 import type { ColdOptions } from './options'
+import { WRAP_UP_TOOL, carryQuestion, noteQuestion } from './question'
 import { holdStatus, refreshStatus } from './status'
 
 const NO_WINDOWS: SessionRateLimit[] = []
@@ -78,6 +79,7 @@ const rateLimits = atom({ plugin: 'session-kit', key: 'rateLimits' } as const, N
 const limitsDismissed = atom({ plugin: 'session-kit', key: 'limitsDismissed' } as const, NO_MARKS)
 const failure = atom({ plugin: 'session-kit', key: 'failure' } as const, null)
 const stages = atom({ plugin: 'session-kit', key: 'stages' } as const, NO_STAGES)
+const pendingQuestion = atom({ plugin: 'session-kit', key: 'pendingQuestion' } as const, null)
 const turnFigures = atom({ plugin: 'session-kit', key: 'turnFigures' } as const, NO_TURNS)
 
 const STAGES_KEPT = 8
@@ -119,6 +121,10 @@ const TOOL = 'mcp__session-kit__clear_point'
 const NEW_TASK_NAME = 'new_task'
 const NEW_TASK_TOOL = 'mcp__session-kit__new_task'
 const HANDOFF_COMMAND = 'session-kit:handoff'
+const QUESTION_WAITS =
+  'Clear point not taken: your question in the next-step box waits on the owner, and a handoff ' +
+  'turn would take the box\'s place. End this turn now, with nothing more started. Call ' +
+  'clear_point again at the clear point after the owner answers.'
 const CLEAR_COMMAND = 'clear'
 const COMPACT_COMMAND = 'compact'
 const EFFORT_COMMAND = 'effort'
@@ -491,10 +497,16 @@ async function judgeChain($: EngineInterface, steps: readonly ChainStep[], note:
   }
 }
 
+/** The handoff command, carrying the question that waits on the person into the file and onto the band. */
+async function handoffCommand($: EngineInterface): Promise<void> {
+  const args = await carryQuestion($)
+  await $.command.run(args === undefined ? { command: HANDOFF_COMMAND } : { command: HANDOFF_COMMAND, args })
+}
+
 async function runHandoff($: EngineInterface): Promise<void> {
   stage($, 'running the handoff command')
   try {
-    await $.command.run({ command: HANDOFF_COMMAND })
+    await handoffCommand($)
     stage($, 'the handoff command returned')
   } catch (error) {
     const state = await read($, chain)
@@ -663,7 +675,7 @@ export async function handoffByPerson($: EngineInterface): Promise<void> {
   later($, async () => {
     stage($, 'the person asked for the handoff')
     try {
-      await $.command.run({ command: HANDOFF_COMMAND })
+      await handoffCommand($)
     } catch (error) {
       await failed($, `the handoff did not run (${reason(error)})`)
     }
@@ -773,6 +785,12 @@ async function stepChain($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'
   }
   switch (state.stage) {
     case 'requested': {
+      if ((await read($, pendingQuestion)) !== null) {
+        await update($, chain, () => null)
+        stage($, 'the turn ended with a question waiting on the owner, so the chain does not start')
+
+        break
+      }
       await update($, chain, () => ({ ...state, stage: 'handoff' }))
       stage($, 'the turn ended: writing the handoff')
       // Outside this dispatch: a command run inside a hook the turn waits on is refused.
@@ -875,6 +893,9 @@ export const register: Register = (on, options) => {
 
   on('tool.call', async ($, e, next) => {
     const ran = await next(e)
+    if (e.tool === WRAP_UP_TOOL && e.agentId === undefined && ran.deny === undefined) {
+      await noteQuestion($, { ask: e['ask'], actions: e['actions'] })
+    }
     if (ran.deny !== undefined || e.tool === TOOL || e.tool === NEW_TASK_TOOL) {
       return ran
     }
@@ -968,6 +989,8 @@ export const register: Register = (on, options) => {
 
   on('prompt.submit', async ($, e, next) => {
     if (e.command === undefined && e.text.trim() !== '' && isThePersons(e.origin)) {
+      // The person's prompt answers the session's question, whatever it says.
+      await update($, pendingQuestion, () => null)
       await update($, lastPrompt, () => e.text)
       const at = await $.clock.now()
       await update($, lastPromptAt, () => at)
@@ -1105,6 +1128,11 @@ export const register: Register = (on, options) => {
     const note = typeof e.note === 'string' && e.note.trim() !== '' ? e.note.trim() : ''
     if ((nextStep !== 'session' && nextStep !== 'owner') || note === '') {
       return refuse('next_step must be "session" or "owner", and note the next step in one line.')
+    }
+    if ((await read($, pendingQuestion)) !== null) {
+      stage($, 'a clear point with a question waiting on the owner: the chain does not start')
+
+      return answer(QUESTION_WAITS)
     }
     const steps = await read($, chainSteps)
     const signal = steps.length + 1

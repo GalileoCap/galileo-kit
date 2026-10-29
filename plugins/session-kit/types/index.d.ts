@@ -117,6 +117,19 @@ export type PresendHeld = {
   rewrite: string | null
 }
 
+/** A button of the next-step box: its label, and the message a press sends as the person's, null for an app action the band cannot run. */
+export type QuestionAction = {
+  label: string
+  message: string | null
+}
+
+/** The question the session put in the next-step box, its buttons, and whether a handoff has carried it past the box. */
+export type PendingQuestion = {
+  ask: string
+  actions: QuestionAction[]
+  carried: boolean
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'session-kit': {
@@ -178,6 +191,8 @@ declare module 'claude-code' {
       itemsPrompted: string[]
       /** True from a tagged prompt (the person's, or the kit's own about a missed item) until its turn ends. */
       tagCheckDue: boolean
+      /** The question of the session's that waits on the person, from its turn until the person's next prompt; null while none does. */
+      pendingQuestion: PendingQuestion | null
       /** The test command failing the same way, counted across edits; null while none is, and after a pass. */
       testRetry: TestRetry | null
     }

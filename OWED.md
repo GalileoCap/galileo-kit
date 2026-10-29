@@ -185,13 +185,19 @@ Seen by the owner on 2026-10-29 on the desktop: "It worked".
 
 ### main: the pane's lists scroll in their cards, and their labels align
 
-`A89` (the kit's pane is the session's dashboard), by the owner's look at 0.42.3: a list longer than its card's window (six items, three commits) scrolls in it by ▴ and ▾ under a `1–6 of 9` mark, in place of `+n more`; an item's id and a question's number sit in a column of their own width, at the top of their text. The guard and the test log read a quoted heredoc's body (`<<'EOF'`) as text that never runs, backticks included. A runner behind the shell's `command` builtin is a run, and `command -v` is not. To see on the desktop: the scroll marks, the aligned ids and numbers, and no STALE after a file written by a heredoc. It reaches a session as 0.36.0 does.
+`A89` (the kit's pane is the session's dashboard), by the owner's look at 0.42.3: a list longer than its card's window (six items, three commits) scrolls in it by ▴ and ▾ under a `1–6 of 9` mark, in place of `+n more`. An item's id and a question's number sit in a column of their own width, at the top of their text. The guard and the test log read a quoted heredoc's body (`<<'EOF'`) as text that never runs, backticks included. A runner behind the shell's `command` builtin is a run, and `command -v` is not. To see on the desktop: the scroll marks, the aligned ids and numbers, and no STALE after a file written by a heredoc. It reaches a session as 0.36.0 does.
 
 ## At the install of session-kit 0.42.5
 
 ### main: a test run with its stderr piped inline is refused
 
 The guard read the `&` of `2>&1` as the end of a command, so `scripts/test x 2>&1 | tail -5` and `pytest 2>&1 -x` passed, and a pipe into `rg` was never a filter. It now blanks a redirection of a stream (`2>&1`, `>&2`, `&>`) before it reads, and counts `rg` and `|&`. Reported by the T-Agents dev session on 2026-10-29. To see: a piped `2>&1` test run in any project is refused with the advice to write a file. It reaches a session as 0.36.0 does.
+
+## At the install of session-kit 0.43.0
+
+### main: a question in the next-step box is never hidden by the kit
+
+`A90` (the kit waits on a pending question): while a `wrap_up` question waits on the owner, the chain does not start and the tagged-lines check sends no prompt. A handoff that runs anyway (the cold-cache timer, or the owner's press) writes the question under Open questions word for word, and the band shows it with its buttons until the owner answers. To see on the desktop: a session that asks in the box and calls `clear_point` in the same turn keeps the box. One left past the cold timer shows a Question row after the compaction, and a press sends the button's message. It reaches a session as 0.36.0 does.
 
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 

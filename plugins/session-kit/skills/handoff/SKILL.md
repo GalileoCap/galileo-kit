@@ -20,6 +20,9 @@ compaction or a restart. This skill writes it.
   state. Run it at the end of a turn that changed something, after a commit,
   after a decision, and before any long run or any point where the context
   is filling.
+- When session-kit runs it while a question of the session's waits on the
+  owner, its arguments give the question and its options. Write them under
+  Open questions word for word.
 
 ## The fields
 
