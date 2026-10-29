@@ -103,6 +103,13 @@ export type TestRetry = {
   edited: boolean
 }
 
+/** One item of the owner's tagged lines: its id (the tag word, a hyphen, a number), its tag, and its first words. */
+export type TaggedItem = {
+  id: string
+  tag: 'Do' | 'Decide' | 'Ask' | 'Later'
+  text: string
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'session-kit': {
@@ -146,6 +153,16 @@ declare module 'claude-code' {
       turnFigures: TurnFigure[]
       /** The last test run, stamped with the tree it ran on; null before any. */
       lastTest: TestRun | null
+      /** Per tag, the last number given to an item in this session; a clear starts them over. */
+      tagCounts: Record<string, number>
+      /** The owner's tagged items not yet reported done, decided, parked or answered, oldest first. */
+      openItems: TaggedItem[]
+      /** The open items the last checked reply left without a line, for the band; emptied by a dismissal. */
+      itemsMissed: TaggedItem[]
+      /** The ids the kit has already prompted the session about, once each. */
+      itemsPrompted: string[]
+      /** True from a tagged prompt (the person's, or the kit's own about a missed item) until its turn ends. */
+      tagCheckDue: boolean
       /** The test command failing the same way, counted across edits; null while none is, and after a pass. */
       testRetry: TestRetry | null
     }

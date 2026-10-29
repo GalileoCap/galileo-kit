@@ -1,5 +1,6 @@
 // The band above the prompt and the line that closes a turn. The band keeps
-// only what needs the person: a failure, the offer or the chain or the context
+// only what needs the person: a failure, the owner's tagged items a reply
+// left without a line, the offer or the chain or the context
 // figure past its threshold, the cold-cache timer that will act on its own (a
 // clause of the context row when that row offers the same chain), and
 // a usage window at 95% (at 80% when the kit keeps no status line). Each row is
@@ -11,7 +12,7 @@
 import { atom, read } from 'claude-code'
 import type { ElementTable, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { TurnFigure, ChainState, ContextFigure, Failure, NewTaskState } from '../types'
+import type { TurnFigure, ChainState, ContextFigure, Failure, NewTaskState, TaggedItem } from '../types'
 import {
   adviceTier,
   chainByPerson,
@@ -29,15 +30,18 @@ import {
 } from './context'
 import { LIMIT_FIRM, LIMIT_WARN, coldClause, coldText, compact, limitLine, newTaskLine, showsLimit, stageLine } from './lines'
 import { readOptions, triggerTokens, withinStep } from './options'
+import { dismissMissed } from './tags'
 
 const NO_WINDOWS: SessionRateLimit[] = []
 const NO_MARKS: Record<string, number> = {}
 const NO_TURNS: TurnFigure[] = []
+const NO_ITEMS: TaggedItem[] = []
 
 const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const coldTimerAt = atom({ plugin: 'session-kit', key: 'coldTimerAt' } as const, 0)
 const failure = atom({ plugin: 'session-kit', key: 'failure' } as const, null)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
+const itemsMissed = atom({ plugin: 'session-kit', key: 'itemsMissed' } as const, NO_ITEMS)
 const figureDismissedAt = atom({ plugin: 'session-kit', key: 'contextDismissedAt' } as const, 0)
 const limitsDismissed = atom({ plugin: 'session-kit', key: 'limitsDismissed' } as const, NO_MARKS)
 const newTask = atom({ plugin: 'session-kit', key: 'newTask' } as const, null)
@@ -70,6 +74,19 @@ function failureRow($: EngineInterface, d: Draw, held: Failure) {
       <Text>{`${held.text}.`}</Text>
       {held.retry === undefined ? null : <Button key="failure-retry" label="Try again" onPress={() => retryFailure($)} />}
       {dismissButton(d, 'failure-dismiss', () => dismissFailure($))}
+    </Box>
+  )
+}
+
+/** The owner's tagged items the last reply left without a closing line. */
+function missedRow($: EngineInterface, d: Draw, missed: readonly TaggedItem[]) {
+  const { Box, Text } = d.p
+
+  return (
+    <Box key="missed" gap={1} alignItems="center">
+      <Text bold color="warning">No line</Text>
+      <Text>{missed.map((i) => `${i.id} "${i.text}"`).join(' · ')}</Text>
+      {dismissButton(d, 'missed-dismiss', () => dismissMissed($))}
     </Box>
   )
 }
@@ -158,6 +175,7 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const below = await next(e)
     const held = await read($, failure)
+    const missed = await read($, itemsMissed)
     const offered = await read($, newTask)
     const running = await read($, chain)
     const now = await read($, figure)
@@ -168,7 +186,7 @@ export const register: Register = (on, options) => {
     const limits = (await read($, rateLimits)).filter((w) => showsLimit(w, marks[w.kind], limitFloor))
     const trigger = now === null ? 0 : triggerTokens(thresholdTokens, thresholdPercent, now.window)
     const past = now !== null && now.tokens >= trigger && !withinStep(dismissedAt, now.tokens, step)
-    if (e.props.hasSurvey || (held === null && offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
+    if (e.props.hasSurvey || (held === null && missed.length === 0 && offered === null && running === null && !past && coldAt === 0 && limits.length === 0)) {
       return below
     }
     const { Box, Button, Text } = $.ui.resolve(e)
@@ -178,6 +196,9 @@ export const register: Register = (on, options) => {
     const rows = []
     if (held !== null) {
       rows.push(failureRow($, d, held))
+    }
+    if (missed.length > 0) {
+      rows.push(missedRow($, d, missed))
     }
     if (offered !== null) {
       rows.push(offerRow($, d, offered))

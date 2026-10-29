@@ -73,7 +73,9 @@ The desktop app tells the model that the next-step box holds one question, and t
 
 ### 11. Matching by first words is the weak joint
 
-Matching on "tag, order and first words" breaks when the model paraphrases, translates (the Spanish sessions) or merges two items. The proposal measures the false-positive rate, which is right. Cheaper still: the kit numbers the items itself in the context it attaches at `prompt.submit` ("Items: D1 rename to Verdict, A1 …"), and the closing block quotes those. The owner still writes no numbers, the match becomes exact, and nothing is lost if the model drops the quote. The proposal rejected new numbering for the owner's eye. This numbering lives only in the hidden context and in the block's line prefix, so it costs the owner nothing to read.
+Matching on "tag, order and first words" breaks when the model paraphrases, translates (the Spanish sessions) or merges two items.
+
+Decided by the owner on 2026-10-29: the check matches by an id the kit assigns. The `prompt.submit` hook parses the tagged lines, gives each an id of the tag word, a hyphen and a number (`Do-1`, `Ask-1`, `Decide-1`, `Later-1`), and attaches the list as hidden context with the instruction to end the reply with one line per item, starting with its id. The closing lines start with the id (`Do-1 Done: rename to Verdict (commit 3f2a1c0)`), so the ids stay visible and the owner can refer back with them ("Do-3 isn't done") without ever writing one. The word-hyphen-number shape clashes with nothing: one letter and digits would read as an intent id (`A1` an action, `C1` a constraint) or as `M27`, `T8` and `Q4` in the analyses. The counter runs per tag across the session, so an item open across turns keeps its id, and a clear starts the counts over. The check reads an id only at the start of a closing line: an id in prose or in pasted text is ignored, and pasted content never opens items.
 
 ## What is easier than it looks
 
@@ -86,7 +88,7 @@ Matching on "tag, order and first words" breaks when the model paraphrases, tran
 
 1. Prove the cold-cache timer in a real desktop session, idle and with the Mac asleep and woken. Prove that `prompt.submit` reaches the kit in the work instance.
 2. `session-watched --status`, `--hold`, `--eta`, `--progress`, `--pause-mark`. They are useful alone, and the `Status?` answer reads them without any watcher.
-3. The tag rule and the turn-end check, with the kit's hidden item numbers, the wake guard from 2, and items kept in `$.state`.
+3. The tag rule and the turn-end check, with the kit-assigned ids of 11, the wake guard from 2, and items kept in `$.state`.
 4. `check_in`, its file registry and the watcher, with the warm and cold split from 3.
 5. The detached-run gate.
 6. The pre-send check, the secret hold first, since it needs no model.

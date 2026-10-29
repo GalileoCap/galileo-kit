@@ -314,7 +314,7 @@ async function opensFreshContext($: EngineInterface): Promise<boolean> {
 }
 
 /** Whether a prompt is the person's own words, which a clear sends again in their place and which lets a chain run again. */
-function isThePersons(origin: PromptOrigin | undefined): boolean {
+export function isThePersons(origin: PromptOrigin | undefined): boolean {
   return origin === undefined || !NOT_THE_PERSONS.has(origin.kind)
 }
 

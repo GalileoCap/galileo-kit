@@ -107,6 +107,12 @@ The status line's `ctx` part ends with `you 12m`, the time since the last prompt
 
 The Context row and the Cache row offered the same chain (`Handoff and compact`, `Run chain now`), so with the `chain` option on the context row ends "runs itself at <hh:mm>" and the Cache row is drawn only when no context row is. The context row's ✕ stops the timer as well. The status line drops the parentheses and "ago" (`ctx 30% 302k +5k · you 12m · 5h 31%`) and writes the timer as `compacts <hh:mm>`, so the usage window should fit on the desktop. It reaches a session as 0.36.0 does. Only the desktop proves that the usage window now fits and that one row reads clearly.
 
+## At the install of session-kit 0.38.0
+
+### main, A82 and A83: tagged lines, their ids and the turn-end check
+
+A prompt of the person's with `Do:`, `Decide:`, `Ask:` or `Later:` lines reaches the model with the items' ids (`Do-1`) and the closing-line forms beside it, and a reply that leaves an item without a line draws a "No line" row on the band and sends one prompt per item (`A83`, tagged items get ids from the kit and a turn-end check). It reaches a session as 0.36.0 does. The engine's tests prove the parsing, the ids, the closing and the single prompt. Only a real session proves three things: that the turn's `answer` holds the closing lines when the reply ends after a tool call (the desktop's wrap-up), that the desktop marks pasted text as `<pasted_content>` in the prompt the hook reads, and that the work instance lets the tagged prompt's hook through, as it does the checkout's.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

@@ -35,6 +35,10 @@ On the first prompt of a context (a new conversation, or one just compacted or c
 - "session-kit: CLAUDE.local.md is missing: run /session-kit:handoff init before working, so the next context starts from the files."
 - "session-kit: CLAUDE.local.md predates the last commit: read it knowing that, and run /session-kit:handoff at the next clear point."
 
+## Added beside a tagged prompt, by the in-process module (`hooks/tags.ts`)
+
+On a prompt of the person's with a line that starts with `Do:`, `Decide:`, `Ask:` or `Later:` (`A83`, tagged items get ids from the kit and a turn-end check), outside fenced blocks and pasted content: "session-kit: the owner's tagged items, by id: Do-1 "<first words>" · Ask-1 "<first words>". End the reply with one line per item, starting with its id: "Do-1 Done: …", "Do-1 Not done: <why>", "Do-1 In progress: <what remains>", "Decide-1 Decided: <where it is recorded>", "Later-1 Parked: <where>", "Ask-1 Answered: <first words>". Then "Read as Do: …" or "Read as FYI: …" for each untagged line you acted on, and last, under "Asks you:", each question the owner must answer, one per line." The list carries every item still open in the session, the new ones after.
+
 ## Added to a tool result, by the settings hooks (`hooks/hooks.json`)
 
 The formatter, after an Edit, Write or Bash edit, when a formatter or linter left something: "<tool> left this in <path>:" and up to a few lines of the tool's output, or "<tool> on <path> did not run: <error>".
@@ -71,6 +75,8 @@ The cold-cache timer (`A49`, the cold-cache timer runs the chain before the cach
 ## Prompts the module submits
 
 After the chain's compaction, as the plugin's prompt: "Continue. Read again in full the documents CLAUDE.local.md lists, then take its next step: <note>".
+
+At the end of a turn whose reply left a tagged item without a closing line, once per item, as the plugin's prompt: "session-kit: your reply leaves these tagged items without a closing line: Do-1 "<first words>". Report each on a line that starts with its id, or say why not." Never while the chain or a new-task offer is under way.
 
 After a `new_task` clear, or on "Keep going here": the person's own last prompt, sent again as their words. A prompt that is not their own words (a notification, a schedule, another session's, a plugin's, a slash command) is never sent in their place (`A46`, prompt origins as a closed set).
 
