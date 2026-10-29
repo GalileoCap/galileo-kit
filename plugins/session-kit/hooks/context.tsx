@@ -48,7 +48,7 @@ import type { EngineInterface, PromptOrigin, Register, RenderSurface, SessionCon
 
 import type { ChainState, ChainStep, ContextFigure, Effort, Failure, NewTaskState, StageLine, TurnFigure } from '../types'
 import { gitOutput } from './checkout'
-import { registerKitCommand } from './pane'
+import { COMMAND, COMMAND_DESCRIPTION, KEPT_OPEN, PANE, PANE_TITLE } from './pane'
 import { clip, limitLine, limitTier, sameWindows, sentence, stageLine } from './lines'
 import { readOptions, triggerTokens, withinStep } from './options'
 import type { ColdOptions } from './options'
@@ -1010,11 +1010,15 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('session.start', async ($, e, next) => {
-    // The command is a convenience: an engine without it must not cost the tools below.
+    // The pane is a convenience: an engine without it must not cost the tools below.
     try {
-      await registerKitCommand($)
+      await $.command.register({ name: COMMAND, description: COMMAND_DESCRIPTION })
+      // The pane opens again where the last press left it open; a reload finds one still up and only retitles it.
+      if ((await $.store.get(KEPT_OPEN)) === true) {
+        await $.ui.open({ id: PANE, title: PANE_TITLE })
+      }
     } catch {
-      // Nothing to tell: the pane is reachable by no command then, and the band and the status line stand.
+      // Nothing to tell: the pane is reachable by the chip alone then, and the band and the status line stand.
     }
     if (!chainOn) {
       return next(e)

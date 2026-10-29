@@ -1,8 +1,14 @@
-// The kit's pane, opened by `/kit` and drawn on every surface: the context
-// with a bar, each usage window, the cache timer, the chain or the offer with
-// the last lines of its journal, the handoff, the uncommitted files and the last
-// test run. It shows what the band and the status line only name, and the
-// facts the handoff carries, without a model turn.
+// The kit's pane, drawn on every surface: the context with a bar, each usage
+// window, the cache timer, the chain or the offer with the last lines of its
+// journal, the handoff, the uncommitted files and the last test run. It shows
+// what the band and the status line only name, and the facts the handoff
+// carries, without a model turn. A `kit` chip in the footer's mode labels shows
+// and hides it with one click, as `/kit` does, and the next session starts with
+// the pane as the last press left it; the pane's own close mark hides it for
+// this session alone. The validator cuts a line of its report at about a
+// thousand characters (`A60`), so the pane and the chip share one drawing hook,
+// and the context concern's `session.start` hook registers the command and
+// opens the pane again with direct calls.
 
 import { atom, read } from 'claude-code'
 import type { EngineInterface, Register, SessionRateLimit } from 'claude-code'
@@ -26,9 +32,13 @@ const turnGrowth = atom({ plugin: 'session-kit', key: 'turnGrowth' } as const, 0
 
 const lastTest = atom({ plugin: 'session-kit', key: 'lastTest' } as const, null)
 
-const PANE = 'kit'
-const COMMAND = 'kit'
+export const PANE = 'kit'
+export const PANE_TITLE = 'session-kit'
+export const COMMAND = 'kit'
+export const COMMAND_DESCRIPTION = 'Show or hide the session-kit pane: context, usage windows, chain and checks'
 const COMMAND_SHOWN = 60
+// The `$.store` key that keeps, across sessions, whether the person left the pane open.
+export const KEPT_OPEN = 'paneOpen'
 
 /** The checkout's two facts, or `unknown` where git or the file system cannot say. */
 async function checkout($: EngineInterface): Promise<{ handoff: string; changes: string }> {
@@ -71,19 +81,37 @@ async function chainLine($: EngineInterface): Promise<string> {
   return running === null ? 'Idle' : stageLine(running)
 }
 
-/** Registers `/kit`; the context concern calls it from its one `session.start` hook, since a module may hook that event once. */
-export async function registerKitCommand($: EngineInterface): Promise<void> {
-  await $.command.register({ name: COMMAND, description: 'Show the context, usage windows, chain and checks of session-kit in a pane' })
+/** Opens the pane where it is closed and closes it where it is open, and keeps the choice for the next session. */
+async function toggle($: EngineInterface): Promise<string> {
+  const isUp = (await $.ui.panes()).some((pane) => pane.id === PANE)
+  await $.store.set(KEPT_OPEN, !isUp)
+  if (isUp) {
+    await $.ui.close({ id: PANE })
+
+    return 'The session-kit pane is hidden.'
+  }
+  const opened = await $.ui.open({ id: PANE, title: PANE_TITLE })
+
+  return opened.isPlaced ? 'The session-kit pane is open.' : `The session-kit pane waits for room: ${opened.reason}`
 }
 
 export const register: Register = (on) => {
-  on('command.run', { command: COMMAND }, async ($) => {
-    const opened = await $.ui.open({ id: PANE, title: 'session-kit' })
+  on('command.run', { command: COMMAND }, async ($) => ({ text: await toggle($) })).catch(() => ({ text: 'The session-kit pane could not be opened.' }))
 
-    return { text: opened.isPlaced ? 'The session-kit pane is open.' : `The session-kit pane waits for room: ${opened.reason}` }
-  }).catch(() => ({ text: 'The session-kit pane could not be opened.' }))
+  on('ui.render', { component: /^(Pane|SessionMode)$/ }, async ($, e, next) => {
+    if (e.component === 'SessionMode') {
+      const { Box, Button } = $.ui.resolve(e)
 
-  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+      return (
+        <Box gap={1}>
+          {await next(e)}
+          <Button key="kit-pane" plain label="kit" onPress={async () => { await toggle($) }} />
+        </Box>
+      )
+    }
+    if (e.requestId !== PANE) {
+      return next(e)
+    }
     const { Box, Text } = $.ui.resolve(e)
     const now = await read($, figure)
     const grewBy = await read($, turnGrowth)

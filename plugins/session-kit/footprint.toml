@@ -9,7 +9,7 @@ engine = "2.1.308"
 "./kit.tsx calls" = [
   "$.clock.after",
   "$.clock.now",
-  "$.command.register (via registerKitCommand)",
+  "$.command.register",
   "$.command.run (via clearThenResend, compactByCommand, handoffByPerson, runHandoff, runHandoffBeforeClear, setEffort)",
   "$.env.get",
   "$.fs.exists (via handoffState)",
@@ -29,10 +29,14 @@ engine = "2.1.308"
   "$.session.usage",
   "$.state.get",
   "$.state.set",
+  "$.store.get",
+  "$.store.set (via toggle)",
   "$.tool.register",
+  "$.ui.close (via toggle)",
   "$.ui.log",
   "$.ui.notify (via notifyOwner)",
   "$.ui.open",
+  "$.ui.panes (via toggle)",
   "$.ui.resolve",
   "$.ui.status (via refreshStatus)",
   "$.ui.toast (via moment)",
@@ -101,8 +105,8 @@ engine = "2.1.308"
   "turn.start",
   "turn.start{turnId=/\".\"/}",
   "turn.step",
+  "ui.render{component=/\"^(Pane|SessionMode)$\"/}",
   "ui.render{component=AbovePrompt}",
-  "ui.render{component=Pane, requestId=kit}",
   "ui.render{component=TurnDuration}",
 ]
 "./kit.tsx state reads" = [
@@ -201,7 +205,7 @@ engine = "2.1.308"
 [why]
 "$.clock.after" = "Defers the chain's and the offer's next stage, and the prompt about a tagged item left without a line, until the turn lets go, and arms the cold-cache timer."
 "$.clock.now" = "Stamps the chain file's lines, the test log's runs, the person's last prompt and the handoff's facts, and dates the cold-cache deadline."
-"$.command.register" = "Registers /kit, the command that opens the kit's pane."
+"$.command.register" = "Registers /kit, the command that shows or hides the kit's pane."
 "$.command.run" = "Runs the handoff command (for the chain, and for the band's Handoff button), /compact for the chain's compaction, and /clear after the new-task offer's press, then /effort when the person chose the effort the model proposed."
 "$.env.get" = "TMPDIR for the chain file and the test log, HOME for the timeline's directory."
 "$.fs.exists" = "Whether CLAUDE.local.md exists, for the checkout's handoff advice."
@@ -221,10 +225,14 @@ engine = "2.1.308"
 "$.session.usage" = "The context figure for the warning and the cold-cache floor, the cost for the timeline, and the memory files' tokens once per context."
 "$.state.get" = "The kit's own state under session-kit.*, declared in types/index.d.ts."
 "$.state.set" = "The kit's own state under session-kit.*, declared in types/index.d.ts."
+"$.store.get" = "Reads, at the session's start, whether the last press left the kit's pane open."
+"$.store.set" = "Keeps, at each press of the chip or /kit, whether the kit's pane is open, for the next session."
 "$.tool.register" = "The clear_point and new_task tools."
+"$.ui.close" = "Hides the kit's pane when the person presses the chip or runs /kit while it is open."
 "$.ui.log" = "One dim transcript line per chain stage, the uncommitted-work line, the failed or stale test run at a turn's end, and facts that could not be added to the handoff."
 "$.ui.notify" = "Tells the person away from the screen that a chain ended with the next step theirs, or failed."
-"$.ui.open" = "Opens the kit's pane when the person runs /kit, and never by itself."
+"$.ui.open" = "Opens the kit's pane when the person presses the chip or runs /kit, and at the session's start where the last press left it open."
+"$.ui.panes" = "Reads whether the kit's pane is open, so a press knows to show or to hide it."
 "$.ui.resolve" = "The components the band above the prompt, the turn line and the pane are drawn with."
 "$.ui.status" = "Pins the status line under the prompt: the context figure, the usage windows and when the cold-cache timer compacts, rewritten only when its text changes."
 "$.ui.toast" = "A moment where no band is drawn, a failure of the chain or the offer included."
@@ -237,4 +245,4 @@ engine = "2.1.308"
 "turn.complete" = "Adds the facts to a handoff the turn wrote, before the chain's compaction, runs the chain's and the offer's next stage, arms the cold-cache timer, reads the growth per turn, hands the context figure back to the engine's, names uncommitted work and a failed or stale test run, checks the reply has a line for each tagged item, and writes the timeline."
 "turn.start" = "Disarms the cold-cache timer and opens the timeline's turn."
 "turn.step" = "Reads each main-loop request's usage, the engine's measurement of the context, which the warning's projection counts on from. Every chunk passes on unchanged."
-"ui.render" = "The band above the prompt (failures, a message the pre-send check held, the tagged items a reply left without a line, the offer, the chain, the context figure, the cold-cache timer, a usage window at 95%) drawn above the bands beneath, the turn line with the context percent its turn ended at, and the kit's pane."
+"ui.render" = "The band above the prompt (failures, a message the pre-send check held, the tagged items a reply left without a line, the offer, the chain, the context figure, the cold-cache timer, a usage window at 95%) drawn above the bands beneath, the turn line with the context percent its turn ended at, the kit's pane, and the `kit` chip that shows and hides it beside the footer's mode labels."

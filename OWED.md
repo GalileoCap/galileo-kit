@@ -151,6 +151,12 @@ Seen by the owner on 2026-10-29 on the desktop, on the Held row alone: "It looks
 
 Seen by the owner on 2026-10-29 on the desktop: "It worked".
 
+## At the install of session-kit 0.41.0
+
+### main: the kit's pane shown and hidden by a chip
+
+`A87` (the kit's pane is shown and hidden by a chip, and kept across sessions), by the owner's word on 2026-10-29. A `kit` chip beside the footer's mode labels shows and hides the pane, as `/kit` now does, and the next session starts with the pane as the last press left it. To see on the desktop: the chip at the right of the prompt's footer, a press each way, then a new session after leaving it open. If the desktop draws no chip there, the chip moves to the hint line. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
