@@ -2,7 +2,7 @@
 id: A28
 from: [O8, O9]
 source: session
-status: decided 2026-10-25
+status: retired 2026-10-29
 kind: check
 implemented_by: [plugins/session-kit/rulebook/session_rulebook.py, plugins/session-kit/bin/session-rulebook, .claude/claude-kit.json, global/CLAUDE.md]
 proven_by: [plugins/session-kit/rulebook/test_session_rulebook.py]
@@ -27,3 +27,5 @@ Instruction following degrades as instructions stack, and the first project's ru
 ## Consequences
 
 The defaults are starting figures, set so the kit passes with room, and unmeasured against instruction following. A project with a long handoff fails the check before its rules do, which is the handoff's own rule seen from the other side. Undone if the budgets are raised every time they are reached, which would mean a budget is not what holds a rulebook's size.
+
+Retired 2026-10-29, superseded by `A81`: the owner raised the rules budget to 7,500 words.

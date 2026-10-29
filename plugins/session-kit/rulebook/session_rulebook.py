@@ -28,7 +28,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-RULES_BUDGET = 5000
+RULES_BUDGET = 7500
 SKILLS_BUDGET = 16000
 IMPORT_DEPTH = 5
 MEASURE_DIR = Path.home() / ".claude" / "session-kit" / "measure"

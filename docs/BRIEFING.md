@@ -22,7 +22,7 @@ Sessions: one task per context. A compaction is asked for at a clear point, afte
 
 Git: commit proactively, deliver green, work only in your own checkout and on your own branch, and never push or publish unless asked. The guard refuses outright `git commit --no-verify`, `git reset --hard`, an amend of a pushed commit, a force-push and a bare stash. What a change leaves to do outside the code is an entry in `OWED.md`.
 
-Gates and tests: zero warnings. The rulebook every turn loads has a word budget of 5,000. A suppression carries its reason in place and the index lists them. Test output goes to a file, which is then searched, and the guard refuses a pipe inline, `-x` and shell `timeout`. A run that may last goes through `session-watched`. A slow test is a smell. Blind tests are scaffolding, written before the code and deleted before done, three kinds kept. A defect fix lands with its regression test. Each test proves a sentence nothing else proves. Done means it was run.
+Gates and tests: zero warnings. The rulebook every turn loads has a word budget of 7,500. A suppression carries its reason in place and the index lists them. Test output goes to a file, which is then searched, and the guard refuses a pipe inline, `-x` and shell `timeout`. A run that may last goes through `session-watched`. A slow test is a smell. Blind tests are scaffolding, written before the code and deleted before done, three kinds kept. A defect fix lands with its regression test. Each test proves a sentence nothing else proves. Done means it was run.
 
 ## The plugin, piece by piece
 

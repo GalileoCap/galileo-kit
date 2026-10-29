@@ -57,7 +57,7 @@ root = tree({
 })
 code, out = run(root, claude_dir)
 case("every file a turn loads is counted, imports included, and the totals are under the default budgets",
-     code == 0 and "rules: 147 of 5,000 words" in out and "skills: 30 of 16,000 words" in out, out)
+     code == 0 and "rules: 147 of 7,500 words" in out and "skills: 30 of 16,000 words" in out, out)
 case("each file is listed with its count", "    100  ~/" in out or "    100  " in out and "global/rules.md" in out and "      5  docs/more.md" in out, out)
 
 # The budgets and the extra skill files come from the project's settings.
@@ -71,7 +71,7 @@ case("skills_from adds a plugin's skills to the skills group", "plugins/x/skills
 # A file that is missing is skipped, and an import loop is read once.
 root = tree({"CLAUDE.md": "@CLAUDE.md\n@gone.md\n" + five(4)})
 code, out = run(root, tree({}))
-case("a missing file or import is skipped and a loop is read once", code == 0 and "rules: 6 of 5,000 words" in out, out)
+case("a missing file or import is skipped and a loop is read once", code == 0 and "rules: 6 of 7,500 words" in out, out)
 
 # The engine's own count, from the timeline the session-kit module writes: the newest memory line that
 # lists one of this project's files is read, an older one and another project's are not.
