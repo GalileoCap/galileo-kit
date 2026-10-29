@@ -30,7 +30,7 @@ engine = "2.1.308"
   "$.state.get",
   "$.state.set",
   "$.store.get",
-  "$.store.set (via toggle)",
+  "$.store.set",
   "$.tool.register",
   "$.ui.close (via toggle)",
   "$.ui.log",
@@ -127,6 +127,7 @@ engine = "2.1.308"
   "session-kit.limitsDismissed",
   "session-kit.newTask",
   "session-kit.openItems",
+  "session-kit.paneFolded",
   "session-kit.presendHeld",
   "session-kit.presendPass",
   "session-kit.rateLimits",
@@ -157,6 +158,7 @@ engine = "2.1.308"
   "session-kit.limitsDismissed",
   "session-kit.newTask",
   "session-kit.openItems",
+  "session-kit.paneFolded",
   "session-kit.presendHeld",
   "session-kit.presendPass",
   "session-kit.rateLimits",
@@ -189,6 +191,7 @@ engine = "2.1.308"
   "session-kit.limitsDismissed",
   "session-kit.newTask",
   "session-kit.openItems",
+  "session-kit.paneFolded",
   "session-kit.presendHeld",
   "session-kit.presendPass",
   "session-kit.rateLimits",
@@ -225,8 +228,8 @@ engine = "2.1.308"
 "$.session.usage" = "The context figure for the warning and the cold-cache floor, the cost for the timeline, and the memory files' tokens once per context."
 "$.state.get" = "The kit's own state under session-kit.*, declared in types/index.d.ts."
 "$.state.set" = "The kit's own state under session-kit.*, declared in types/index.d.ts."
-"$.store.get" = "Reads, at the session's start, whether the last press left the kit's pane open."
-"$.store.set" = "Keeps, at each press of the chip or /kit, whether the kit's pane is open, for the next session."
+"$.store.get" = "Reads, at the session's start, whether the last press left the kit's pane open, and, at the pane's first drawing, which of its sections the person folded."
+"$.store.set" = "Keeps, for the next session, whether the kit's pane is open at each press of the chip or /kit, and which of its sections are folded at each press of a section's title."
 "$.tool.register" = "The clear_point and new_task tools."
 "$.ui.close" = "Hides the kit's pane when the person presses the chip or runs /kit while it is open."
 "$.ui.log" = "One dim transcript line per chain stage, the uncommitted-work line, the failed or stale test run at a turn's end, and facts that could not be added to the handoff."

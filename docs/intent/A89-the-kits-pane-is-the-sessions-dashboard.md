@@ -4,14 +4,14 @@ from: [O17]
 source: owner
 status: decided 2026-10-29
 kind: behaviour
-implemented_by: [plugins/session-kit/hooks/pane.tsx, plugins/session-kit/footprint.toml]
+implemented_by: [plugins/session-kit/hooks/pane.tsx, plugins/session-kit/types/index.d.ts, plugins/session-kit/footprint.toml]
 proven_by: []
 supersedes: []
 ---
 
 # A89 The kit's pane is the session's dashboard
 
-The pane holds six sections, each left out when it has nothing to say. Each is a card with a rounded border: its title and the figure that sums it up on the first line (the count of items or commits, the handoff's state, the context or usage percent in its tone), then its body. The fact that matters is in full weight and its context dim: a commit's hash dim and mono beside its subject cut at its first clause, a file's path dim and mono, a test command without its leading `cd`. A line runs to the card's edge and is truncated there.
+The pane holds six sections, each left out when it has nothing to say. Each is a card with a rounded border: its title and the figure that sums it up on the first line (the count of items or commits, the handoff's state, the context or usage percent in its tone), then its body. The fact that matters is in full weight and its context dim: a commit's hash dim and mono beside its subject cut at its first clause, a file's path dim and mono, a test command without its leading `cd`. A line runs to the card's edge and is truncated there. A press on a card's title folds the card to its first line, marked `▸`, and a second press opens it, marked `▾`. The folded titles are kept in `$.store`, so a new session starts with the same sections folded.
 
 - Your items: the owner's open tagged items, by id.
 - This session: the commits made since the session started, the uncommitted files by name, and the last test run with its verdict in colour.
@@ -37,7 +37,7 @@ The pane repeats the status line's numbers, now as gauges. Each drawing runs `gi
 
 ## Proof
 
-The owner saw the first version on the desktop on 2026-10-29, sections in the band's ledger look, and asked for visual work: separators, alignment, cards, the relevant text bold against its context. The cards answer it.
+The owner saw the first version on the desktop on 2026-10-29, sections in the band's ledger look, and asked for visual work: separators, alignment, cards, the relevant text bold against its context. The cards answer it. Then, on 0.42.1: "Looking better, can you make it so I can collapse the sections?", answered by the fold.
 
 
 A scaffolding test under `claude plugin test` on 2.1.308 drew the pane on the desktop and the terminal with git and the handoff stubbed: the session's commits and files, the next step, the questions, the handoff's state and the context showed, with one SVG on the desktop and none on the terminal. The test was deleted as blind scaffolding. Not yet seen on the desktop.

@@ -3,7 +3,8 @@
 // run, the next step and the open questions the handoff records, the context
 // with its thresholds, its curve over the turns and the handoff's buttons, each
 // usage window, and the chain while one runs or has failed. A section with
-// nothing to say is left out. Each section is a card: its title and the figure
+// nothing to say is left out. Each section is a card: its title, which folds
+// the card to its first line and is kept folded across sessions, and the figure
 // that sums it up on one line, then its body, the fact that matters in full
 // weight and its context dim. The desktop draws the gauges and the
 // curve as SVG, the terminal as cells. A `kit` chip in the footer's mode labels
@@ -15,7 +16,7 @@
 // context concern's `session.start` hook registers the command and opens the
 // pane again with direct calls.
 
-import { atom, read } from 'claude-code'
+import { atom, read, update } from 'claude-code'
 import type { ElementTable, EngineInterface, Register, RenderChildren, SessionRateLimit } from 'claude-code'
 
 import type { StageLine, TaggedItem, TestRun, TurnFigure } from '../types'
@@ -42,6 +43,7 @@ const turnGrowth = atom({ plugin: 'session-kit', key: 'turnGrowth' } as const, 0
 const turnFigures = atom({ plugin: 'session-kit', key: 'turnFigures' } as const, NO_TURNS)
 const openItems = atom({ plugin: 'session-kit', key: 'openItems' } as const, NO_ITEMS)
 const lastTest = atom({ plugin: 'session-kit', key: 'lastTest' } as const, null)
+const paneFolded = atom({ plugin: 'session-kit', key: 'paneFolded' } as const, null)
 
 export const PANE = 'kit'
 export const PANE_TITLE = 'session-kit'
@@ -49,6 +51,8 @@ export const COMMAND = 'kit'
 export const COMMAND_DESCRIPTION = 'Show or hide the session-kit pane: your items, this session, the next step, context, usage and chain'
 // The `$.store` key that keeps, across sessions, whether the person left the pane open.
 export const KEPT_OPEN = 'paneOpen'
+// The `$.store` key that keeps, across sessions, the titles of the sections the person folded.
+const KEPT_FOLDED = 'paneFolded'
 
 const HANDOFF = 'CLAUDE.local.md'
 const SHOWN = 6
@@ -64,7 +68,12 @@ const SPARKS = '▁▂▃▄▅▆▇█'
 const INK = { success: '#3fb950', warning: '#d29922', error: '#f85149', track: '#8b949e55', mark: '#8b949e' } as const
 
 type Tone = 'success' | 'warning' | 'error'
-type Parts = Pick<ElementTable<'desktop'>, 'Box' | 'Button' | 'Text'>
+type Parts = Pick<ElementTable<'desktop'>, 'Box' | 'Button' | 'Text'> & {
+  /** The titles of the sections folded to their first line. */
+  folded: readonly string[]
+  /** Folds an open section or opens a folded one. */
+  fold: (title: string) => Promise<void>
+}
 type Svg = ElementTable<'desktop'>['Svg'] | null
 
 /** What the pane reads off the checkout and the handoff, once per drawing. */
@@ -172,19 +181,27 @@ export function sparkline(percents: readonly number[]): string {
   return percents.map((p) => SPARKS[Math.min(SPARKS.length - 1, Math.floor((p / top) * (SPARKS.length - 1)))]).join('')
 }
 
-/** A section's card: its title and the figure that sums it up on one line, then its body. */
+/** A section's card: its title, which folds the card to this line, and the figure that sums it up, then its body unless folded. */
 function card(p: Parts, title: string, summary: RenderChildren, body: RenderChildren[]) {
-  const { Box, Text } = p
+  const { Box, Button, Text } = p
+  const isFolded = p.folded.includes(title)
 
   return (
-    <Box key={title} flexDirection="column" borderStyle="round" borderColor="subtle" paddingX={1} rowGap={0}>
-      <Box justifyContent="space-between" gap={1}>
-        <Text weight="semibold">{title}</Text>
+    <Box key={title} flexDirection="column" borderStyle="round" borderColor="subtle" paddingX={1}>
+      <Box justifyContent="space-between" alignItems="center" gap={1}>
+        <Button key={`fold-${title}`} plain onPress={() => p.fold(title)}>
+          <Text dimColor>{isFolded ? '▸' : '▾'}</Text> <Text weight="semibold">{title}</Text>
+        </Button>
         {summary}
       </Box>
-      {body}
+      {isFolded ? null : body}
     </Box>
   )
+}
+
+/** The folded titles the store kept: its strings, or none where it holds something else. */
+function titlesOf(kept: unknown): string[] {
+  return Array.isArray(kept) ? kept.filter((t): t is string => typeof t === 'string') : []
 }
 
 /** A commit's subject as far as its first clause: the words before a colon or a parenthesis. */
@@ -253,7 +270,18 @@ export const register: Register = (on, options) => {
       return next(e)
     }
     const table = $.ui.resolve(e)
-    const p: Parts = { Box: table.Box, Button: table.Button, Text: table.Text }
+    const folded = (await read($, paneFolded)) ?? titlesOf(await $.store.get(KEPT_FOLDED))
+    const p: Parts = {
+      Box: table.Box,
+      Button: table.Button,
+      Text: table.Text,
+      folded,
+      fold: async (title) => {
+        const titles = folded.includes(title) ? folded.filter((t) => t !== title) : [...folded, title]
+        await update($, paneFolded, () => titles)
+        await $.store.set(KEPT_FOLDED, titles)
+      },
+    }
     const svg: Svg = 'Svg' in table ? table.Svg : null
     const { Box, Button, Text } = p
     const items = await read($, openItems)

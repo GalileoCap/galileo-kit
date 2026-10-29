@@ -169,6 +169,12 @@ Seen by the owner on 2026-10-29 on the desktop: "It worked".
 
 `A89` (the kit's pane is the session's dashboard), by the owner's look at 0.42.0 on the desktop: each section a bordered card with its title and summing figure on the first line, the relevant text in full weight and its context dim, long lines truncated at the card's edge. To see on the desktop: the borders, the alignment of the titles with their figures, and the truncation. It reaches a session as 0.36.0 does.
 
+## At the install of session-kit 0.42.2
+
+### main: the pane's sections fold
+
+`A89` (the kit's pane is the session's dashboard), by the owner's word on 2026-10-29: a press on a card's title folds it to its first line and a second opens it, and a new session starts with the same sections folded. To see on the desktop: a fold and an open, the `▸` and `▾` marks, and the folds kept after a restart. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
