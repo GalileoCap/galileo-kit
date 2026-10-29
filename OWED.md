@@ -163,6 +163,12 @@ Seen by the owner on 2026-10-29 on the desktop: "It worked".
 
 `A89` (the kit's pane is the session's dashboard), by the owner's word on 2026-10-29: six sections (Items, Session, Next, Context, Usage, Chain), each left out when empty, with SVG gauges on the desktop. To see on the desktop: the pane opened from the `kit` chip, in a session with commits, uncommitted files and a handoff. It reaches a session as 0.36.0 does.
 
+## At the install of session-kit 0.42.1
+
+### main: the pane's sections are cards
+
+`A89` (the kit's pane is the session's dashboard), by the owner's look at 0.42.0 on the desktop: each section a bordered card with its title and summing figure on the first line, the relevant text in full weight and its context dim, long lines truncated at the card's edge. To see on the desktop: the borders, the alignment of the titles with their figures, and the truncation. It reaches a session as 0.36.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
