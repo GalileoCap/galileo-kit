@@ -75,7 +75,12 @@ def test_week_four_gives_the_verdict_from_the_weeks_figures_and_prints_only_the_
         {"at": int(at(23, "19:00").timestamp() * 1000), "session": "s1", "cwd": LANE, "kind": "work", "reason": "the demo | tomorrow", "via": "band", "outcome": "sent"},
         {"at": int(at(20, "19:00").timestamp() * 1000), "session": "s1", "cwd": LANE, "kind": "work", "reason": "last week", "via": "band", "outcome": "sent"},
     ]
-    focus = {"load/focus-2026-11-23.md": "# Week of 2026-11-23\n\n- value metrics (O18): `~/devel/iquall/tagents/lane5`\n"}
+    # Value metrics was lane5's must-have until Tuesday morning, when the owner dropped it from the list.
+    tagged = [(at(23, "08:59"), "value metrics (O18)"), (at(24, "09:59"), None)]
+    focus = {
+        "load/focus-2026-11-23.md": "# Week of 2026-11-23\n\n- the MAT demo ~/devel/iquall/demo-mat-porting\n",
+        "load/prompts-2026-11-23.jsonl": "".join(json.dumps({"at": int(w.timestamp() * 1000), "session": "s1", "cwd": LANE, "focus": f}) + "\n" for w, f in tagged),
+    }
     stdout, review = run(prompts, holds, "2026-11-27", focus)
 
     assert stdout.strip().endswith("load/week-2026-11-23.md") and "\n" not in stdout.strip(), stdout
@@ -88,8 +93,9 @@ def test_week_four_gives_the_verdict_from_the_weeks_figures_and_prints_only_the_
     assert "after 22:00: 1 of 2: met" in review, review
     assert "the bar is not met: 2b rolls out" in review, review
     assert "| `~/devel/galileo/misc/galileo-kit` (watched) | personal | - | 1 | 1 | 100% |" in review, review
-    # The focus list the hold kept for the week: lane5's three messages of five.
-    assert "3 of 5 messages on focus (60%)" in review, review
+    # Each message keeps the tag it went on with: lane5's Monday two on focus, its Tuesday one off.
+    assert "2 of 5 messages on focus (40%)" in review, review
+    assert "| value metrics (O18) | - | 2 | 1 | 40% |" in review, review
     assert "| `~/devel/iquall/tagents/lane5` | work | value metrics (O18) | 3 | 1 | 33% |" in review, review
     assert "| Mon 23 | 4 | 3 |" in review and "| 09:00 | 23:30 |" in review, review
     assert "the demo \\| tomorrow" in review and "last week" not in review, review
