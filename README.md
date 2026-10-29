@@ -149,14 +149,14 @@ plugins/session-kit/codeintel/scripts/test        # its tests
 
 `global/CODE.md` holds the rules about the shape of code, for a project that takes the pure-core shape: it names the file in its `CLAUDE.md` with an `@` line, and `session-codeintel layers` writes the gate behind the first rule.
 
-A plugin cannot ship a `CLAUDE.md`, so the rules that belong in every project live in `global/CLAUDE.md` and are linked into `~/.claude/CLAUDE.md` by a script:
+A plugin cannot ship a `CLAUDE.md`, so the rules that belong in every project live in `global/CLAUDE.md`, and a script adds the line that imports them, `@<path>/global/CLAUDE.md`, to `~/.claude/CLAUDE.md`:
 
 ```bash
-global/install.sh          # link it (config dir: $CLAUDE_CONFIG_DIR, else ~/.claude)
+global/install.sh          # add the import (config dir: $CLAUDE_CONFIG_DIR, else ~/.claude)
 global/install.sh --check  # say what the state is, change nothing
 ```
 
-It never replaces a file. If `~/.claude/CLAUDE.md` already exists, it is left alone and the script prints the line to add to it, `@<path>/global/CLAUDE.md`, which imports the kit's text. Because the install is a link, `git pull` in the kit's working copy updates the rules. The cases are in `global/test_install.sh`.
+The file stays yours: a missing one is written with the line alone, an existing one gains the line at its end, and the rest of it holds this machine's own rules. Where the file is a link to `global/CLAUDE.md`, the script swaps it for a file holding the line, and a link to anything else is left alone with the line printed. The import names the working copy, so `git pull` there updates the rules. The cases are in `global/test_install.sh`.
 
 `global/RATIONALE.md` holds the reason behind each rule, under the same headings. It is not linked or loaded: a session opens it when a rule looks arbitrary, and the rules work without it.
 

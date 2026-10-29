@@ -2,7 +2,7 @@
 id: A15
 from: [O3]
 source: session
-status: decided 2026-10-11
+status: retired 2026-10-29
 kind: behaviour
 implemented_by: [global/CLAUDE.md, global/RATIONALE.md, global/install.sh]
 proven_by: [global/test_install.sh]
@@ -20,3 +20,7 @@ A plugin cannot ship a `CLAUDE.md`, so the rules reach every session through the
 ## Consequences
 
 Loaded into every session. Under the process each rule names the action it is, and `RATIONALE.md` splits into one file per rule, proposed in `global/goals-objectives-actions.md` and not yet done.
+
+## Retired
+
+Retired on 2026-10-29 by the owner's word, superseded by `A80` (the global rules, imported into the user's own CLAUDE.md). The link made `~/.claude/CLAUDE.md` the repository's file, so a machine had no place for rules of its own.

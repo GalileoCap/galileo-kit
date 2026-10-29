@@ -6,7 +6,7 @@ Written 2026-10-25 for the owner, who asked for the project as a newcomer would 
 
 Your whole setup for working with agents, in one place. It has three layers.
 
-1. The rules. `global/CLAUDE.md` is linked into `~/.claude/CLAUDE.md`, so every Claude Code session on this machine loads it, in every project. Each rule is one bold sentence with its mechanism, and `global/RATIONALE.md` carries the reason under the same heading, read on demand. `global/CODE.md` holds the rules about the shape of code, which a project takes by importing it. `global/goals-objectives-actions.md` is the process behind the record of intent, with its prior art beside it.
+1. The rules. `global/CLAUDE.md` is imported by an `@` line in `~/.claude/CLAUDE.md`, so every Claude Code session on this machine loads it, in every project. Each rule is one bold sentence with its mechanism, and `global/RATIONALE.md` carries the reason under the same heading, read on demand. `global/CODE.md` holds the rules about the shape of code, which a project takes by importing it. `global/goals-objectives-actions.md` is the process behind the record of intent, with its prior art beside it.
 2. The plugin, `session-kit`. The repository is a Claude Code plugin marketplace holding one plugin, which enforces some of the rules in-process, keeps the handoff, and puts nine commands on the Bash tool's PATH.
 3. The record. `docs/intent/` holds why the project is what it is, one file per entry, and `docs/` the research, the reviews, the analyses, the measurements and the plan.
 

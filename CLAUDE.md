@@ -1,6 +1,6 @@
 # galileo-kit
 
-Everything the owner works with agents through: the rules every session follows, the tools and plugins sessions use, and each third-party piece vetted before it is installed and forked when it is kept. It is a plugin marketplace holding the `session-kit` plugin, the global rules under `global/`, and the documents under `docs/`. The global rules, `global/CLAUDE.md`, are this repository's rules too, loaded through the link at `~/.claude/CLAUDE.md`. `global/CODE.md` holds the rules about the shape of code, which a project takes by importing it.
+Everything the owner works with agents through: the rules every session follows, the tools and plugins sessions use, and each third-party piece vetted before it is installed and forked when it is kept. It is a plugin marketplace holding the `session-kit` plugin, the global rules under `global/`, and the documents under `docs/`. The global rules, `global/CLAUDE.md`, are this repository's rules too, loaded through the `@` line `global/install.sh` adds to `~/.claude/CLAUDE.md`. `global/CODE.md` holds the rules about the shape of code, which a project takes by importing it.
 
 ## Documents
 

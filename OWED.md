@@ -106,3 +106,9 @@ The status line's `ctx` part ends with `you 12m`, the time since the last prompt
 ### One context row when the cold timer is set, and a shorter status line
 
 The Context row and the Cache row offered the same chain (`Handoff and compact`, `Run chain now`), so with the `chain` option on the context row ends "runs itself at <hh:mm>" and the Cache row is drawn only when no context row is. The context row's ✕ stops the timer as well. The status line drops the parentheses and "ago" (`ctx 30% 302k +5k · you 12m · 5h 31%`) and writes the timer as `compacts <hh:mm>`, so the usage window should fit on the desktop. It reaches a session as 0.36.0 does. Only the desktop proves that the usage window now fits and that one row reads clearly.
+
+## On each machine whose ~/.claude/CLAUDE.md links to the kit
+
+### main, A80: the global rules imported into the user's file
+
+`~/.claude/CLAUDE.md` becomes the machine's own file importing `global/CLAUDE.md` (`A80`, the global rules imported into the user's own CLAUDE.md). On each machine installed by the old link, run `global/install.sh` from the kit's working copy once: it replaces the link with a file holding the `@` line. This machine was converted on 2026-10-29. The check: a session started after it names `global/CLAUDE.md` among its loaded memory files (`/memory` in a terminal session).
