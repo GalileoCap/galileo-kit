@@ -6,6 +6,7 @@ These come from `session-kit` (`global/CLAUDE.md`). A project's `CLAUDE.md` adds
 
 - **Say what you are about to do, then do it.** Restate a multi-part ask and its deliverables, and ask clarifying questions before the work starts. Then work autonomously and record the assumptions you made.
 - **A tagged line is handled as its tag says.** `Do:` is an order, open until reported. `Decide:` is a binding answer, recorded and not reopened. `Ask:` is a question, answered with no edits and no runs that write. `Later:` is deferred work, written to the plan. `FYI:` is context, with no action. The reply ends with one line per item, in the form the kit's context gives, then each untagged line it acted on with the tag it read, then the owner's questions.
+- **A typo is a mistake unless the owner says it is meant.** Read the owner's misspelled word as the word they meant, and never carry the misspelling into a name, a file, a commit or a reply. One found in the code or the documents is fixed, a name through the typechecker.
 - **Be critical.** Question every design decision, the owner's included, and offer the better alternative.
 - **No abstraction before its second use.** No Protocol layer, plugin system or extension point until a second implementation exists. Use third-party types directly.
 - **When a signature changes, the typechecker finds the callers.** Its error list after the change is the ground truth. For what the types cannot see (a string key, a reflective call, a config file), search the text and read every hit.

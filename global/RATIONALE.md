@@ -12,6 +12,8 @@
 
 **A tagged line is handled as its tag says.** A message that mixes a decision, a question and an order loses items, and a remark read as an order costs a revert. A review of the owner's messages across 152 sessions on 2026-10-29 found five asks of the kind "put the open questions to me again" and a whole message spent saying that some lines were only notes. The tag lets the owner route each line, and makes "answer only" one word long. The closing lines let the owner check every order at a glance, and the kit's ids make the check a program's: an item left without a line is named at the turn's end. The forms of the closing lines live in the kit's context, since only a tagged turn needs them.
 
+**A typo is a mistake unless the owner says it is meant.** A misspelling read as deliberate becomes a name: a function, a file or an id spelled wrong, which every later reader copies and every search has to guess. The owner types fast and asked, on 2026-10-29, that no session treat a typo as intentional without their explicit word. Reading the word meant costs nothing, and a name the owner wants spelled oddly is rare enough to be said.
+
 **Be critical.** An agent that agrees with every design carries the owner's mistakes into code, where they cost more to undo. The owner asked for the better alternative to be named every time, their own designs included.
 
 **No abstraction before its second use.** An interface drawn from one implementation encodes that implementation's accidents. The second use is what shows which parts vary. Until it arrives, the layer is one more thing every reader crosses and one more place every change touches. A third-party type used directly keeps its own documentation.

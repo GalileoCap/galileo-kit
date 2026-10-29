@@ -123,6 +123,8 @@
 
 ## Deferred
 
+- The validator's cut. `claude plugin validate` cuts a line of its report at about a thousand characters, and the footprint gate (`A60`, the kit's reach held to a reviewed footprint) refuses a cut line. Since `A87` (the kit's pane is shown and hidden by a chip, and kept across sessions) the kit's hooks line stands at 987 and its calls line at 950, so nearly any new hook or helper making `$` calls trips the gate. Two ways out: the gate accepts a cut line whose hidden length is unchanged, or the kit merges hooks to keep the lines short. Deferred by the owner on 2026-10-29. Once there is room, `A87` can record the pane's own close mark through a `ui.close` hook.
+
 - Part B of `docs/analyses/proposal-prefixes-and-check-ins.md`, the check-ins: `session-watched`'s new options, `check_in`, the watcher and the detached-run gate. Deferred by the owner on 2026-10-29 so the prefixes go first. The read in `docs/analyses/prefixes-and-check-ins-read.md` holds what it has to answer, the cold-cache timer proven in a real session first.
 
 - `cache-tax`'s fork, to decide against the cold-cache timer (`A49`), which takes its ground. Details in `docs/reviews/cache-tax.md`, under "What could move into `session-kit`".
