@@ -61,11 +61,16 @@ def _heredoc(match: re.Match[str]) -> str:
     return " " if match.group(1) else _unless_it_runs(" ")(match)
 
 
+# A redirection that joins or moves a stream (`2>&1`, `>&2`, `&>log`): its `&` ends no command.
+REDIRECT = re.compile(r"(?<!\d)\d*>&\d*-?|&>>?")
+
+
 def bare(cmd: str) -> str:
-    """The command as the shell runs it: heredoc bodies and quoted text blanked, except one holding a substitution."""
+    """The command as the shell runs it: heredoc bodies and quoted text blanked, except one holding a substitution, and redirections of a stream blanked."""
     cmd = HEREDOC.sub(_heredoc, cmd)
     cmd = SINGLE_QUOTED.sub("''", cmd)
-    return DOUBLE_QUOTED.sub(_unless_it_runs('""'), cmd)
+    cmd = DOUBLE_QUOTED.sub(_unless_it_runs('""'), cmd)
+    return REDIRECT.sub(" ", cmd)
 
 
 def project_test_commands(cwd: str) -> list[str]:
@@ -112,7 +117,7 @@ def bash_rules(cwd: str) -> list[tuple[re.Pattern[str], str]]:
             "parameter, in milliseconds where the shell's is seconds. Inside a script it is fine.",
         ),
         (
-            re.compile(rf"{test_start}[^;&|]*\|\s*(grep|head|tail|less|more)(\s|$|\))"),
+            re.compile(rf"{test_start}[^;&|]*\|&?\s*(grep|rg|head|tail|less|more)(\s|$|\))"),
             "Write test output to a file (`&> log`) and search the file. Piping it inline "
             "throws the rest away and forces a rerun.",
         ),

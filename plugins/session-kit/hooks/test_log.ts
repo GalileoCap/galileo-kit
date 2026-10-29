@@ -57,8 +57,10 @@ const HEREDOC = /<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2\s*(?=\n|$)/g
 const SINGLE_QUOTED = /'[^']*'/g
 const DOUBLE_QUOTED = /"(?:[^"\\]|\\.)*"/g
 const RUNS = /\$\(|`/
+// A redirection that joins or moves a stream (`2>&1`, `>&2`, `&>log`): its `&` ends no command.
+const REDIRECT = /(?<!\d)\d*>&\d*-?|&>>?/g
 
-/** The command as the shell runs it: heredoc bodies and quoted text blanked, except one holding a substitution. */
+/** The command as the shell runs it: heredoc bodies and quoted text blanked, except one holding a substitution, and redirections of a stream blanked. */
 export function bare(command: string): string {
   const unlessItRuns = (blank: string) => (text: string) => (RUNS.test(text) ? text : blank)
 
@@ -67,6 +69,7 @@ export function bare(command: string): string {
     .replace(HEREDOC, (text: string, quote: string) => (quote === '' ? unlessItRuns(' ')(text) : ' '))
     .replace(SINGLE_QUOTED, "''")
     .replace(DOUBLE_QUOTED, unlessItRuns('""'))
+    .replace(REDIRECT, ' ')
 }
 
 /** A runner where a command segment starts, behind a launcher and its words, or a path, or neither. */
