@@ -52,7 +52,7 @@ function escape(text: string): string {
 
 // The guard's reading of a command (hooks/guard.py), so the two agree on what a test run is.
 const START = '(?:^|[;&|(`])\\s*'
-const LAUNCHER = '(?:uv\\s+run|poetry\\s+run|pipenv\\s+run|npx|pnpm\\s+exec|yarn\\s+run|python3?\\s+-m|env|time|nice|session-watched)'
+const LAUNCHER = '(?:uv\\s+run|poetry\\s+run|pipenv\\s+run|npx|pnpm\\s+exec|yarn\\s+run|python3?\\s+-m|command(?!\\s+-[vV])|env|time|nice|session-watched)'
 const HEREDOC = /<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2\s*(?=\n|$)/g
 const SINGLE_QUOTED = /'[^']*'/g
 const DOUBLE_QUOTED = /"(?:[^"\\]|\\.)*"/g

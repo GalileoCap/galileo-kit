@@ -40,7 +40,7 @@ START = r"(^|[;&|(`])\s*"
 AMEND = re.compile(START + r"git\s+commit[^;&|]*--amend")
 
 # What may stand between a segment's start and a test runner: a tool that runs it, with its own options.
-LAUNCHER = r"(?:uv\s+run|poetry\s+run|pipenv\s+run|npx|pnpm\s+exec|yarn\s+run|python3?\s+-m|env|time|nice|session-watched)"
+LAUNCHER = r"(?:uv\s+run|poetry\s+run|pipenv\s+run|npx|pnpm\s+exec|yarn\s+run|python3?\s+-m|command(?!\s+-[vV])|env|time|nice|session-watched)"
 
 HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2\s*(?=\n|$)")
 SINGLE_QUOTED = re.compile(r"'[^']*'")

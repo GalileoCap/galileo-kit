@@ -75,6 +75,9 @@ test('a runner named only in quoted text, a heredoc or an argument is no test ru
 
   await $.tool.call({ tool: 'Bash', command: 'cd /proj/tagents-platform && session-watched -- scripts/test stack > "$TMPDIR/stack.log" 2>&1' })
   expect(files[LOG]).toMatch(/Command: cd \/proj\/tagents-platform && session-watched -- scripts\/test stack/)
+
+  await $.tool.call({ tool: 'Bash', command: 'command scripts/check .' })
+  expect(files[LOG]).toMatch(/Command: command scripts\/check \.\n/)
 })
 
 test('a call a command hook refused is no test run, and the run before it stays the last', async ($, on) => {
