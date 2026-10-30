@@ -227,7 +227,7 @@ The guard read the `&` of `2>&1` as the end of a command, so `scripts/test x 2>&
 
 ### main: a launcher called by its path starts a test run
 
-The test log and the guard read `plugins/session-kit/bin/session-watched -- <runner>` as a test run, as they read `session-watched -- <runner>`: the run is recorded, and a `-x` or a pipe behind it is refused. To see: a session that runs its tests through the kit's `bin/` path reads PASS at its next commit, with the run in its test log. It reaches a session as 0.47.0 does.
+The test log and the guard read `plugins/session-kit/bin/session-watched -- <runner>` as a test run, as they read `session-watched -- <runner>`: the run is recorded, and a `-x` or a pipe behind it is refused. The test log reads the project's `test_commands` from the nearest `.claude/claude-kit.json` at or above the session's folder, so a session that moved into a subfolder still records its runs. To see: a session that runs its tests through the kit's `bin/` path reads PASS at its next commit, with the run in its test log. It reaches a session as 0.47.0 does.
 
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 

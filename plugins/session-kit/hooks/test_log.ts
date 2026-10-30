@@ -2,9 +2,10 @@
 // output is written to `<tempdir>/claude-kit-last-test-<session id>.log`,
 // replaced each run, and a failed run tells the model in one line where it
 // is. A command is a test run when one of the builtin runners or a
-// `test_commands` entry of the project's `.claude/claude-kit.json` starts a
-// command segment, read as the guard reads it: quoted text and heredoc bodies
-// do not count. A call a command hook refused never ran, and is no run.
+// `test_commands` entry of the nearest `.claude/claude-kit.json` at or above
+// the session's folder starts a command segment, read as the guard reads it:
+// quoted text and heredoc bodies do not count. A call a command hook refused
+// never ran, and is no run.
 //
 // Each run is stamped with the working tree it ran on: a fingerprint of the
 // content of every tracked and untracked file, read through git, which a
@@ -290,18 +291,26 @@ async function markEdited($: EngineInterface): Promise<void> {
   }
 }
 
+/** The project's `test_commands`, from the nearest `.claude/claude-kit.json` at or above `cwd`, so a session in a subfolder keeps them. */
 async function projectRunners($: EngineInterface, cwd: string): Promise<string[]> {
-  try {
-    const parsed: unknown = JSON.parse(await $.fs.read(`${cwd}/.claude/claude-kit.json`))
-    if (typeof parsed !== 'object' || parsed === null || !('test_commands' in parsed)) {
+  for (let dir = cwd.replace(/\/+$/, ''); dir !== ''; dir = dir.slice(0, dir.lastIndexOf('/'))) {
+    let text: string
+    try {
+      text = await $.fs.read(`${dir}/.claude/claude-kit.json`)
+    } catch {
+      continue // No config in this folder: try its parent.
+    }
+    try {
+      const parsed: unknown = JSON.parse(text)
+      const listed = typeof parsed === 'object' && parsed !== null && 'test_commands' in parsed ? parsed.test_commands : []
+
+      return Array.isArray(listed) ? listed.filter((c): c is string => typeof c === 'string' && c !== '') : []
+    } catch {
       return []
     }
-    const listed = parsed.test_commands
-
-    return Array.isArray(listed) ? listed.filter((c): c is string => typeof c === 'string' && c !== '') : []
-  } catch {
-    return []
   }
+
+  return []
 }
 
 export const register: Register = (on) => {

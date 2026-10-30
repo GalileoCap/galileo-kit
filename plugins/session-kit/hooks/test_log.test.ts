@@ -45,6 +45,14 @@ test('a project runner from .claude/claude-kit.json is a test run, and an ordina
   expect(files[LOG]).toMatch(/3 failed/)
 })
 
+test("from a folder inside the project, the project's runners still start a test run", async ($, on) => {
+  const { files } = world(on, { tmpdir: '/var/tmp/t', cwd: '/proj/plugins/kit', files: { '/proj/.claude/claude-kit.json': '{"test_commands": ["claude plugin test"]}' } })
+  on('tool.call', () => ({ result: { stdout: '95 pass', stderr: '', interrupted: false } }))
+
+  await $.tool.call({ tool: 'Bash', command: 'session-watched -- command claude plugin test . > $S/test.log 2>&1' })
+  expect(files[LOG]).toMatch(/Command: session-watched -- command claude plugin test \./)
+})
+
 test('each run replaces the log whole, and the log goes to /tmp without TMPDIR', async ($, on) => {
   const { files } = world(on)
   let stdout = 'FAILED the-old-failure'
