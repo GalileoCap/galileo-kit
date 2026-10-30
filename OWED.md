@@ -229,6 +229,12 @@ The guard read the `&` of `2>&1` as the end of a command, so `scripts/test x 2>&
 
 The test log and the guard read `plugins/session-kit/bin/session-watched -- <runner>` as a test run, as they read `session-watched -- <runner>`: the run is recorded, and a `-x` or a pipe behind it is refused. The test log reads the project's `test_commands` from the nearest `.claude/claude-kit.json` at or above the session's folder, so a session that moved into a subfolder still records its runs. To see: a session that runs its tests through the kit's `bin/` path reads PASS at its next commit, with the run in its test log. It reaches a session as 0.47.0 does.
 
+## At the install of session-kit 0.48.0
+
+### main: a prompt into one session more than three waits for a reason
+
+`A95` (a prompt into one session more than three waits for a reason). Add `"sessions": {"max": 3, "idleMinutes": 30}` to `~/.claude/session-kit/load/settings.json`. To see: with three sessions worked in the last half hour, the first prompt into a fourth shows the band's Held row naming the three, and the reason sends it on with no pass. It reaches a session as 0.47.0 does, and a session started before the install has no `turnEnded` in its record, so it counts as active only while it works until its next turn.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

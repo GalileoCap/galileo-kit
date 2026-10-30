@@ -117,9 +117,16 @@ export type PresendHeld = {
   rewrite: string | null
 }
 
-/** The owner's prompt held outside its window: the window's kind, the prompt's start, and the file a reason ends the wait by. */
+/**
+ * The owner's prompt held outside its window or into a session past the
+ * active ones: the window's kind, whether the window holds it, the other
+ * active sessions when they do, the prompt's start, and the file a reason
+ * ends the wait by.
+ */
 export type LoadHeld = {
   kind: 'work' | 'personal'
+  window: boolean
+  crowd: string[]
   preview: string
   file: string
 }
@@ -198,7 +205,7 @@ declare module 'claude-code' {
       paneFolded: string[] | null
       /** Per list of the pane, the first item its window shows; a list left out starts at its top. */
       paneScroll: Record<string, number>
-      /** The owner's prompt held outside its window for a reason; null while none is. */
+      /** The owner's prompt held for a reason, outside its window or into a session past the active ones; null while none is. */
       loadHeld: LoadHeld | null
       /** The pass the last reason opened, for the status line; null before any. */
       loadPass: LoadPass | null

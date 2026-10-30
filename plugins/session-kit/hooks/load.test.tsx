@@ -1,8 +1,9 @@
 // The owner's working window, held for them alone (A92): outside it, the
 // owner's prompt waits on the band for a one-line reason, which sends it on
-// unchanged, logs it and opens a pass for every session for 30 minutes. Each
-// prompt that goes on is tagged against the owner's focus list (A94). Nothing
-// of it reaches the model.
+// unchanged, logs it and opens a pass for every session for 30 minutes. A
+// prompt into a session past the active ones is held the same way (A95), and
+// each prompt that goes on is tagged against the owner's focus list (A94).
+// Nothing of it reaches the model.
 
 import { expect, mock, test } from 'claude-code/testing'
 
@@ -31,7 +32,9 @@ const BAND = {
 
 const COMPOSER: PromptOrigin = { kind: 'composer' }
 
-function engine(on: On, options: { now: number; cwd: string; settings?: boolean; files?: { [path: string]: string } }) {
+type Record = { id: string; cwd: string; state: string; since: number; beat: number; question: boolean; turnEnded: number }
+
+function engine(on: On, options: { now: number; cwd: string; settings?: boolean; files?: { [path: string]: string }; sessions?: Record[] }) {
   const files: { [path: string]: string } = { ...(options.settings === false ? {} : { [`${LOAD}/settings.json`]: JSON.stringify(SETTINGS) }), ...options.files }
   const status: (string | undefined)[] = []
   const entered: string[] = []
@@ -63,6 +66,12 @@ function engine(on: On, options: { now: number; cwd: string; settings?: boolean;
   // The hold's wait: a shell loop that ends once the reason file holds text.
   on('process.run', async (_, e) => {
     const path = e.argv.at(-1) ?? ''
+    // The registry's listing: each record on a line.
+    if (path === `${HOME}/.claude/session-kit/sessions`) {
+      const stdout = (options.sessions ?? []).map((r) => JSON.stringify(r)).join('\n')
+
+      return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    }
     if (path.startsWith(LOAD)) {
       if ((files[path] ?? '') === '') {
         await new Promise<void>((resolve) => waiting.push({ path, resolve }))
@@ -191,4 +200,41 @@ test("each prompt that goes on is tagged against this week's focus list by its f
   files[`${HOME}/.claude/session-kit/focus.md`] = focus.replace('2026-10-26', '2026-10-19')
   await $.prompt.submit({ text: 'more work', wait: false, origin: COMPOSER })
   expect(status.at(-1)).toContain("the focus list is not this week's")
+})
+
+test('with three other sessions active a prompt into one more waits for a reason, the band naming them; the reason sends it on with no pass, and a session already active goes straight on', async ($, on) => {
+  const record = (id: string, cwd: string, state: string, beatAgo: number, turnAgo: number): Record => ({
+    id, cwd, state, since: AT_09 - turnAgo, beat: AT_09 - beatAgo, question: false, turnEnded: turnAgo === 0 ? 0 : AT_09 - turnAgo,
+  })
+  const sessions = [
+    record('a', '/home/me/devel/iquall/tagents/lane1', 'working', MINUTE / 2, 0),
+    record('b', '/home/me/devel/iquall/tagents/lane2', 'waiting', MINUTE / 2, 10 * MINUTE),
+    record('c', '/home/me/devel/iquall/tagents/lane3', 'working', MINUTE / 2, 0),
+    // Idle past the limit, quit, and ended: none of them counts.
+    record('d', '/home/me/devel/iquall/tagents/lane4', 'waiting', MINUTE / 2, 45 * MINUTE),
+    record('e', '/home/me/devel/iquall/tagents/desk', 'working', 5 * MINUTE, 0),
+    record('f', '/home/me/devel/iquall/tagents/dev', 'ended', MINUTE / 2, 0),
+  ]
+  const settings = JSON.stringify({ ...SETTINGS, sessions: { max: 3, idleMinutes: 30 } })
+  const { entered, files, log } = engine(on, { now: AT_09, cwd: '/home/me/devel/iquall/tagents/lane5', files: { [`${LOAD}/settings.json`]: settings }, sessions })
+  await $.session.start({ cwd: '/home/me/devel/iquall/tagents/lane5', surface: 'desktop', isInteractive: true })
+
+  const sending = $.prompt.submit({ text: 'start lane5', wait: false, origin: COMPOSER })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const texts = (await ui.findAll({ type: 'Text' })).map((t) => t.text).join(' | ')
+  expect(texts).toContain('3 other sessions are active. A reason sends it on.')
+  expect(texts).not.toContain('Outside your')
+  expect(texts).toContain('~/devel/iquall/tagents/lane1: working')
+  expect(texts).toContain('~/devel/iquall/tagents/lane2: waiting since 08:50')
+  expect(texts).not.toContain('lane4')
+  await ui.input({ key: 'load-reason', text: 'lane5 is the week' })
+  await ui.unmount()
+  await sending
+  expect(entered).toEqual(['start lane5'])
+  expect(log()).toEqual([expect.objectContaining({ held: ['sessions'], active: 3, reason: 'lane5 is the week', outcome: 'sent' })])
+  expect(files[`${LOAD}/pass.json`]).toBeUndefined()
+
+  sessions.push(record('sess-1', '/home/me/devel/iquall/tagents/lane5', 'waiting', MINUTE / 2, MINUTE))
+  await $.prompt.submit({ text: 'and go on', wait: false, origin: COMPOSER })
+  expect(entered).toEqual(['start lane5', 'and go on'])
 })

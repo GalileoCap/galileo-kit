@@ -2,8 +2,8 @@
 // ~/.claude/session-kit/sessions/<id>.json, outside every project, for what
 // counts the owner's load across sessions. The record says whether the
 // session is working or waiting on the owner, since when, whether a question
-// of its waits, and a beat written each minute while it lives, so a reader
-// tells a closed session by its age. A clear ends the old session's record as
+// of its waits, when its last main-loop turn ended, and a beat written each
+// minute while it lives, so a reader tells a closed session by its age. A clear ends the old session's record as
 // the new one starts. It rides on context.tsx's hooks, since a hook of its own
 // would put the kit's hooks line past the validator's cut. A write that fails
 // is skipped: the registry is never the reason a turn goes wrong.
@@ -12,7 +12,8 @@ import type { EngineInterface, Timer } from 'claude-code'
 
 type State = 'working' | 'waiting' | 'ended'
 
-type SessionRecord = { id: string; cwd: string; state: State; since: number; beat: number; question: boolean }
+/** A session's record; `turnEnded` is 0 before its first main-loop turn ends. */
+export type SessionRecord = { id: string; cwd: string; state: State; since: number; beat: number; question: boolean; turnEnded: number }
 
 const BEAT_MS = 60_000
 
@@ -35,7 +36,8 @@ async function mark($: EngineInterface, state: State, question: boolean): Promis
     return
   }
   const at = await $.clock.now()
-  current = { ...current, state, question, since: state === current.state && question === current.question ? current.since : at, beat: at }
+  const since = state === current.state && question === current.question ? current.since : at
+  current = { ...current, state, question, since, beat: at, turnEnded: state === 'waiting' ? at : current.turnEnded }
   await write($, current)
 }
 
@@ -47,7 +49,7 @@ export async function startRecord($: EngineInterface): Promise<void> {
     if (current !== null && current.id !== id) {
       await write($, { ...current, state: 'ended', beat: at })
     }
-    current = { id, cwd: await $.session.cwd(), state: 'waiting', since: at, beat: at, question: false }
+    current = { id, cwd: await $.session.cwd(), state: 'waiting', since: at, beat: at, question: false, turnEnded: 0 }
     await write($, current)
     beating?.cancel()
     beating = $.clock.every(BEAT_MS, async () => {

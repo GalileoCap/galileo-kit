@@ -295,17 +295,23 @@ def holds_of(path: Path, start: datetime, end: datetime) -> list[dict]:
     return found
 
 
+def held_for(hold: dict) -> str:
+    """What held a prompt: the window, the sessions active past the limit, or both; a line from before 0.48.0 was the window's."""
+    held = hold.get("held") if isinstance(hold.get("held"), list) else ["window"]
+    return ", ".join("the window" if h == "window" else f"{hold.get('active')} sessions active" for h in held)
+
+
 def holds_table(holds: list[dict], tz: ZoneInfo, home: str) -> str:
     if not holds:
         return "No prompt was held."
     rows = [[
-        h["_at"].astimezone(tz).strftime("%a %H:%M"), f"`{folder_of(h.get('cwd'), home)}`", str(h.get("kind")), str(h.get("via")),
+        h["_at"].astimezone(tz).strftime("%a %H:%M"), f"`{folder_of(h.get('cwd'), home)}`", str(h.get("kind")), held_for(h), str(h.get("via")),
         str(h.get("outcome")), "-" if h.get("reason") is None else " ".join(str(h["reason"]).split()).replace("|", "\\|"),
     ] for h in holds]
     sent = sum(1 for h in holds if h.get("outcome") == "sent" and h.get("via") == "band")
     back = sum(1 for h in holds if h.get("outcome") == "returned")
     phone = sum(1 for h in holds if h.get("via") == "phone")
-    return f"{table(['When', 'Folder', 'Kind', 'Via', 'Outcome', 'Reason'], rows)}\n\n{sent} sent with a reason, {back} put back in the box, {phone} from the phone with none."
+    return f"{table(['When', 'Folder', 'Kind', 'Held for', 'Via', 'Outcome', 'Reason'], rows)}\n\n{sent} sent with a reason, {back} put back in the box, {phone} from the phone with none."
 
 
 def bar_section(bar: dict | None, week: list[Message], lasts: list[tuple[date, datetime]], monday: date, watch: list[str]) -> str:

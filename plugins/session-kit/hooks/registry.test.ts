@@ -13,7 +13,7 @@ const MINUTE = 60_000
 const T0 = 1_700_000_000_000
 const START = { cwd: '/proj', surface: 'desktop', isInteractive: true } as const
 
-type Record = { id: string; cwd: string; state: string; since: number; beat: number; question: boolean }
+type Record = { id: string; cwd: string; state: string; since: number; beat: number; question: boolean; turnEnded: number }
 
 function engine(on: On) {
   const files: { [path: string]: string } = {}
@@ -60,7 +60,7 @@ function reply(turnId: string, agentId?: string): TurnCompleteInput {
 test('a main-loop turn marks the session working, its end waiting on the owner, with a question when one waits; a subagent writes nothing', async ($, on) => {
   const { clock, record } = engine(on)
   await $.session.start(START)
-  expect(record('sess-1')).toMatchObject({ id: 'sess-1', cwd: '/proj', state: 'waiting', question: false })
+  expect(record('sess-1')).toMatchObject({ id: 'sess-1', cwd: '/proj', state: 'waiting', question: false, turnEnded: 0 })
 
   await clock.advance(5_000)
   await $.turn.start({ text: 'go', turnId: 't1' })
@@ -73,7 +73,7 @@ test('a main-loop turn marks the session working, its end waiting on the owner, 
   await clock.advance(5_000)
   await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'Drawn.', ask: 'Which one?', actions: [{ label: 'A' }] })
   await $.turn.complete(reply('t1'))
-  expect(record('sess-1')).toMatchObject({ state: 'waiting', since: T0 + 10_000, question: true })
+  expect(record('sess-1')).toMatchObject({ state: 'waiting', since: T0 + 10_000, question: true, turnEnded: T0 + 10_000 })
 
   await $.prompt.submit({ text: 'A', wait: false, origin: { kind: 'composer' } })
   await $.turn.start({ text: 'A', turnId: 't2' })

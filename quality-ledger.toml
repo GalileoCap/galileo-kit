@@ -1779,6 +1779,15 @@ why = "a prompt with no reason, from the phone or put back, prints a dash"
 
 [[fallbacks]]
 site = "plugins/session-kit/transcripts/week.py"
+where = "held_for"
+form = "if-none"
+code = "hold.get('held') if isinstance(hold.get('held'), list) else ['window']"
+class = "declared"
+disposition = "keep"
+why = "a hold logged before 0.48.0 names nothing, and the window was then all that held"
+
+[[fallbacks]]
+site = "plugins/session-kit/transcripts/week.py"
 where = "report"
 form = "get"
 code = "settings.get('watch', [])"

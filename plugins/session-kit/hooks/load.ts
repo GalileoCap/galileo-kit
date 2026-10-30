@@ -22,12 +22,16 @@ import type { EngineInterface, PromptOrigin } from 'claude-code'
 import type { LoadFocus, LoadHeld, LoadPass } from '../types'
 import { clip } from './lines'
 import { withHeld } from './presend'
+import type { SessionRecord } from './registry'
 
 type Kind = 'work' | 'personal'
 
 type Span = { days: readonly string[]; hours: readonly string[] }
 
-export type LoadSettings = { timeZone: string; work: Span; personal: Span & { folders: readonly string[] }; passMinutes: number }
+/** How many other sessions may be active before a prompt into one more is held, and the minutes after its turn a session stays active. */
+export type SessionLimit = { max: number; idleMinutes: number }
+
+export type LoadSettings = { timeZone: string; work: Span; personal: Span & { folders: readonly string[] }; passMinutes: number; sessions?: SessionLimit }
 
 const loadHeld = atom({ plugin: 'session-kit', key: 'loadHeld' } as const, null)
 const loadPass = atom({ plugin: 'session-kit', key: 'loadPass' } as const, null)
@@ -37,6 +41,11 @@ const MINUTE_MS = 60000
 const WAIT_MS = 10 * MINUTE_MS
 const RETURNED = '\u0000returned'
 const WAIT_SCRIPT = 'while [ ! -s "$0" ]; do sleep 0.3; done'
+// The registry's records, one a line; read through the shell, as a listing call would put the calls line past its cut.
+const LIST_SCRIPT = 'for f in "$0"/*.json; do [ -f "$f" ] && cat "$f" && echo; done'
+const LIST_MS = 5000
+// A record whose beat is older than this is a session that quit.
+const ALIVE_MS = 2 * MINUTE_MS
 // A day runs from 04:00, as the week review counts it.
 const DAY_CUTOFF_MS = 4 * 60 * MINUTE_MS
 const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
@@ -125,6 +134,21 @@ export function focusOf(list: FocusList, cwd: string, home: string): string | nu
   return list.items.find((item) => item.folders.some((folder) => isUnder(folder, cwd, home)))?.name ?? null
 }
 
+/** Whether a session counts toward the owner's load: alive, and working or within `idleMinutes` of its last turn's end. */
+export function isActive(record: SessionRecord, now: number, limit: SessionLimit): boolean {
+  const ended = record.turnEnded ?? 0 // A record from before turnEnded was written counts only while it works.
+
+  return record.state !== 'ended' && now - record.beat < ALIVE_MS && (record.state === 'working' || (ended > 0 && now - ended < limit.idleMinutes * MINUTE_MS))
+}
+
+/** The other active sessions when they reach the limit and this one is not among the active; empty otherwise. */
+export function crowdOf(records: readonly SessionRecord[], session: string, now: number, limit: SessionLimit): SessionRecord[] {
+  const active = records.filter((r) => isActive(r, now, limit))
+  const others = active.filter((r) => r.id !== session)
+
+  return others.length >= limit.max && others.length === active.length ? others : []
+}
+
 /** The focus tag as the status line names it. */
 export function focusLabel(focus: LoadFocus): string {
   if (focus.tag === 'stale') {
@@ -179,39 +203,60 @@ export async function hold($: EngineInterface, text: string, origin: PromptOrigi
       signal.removeEventListener('abort', giveBack)
     }
   }
-  // Holds the prompt outside its window; null lets it on.
-  const gate = async (settings: LoadSettings, line: { at: number; session: string; cwd: string; kind: Kind }): Promise<string | null> => {
-    if (inWindow(settings, line.kind, line.at)) {
-      return null
-    }
-    const pass = (await readJson(`${dir}/pass.json`)) as LoadPass | null // Written by this module alone.
+  // The other active sessions when this prompt would be one more past the limit.
+  const crowd = async (limit: SessionLimit, timeZone: string, home: string, line: { at: number; session: string }): Promise<string[]> => {
+    const listed = await $.process.run(['/bin/sh', '-c', LIST_SCRIPT, `${home}/.claude/session-kit/sessions`], { timeoutMs: LIST_MS })
+    const records = listed.stdout.split('\n').flatMap((l): SessionRecord[] => {
+      try {
+        return l.trim() === '' ? [] : [JSON.parse(l) as SessionRecord] // Written by registry.ts alone.
+      } catch {
+        return [] // A record cut by a write in flight: the next prompt reads it whole.
+      }
+    })
+
+    return crowdOf(records, line.session, line.at, limit).map((r) => {
+      const where = r.cwd.replace(home, '~')
+
+      return r.state === 'working' ? `${where}: working` : `${where}: waiting since ${clockLabel(r.turnEnded, timeZone)}`
+    })
+  }
+  // Holds the prompt outside its window or into one session more than the limit; null lets it on.
+  const gate = async (settings: LoadSettings, home: string, line: { at: number; session: string; cwd: string; kind: Kind }): Promise<string | null> => {
+    let window = !inWindow(settings, line.kind, line.at)
+    const pass = window ? ((await readJson(`${dir}/pass.json`)) as LoadPass | null) : null // Written by this module alone.
     if (pass !== null && pass.until > line.at) {
       await update($, loadPass, () => ({ until: pass.until, label: clockLabel(pass.until, settings.timeZone) }))
-
+      window = false
+    }
+    const others = settings.sessions === undefined ? [] : await crowd(settings.sessions, settings.timeZone, home, line)
+    if (!window && others.length === 0) {
       return null
     }
+    const why = { ...line, held: [...(window ? ['window'] : []), ...(others.length > 0 ? ['sessions'] : [])], active: others.length }
     if (origin?.kind === 'bridge') {
-      await append(`${dir}/holds.jsonl`, { ...line, reason: null, via: 'phone', outcome: 'sent' })
+      await append(`${dir}/holds.jsonl`, { ...why, reason: null, via: 'phone', outcome: 'sent' })
 
       return null
     }
     const file = `${dir}/reason-${line.session}`
     await $.fs.write(file, '')
-    const held: LoadHeld = { kind: line.kind, preview: clip(text, 80), file }
+    const held: LoadHeld = { kind: line.kind, window, crowd: others, preview: clip(text, 80), file }
     await update($, loadHeld, () => held)
     const reason = await awaitReason(file)
     await update($, loadHeld, () => null)
     if (reason === null) {
-      await append(`${dir}/holds.jsonl`, { ...line, reason: null, via: 'band', outcome: 'returned' })
+      await append(`${dir}/holds.jsonl`, { ...why, reason: null, via: 'band', outcome: 'returned' })
       const box = (await $.prompt.read()).text
       await $.prompt.fill({ text: withHeld(box, text), mode: 'replace' })
 
-      return 'Held outside your window: the prompt is back in the box.'
+      return window ? 'Held outside your window: the prompt is back in the box.' : `Held with ${others.length} other sessions active: the prompt is back in the box.`
     }
-    const until = (await $.clock.now()) + settings.passMinutes * MINUTE_MS
-    await append(`${dir}/holds.jsonl`, { ...line, reason, via: 'band', outcome: 'sent' })
-    await $.fs.write(`${dir}/pass.json`, JSON.stringify({ until, session: line.session, reason }))
-    await update($, loadPass, () => ({ until, label: clockLabel(until, settings.timeZone) }))
+    await append(`${dir}/holds.jsonl`, { ...why, reason, via: 'band', outcome: 'sent' })
+    if (window) {
+      const until = (await $.clock.now()) + settings.passMinutes * MINUTE_MS
+      await $.fs.write(`${dir}/pass.json`, JSON.stringify({ until, session: line.session, reason }))
+      await update($, loadPass, () => ({ until, label: clockLabel(until, settings.timeZone) }))
+    }
 
     return null
   }
@@ -254,7 +299,7 @@ export async function hold($: EngineInterface, text: string, origin: PromptOrigi
       return null
     }
     const line = { at: await $.clock.now(), session: await $.session.id(), cwd: await $.session.cwd() }
-    const returned = await gate(settings, { ...line, kind: kindOf(settings, line.cwd, home) })
+    const returned = await gate(settings, home, { ...line, kind: kindOf(settings, line.cwd, home) })
     if (returned === null) {
       await tally(home, settings.timeZone, line)
     }

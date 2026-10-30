@@ -74,6 +74,7 @@ def test_week_four_gives_the_verdict_from_the_weeks_figures_and_prints_only_the_
     holds = [
         {"at": int(at(23, "19:00").timestamp() * 1000), "session": "s1", "cwd": LANE, "kind": "work", "reason": "the demo | tomorrow", "via": "band", "outcome": "sent"},
         {"at": int(at(20, "19:00").timestamp() * 1000), "session": "s1", "cwd": LANE, "kind": "work", "reason": "last week", "via": "band", "outcome": "sent"},
+        {"at": int(at(24, "10:00").timestamp() * 1000), "session": "s2", "cwd": KIT, "kind": "personal", "held": ["sessions"], "active": 3, "reason": "the review", "via": "band", "outcome": "sent"},
     ]
     # Value metrics was lane5's must-have until Tuesday morning, when the owner dropped it from the list.
     tagged = [(at(23, "08:59"), "value metrics (O18)"), (at(24, "09:59"), None)]
@@ -99,6 +100,8 @@ def test_week_four_gives_the_verdict_from_the_weeks_figures_and_prints_only_the_
     assert "| `~/devel/iquall/tagents/lane5` | work | value metrics (O18) | 3 | 1 | 33% |" in review, review
     assert "| Mon 23 | 4 | 3 |" in review and "| 09:00 | 23:30 |" in review, review
     assert "the demo \\| tomorrow" in review and "last week" not in review, review
+    # A line from before 0.48.0 was held by the window alone.
+    assert "| work | the window | band | sent |" in review and "| personal | 3 sessions active | band | sent | the review |" in review, review
 
 
 def test_before_its_weeks_are_up_the_bar_gives_no_verdict_and_a_list_of_another_week_is_no_focus_list() -> None:

@@ -170,15 +170,19 @@ function missedRow($: EngineInterface, missed: readonly TaggedItem[]): Row {
   }
 }
 
-/** The owner's prompt held outside its window: a reason in the field sends it on, and the ✕ puts it back in the box. */
+/** The owner's prompt held outside its window or into a session past the active ones: a reason in the field sends it on, and the ✕ puts it back in the box. */
 function loadRow($: EngineInterface, held: LoadHeld): Row {
+  const crowd = held.crowd.length === 0 ? '' : `${held.crowd.length} other sessions are active. `
+  const window = held.window ? `Outside your ${held.kind} window. ` : ''
+  const pass = held.window ? 'A reason sends it on, and opens a pass for every session.' : 'A reason sends it on.'
+
   return {
     key: 'load',
     label: 'Held',
     tone: 'warning',
-    text: [{ text: `Outside your ${held.kind} window. A reason sends it on, and opens a pass for every session.` }],
+    text: [{ text: `${window}${crowd}${pass}` }],
     actions: [],
-    details: [{ text: held.preview, dim: true }],
+    details: [{ text: held.preview, dim: true }, ...held.crowd.map((line) => ({ text: line }))],
     field: { key: 'load-reason', placeholder: 'why now, in a line', submitLabel: 'send', onSubmit: (value) => giveReason($, held, value) },
     dismiss: { key: 'load-return', label: '✕', onPress: () => returnHeld($, held) },
   }
