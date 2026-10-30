@@ -58,7 +58,7 @@ test('each run replaces the log whole, and the log goes to /tmp without TMPDIR',
   expect(log).not.toMatch(/the-old-failure/)
 })
 
-test('a runner named only in quoted text, a heredoc or an argument is no test run, and one a launcher starts is', async ($, on) => {
+test('a runner named only in quoted text, a heredoc or an argument is no test run, and one a launcher starts is, the launcher called by its name or its path', async ($, on) => {
   const { files } = world(on, { tmpdir: '/var/tmp/t', files: { '/proj/.claude/claude-kit.json': '{"test_commands": ["scripts/test", "scripts/check"]}' } })
   on('tool.call', () => ({ result: { stdout: '', stderr: '', interrupted: false } }))
 
@@ -78,6 +78,10 @@ test('a runner named only in quoted text, a heredoc or an argument is no test ru
 
   await $.tool.call({ tool: 'Bash', command: 'command scripts/check .' })
   expect(files[LOG]).toMatch(/Command: command scripts\/check \.\n/)
+
+  // A launcher called by its path, as the kit's own bin/session-watched.
+  await $.tool.call({ tool: 'Bash', command: 'S=/tmp/s; plugins/session-kit/bin/session-watched -- command scripts/test unit > $S/test.log 2>&1' })
+  expect(files[LOG]).toMatch(/Command: S=\/tmp\/s; plugins\/session-kit\/bin\/session-watched -- command scripts\/test unit/)
 })
 
 test('a call a command hook refused is no test run, and the run before it stays the last', async ($, on) => {

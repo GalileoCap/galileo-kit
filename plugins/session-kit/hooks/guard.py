@@ -86,8 +86,8 @@ def project_test_commands(cwd: str) -> list[str]:
 def bash_rules(cwd: str) -> list[tuple[re.Pattern[str], str]]:
     names = BUILTIN_TEST_COMMANDS + project_test_commands(cwd)
     test_cmd = "(" + "|".join(re.escape(n) for n in names) + ")"
-    # A runner where a segment starts, behind a launcher and its words, or a path, or neither.
-    test_start = START + rf"(?:{LAUNCHER}(?:\s+\S+)*?\s+)?(?:\S*/)?{test_cmd}(?![\w.-])"
+    # A runner where a segment starts, behind a launcher (by its name or its path) and its words, or a path, or neither.
+    test_start = START + rf"(?:(?:\S*/)?{LAUNCHER}(?:\s+\S+)*?\s+)?(?:\S*/)?{test_cmd}(?![\w.-])"
     return [
         (
             re.compile(START + r"git\s+commit[^|;&]*--no-verify"),

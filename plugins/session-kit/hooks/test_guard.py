@@ -54,6 +54,7 @@ CASES: list[tuple[dict, str, str]] = [
     (bash("git stash pop"), DENY, "git stash pop"),
     (bash("uv run --project x pytest -x"), DENY, "-x behind a launcher"),
     (bash("session-watched -- pytest -x"), DENY, "-x behind session-watched"),
+    (bash("plugins/session-kit/bin/session-watched -- pytest -x"), DENY, "-x behind session-watched called by its path"),
     (bash("command pytest -x"), DENY, "-x behind the shell's command builtin"),
     (bash("pytest 2>&1 -x"), DENY, "-x after a redirection of stderr"),
     (bash("cd x && python -m pytest tests | tail -20"), DENY, "a runner behind python -m, piped"),

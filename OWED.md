@@ -223,6 +223,12 @@ The guard read the `&` of `2>&1` as the end of a command, so `scripts/test x 2>&
 
 `A94` (the sessions tagged against the owner's focus list). The owner writes `~/.claude/session-kit/focus.md` each Monday: `# Week of YYYY-MM-DD`, that Monday, then a `- ` line per must-have, its name and its folders as `~/` or `/` paths. To see: the next prompt in a must-have's folder shows "on focus: <name>, N% on this week" on the status line, a prompt elsewhere "off focus", and `session-transcripts week` a Focus section. With no list nothing changes.
 
+## At the install of session-kit 0.47.1
+
+### main: a launcher called by its path starts a test run
+
+The test log and the guard read `plugins/session-kit/bin/session-watched -- <runner>` as a test run, as they read `session-watched -- <runner>`: the run is recorded, and a `-x` or a pipe behind it is refused. To see: a session that runs its tests through the kit's `bin/` path reads PASS at its next commit, with the run in its test log. It reaches a session as 0.47.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

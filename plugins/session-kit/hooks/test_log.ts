@@ -72,10 +72,10 @@ export function bare(command: string): string {
     .replace(REDIRECT, ' ')
 }
 
-/** A runner where a command segment starts, behind a launcher and its words, or a path, or neither. */
+/** A runner where a command segment starts, behind a launcher (by its name or its path) and its words, or a path, or neither. */
 export function isTestRun(command: string, runners: readonly string[]): boolean {
   const names = runners.map(escape).join('|')
-  const start = new RegExp(`${START}(?:${LAUNCHER}(?:\\s+\\S+)*?\\s+)?(?:\\S*/)?(?:${names})(?![\\w.-])`)
+  const start = new RegExp(`${START}(?:(?:\\S*/)?${LAUNCHER}(?:\\s+\\S+)*?\\s+)?(?:\\S*/)?(?:${names})(?![\\w.-])`)
 
   return runners.length > 0 && start.test(bare(command))
 }
