@@ -235,6 +235,12 @@ The test log and the guard read `plugins/session-kit/bin/session-watched -- <run
 
 `A95` (a prompt into one session more than three waits for a reason). Add `"sessions": {"max": 3, "idleMinutes": 30}` to `~/.claude/session-kit/load/settings.json`. To see: with three sessions worked in the last half hour, the first prompt into a fourth shows the band's Held row naming the three, and the reason sends it on with no pass. It reaches a session as 0.47.0 does, and a session started before the install has no `turnEnded` in its record, so it counts as active only while it works until its next turn.
 
+## At the install of session-kit 0.49.0
+
+### main: the owner's prompt goes on, and the band asks why
+
+`A96` (the owner's prompt goes on, and the band asks why). Nothing to change in the settings. To see: a prompt outside the window, or into a fourth session, starts at once, and the band's Why now row asks for a line. A reason opens the window's pass, and the ✕ dismisses the row, each logged in `holds.jsonl`. A session started before the install still holds its prompts until it reloads the plugin.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

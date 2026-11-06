@@ -2,7 +2,7 @@
 id: A92
 from: [O22]
 source: owner
-status: decided 2026-10-29
+status: retired 2026-11-06
 kind: behaviour
 implemented_by: [plugins/session-kit/hooks/load.ts, plugins/session-kit/hooks/context.tsx, plugins/session-kit/hooks/band.tsx, plugins/session-kit/hooks/status.ts]
 proven_by: [plugins/session-kit/hooks/load.test.tsx]

@@ -53,7 +53,7 @@ import { clip, limitLine, limitTier, sameWindows, sentence, stageLine } from './
 import { readOptions, triggerTokens, withinStep } from './options'
 import type { ColdOptions } from './options'
 import { WRAP_UP_TOOL, carryQuestion, noteQuestion } from './question'
-import { hold } from './load'
+import { askWhy } from './load'
 import { markWaiting, markWorking, startRecord } from './registry'
 import { holdStatus, refreshStatus } from './status'
 
@@ -991,10 +991,7 @@ export const register: Register = (on, options) => {
 
   on('prompt.submit', async ($, e, next) => {
     if (e.command === undefined && e.isMeta !== true && e.text.trim() !== '' && isThePersons(e.origin)) {
-      const returned = await hold($, e.text, e.origin, next.signal)
-      if (returned !== null) {
-        return { drop: returned }
-      }
+      await askWhy($, e.text, e.origin)
     }
     if (e.command === undefined && e.text.trim() !== '' && isThePersons(e.origin)) {
       // The person's prompt answers the session's question, whatever it says.

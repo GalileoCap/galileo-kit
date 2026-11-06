@@ -118,12 +118,12 @@ export type PresendHeld = {
 }
 
 /**
- * The owner's prompt held outside its window or into a session past the
- * active ones: the window's kind, whether the window holds it, the other
- * active sessions when they do, the prompt's start, and the file a reason
- * ends the wait by.
+ * The question on the band after the owner's prompt went on outside its
+ * window or into a session past the active ones: the window's kind, whether
+ * the window asked it, the other active sessions when they did, the prompt's
+ * start, and the file the answer is written to.
  */
-export type LoadHeld = {
+export type LoadAsk = {
   kind: 'work' | 'personal'
   window: boolean
   crowd: string[]
@@ -205,8 +205,8 @@ declare module 'claude-code' {
       paneFolded: string[] | null
       /** Per list of the pane, the first item its window shows; a list left out starts at its top. */
       paneScroll: Record<string, number>
-      /** The owner's prompt held for a reason, outside its window or into a session past the active ones; null while none is. */
-      loadHeld: LoadHeld | null
+      /** The band's question why, after a prompt outside the window or into a session past the active ones; null while none waits. */
+      loadAsk: LoadAsk | null
       /** The pass the last reason opened, for the status line; null before any. */
       loadPass: LoadPass | null
       /** The session's focus tag and the week's share, for the status line; null without a focus list. */

@@ -1,27 +1,23 @@
-// The owner's working window (A92), for the owner alone: nothing here
-// reaches a model (C5). With ~/.claude/session-kit/load/settings.json in
-// place, the owner's prompt outside its window waits while the band asks for
-// a one-line reason. A work prompt's window is the work hours, and a personal
-// project's is the waking slot, so the sleeping hours hold every prompt. The
-// reason sends the prompt on as it came, is logged in holds.jsonl with the
-// session and its kind, and opens a pass that lets every session's prompts
-// through for passMinutes. The wait is a process that ends when the reason
-// file holds text, since a hook's own time is bounded and a `$` call in
-// flight is not (the probe of 2026-10-29). An interrupt, the ✕, or ten
-// minutes with no reason puts the prompt back in the box instead. A prompt
-// from the phone, which draws no band, goes on and is logged with no reason.
-// Each prompt that goes on is also matched against the owner's focus list,
-// ~/.claude/session-kit/focus.md, by its folder (A94): logged in
-// prompts-<monday>.jsonl, and named on the status line with the week's share
-// on focus. The hold rides on context.tsx's prompt.submit hook, the kit's outermost.
-// Anything that fails lets the prompt through (C1).
+// The owner's working window (A92, A95, superseded by A96): for the owner
+// alone, nothing here reaches a model (C5). With
+// ~/.claude/session-kit/load/settings.json in place, the owner's prompt
+// outside its window, or into one session more than the active ones allow,
+// goes on at once, and the band asks why in a line. A work prompt's window
+// is the work hours, and a personal project's is the waking slot. The
+// question is logged in holds.jsonl as asked, and the answer or the ✕ adds
+// a line of its own. A reason given for the window opens a pass that spares
+// every session the question for passMinutes. A prompt from the phone, which
+// draws no band, is logged with no reason. Each prompt is also matched
+// against the owner's focus list, ~/.claude/session-kit/focus.md, by its
+// folder (A94): logged in prompts-<monday>.jsonl, and named on the status
+// line with the week's share on focus. It rides on context.tsx's
+// prompt.submit hook. Anything that fails lets the prompt through (C1).
 
-import { atom, update } from 'claude-code'
+import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PromptOrigin } from 'claude-code'
 
-import type { LoadFocus, LoadHeld, LoadPass } from '../types'
+import type { LoadAsk, LoadFocus, LoadPass } from '../types'
 import { clip } from './lines'
-import { withHeld } from './presend'
 import type { SessionRecord } from './registry'
 
 type Kind = 'work' | 'personal'
@@ -33,14 +29,15 @@ export type SessionLimit = { max: number; idleMinutes: number }
 
 export type LoadSettings = { timeZone: string; work: Span; personal: Span & { folders: readonly string[] }; passMinutes: number; sessions?: SessionLimit }
 
-const loadHeld = atom({ plugin: 'session-kit', key: 'loadHeld' } as const, null)
+const loadAsk = atom({ plugin: 'session-kit', key: 'loadAsk' } as const, null)
 const loadPass = atom({ plugin: 'session-kit', key: 'loadPass' } as const, null)
 const loadFocus = atom({ plugin: 'session-kit', key: 'loadFocus' } as const, null)
 
 const MINUTE_MS = 60000
+// One wait's bound, `$.process.run`'s own; the wait starts again while the question is up.
 const WAIT_MS = 10 * MINUTE_MS
-const RETURNED = '\u0000returned'
-const WAIT_SCRIPT = 'while [ ! -s "$0" ]; do sleep 0.3; done'
+const DISMISSED = '\u0000dismissed'
+const WAIT_SCRIPT = 'while [ ! -s "$0" ]; do sleep 1; done'
 // The registry's records, one a line; read through the shell, as a listing call would put the calls line past its cut.
 const LIST_SCRIPT = 'for f in "$0"/*.json; do [ -f "$f" ] && cat "$f" && echo; done'
 const LIST_MS = 5000
@@ -171,10 +168,11 @@ export function clockLabel(ms: number, timeZone: string): string {
 }
 
 /**
- * Holds the owner's prompt outside its window until a reason comes: null lets
- * it on, and a text is the drop's reason, the prompt then back in the box.
+ * Asks the owner why, for a prompt outside its window or into one session past
+ * the active ones. The prompt has already gone on: the band's row waits for a
+ * reason or the ✕, and the session never waits on it.
  */
-export async function hold($: EngineInterface, text: string, origin: PromptOrigin | undefined, signal: AbortSignal): Promise<string | null> {
+export async function askWhy($: EngineInterface, text: string, origin: PromptOrigin | undefined): Promise<void> {
   // Local closures keep the validator's calls line under its cut (docs/PLAN.md, Deferred).
   const readText = async (path: string) => ((await $.fs.exists(path)) ? await $.fs.read(path) : '')
   const readJson = async (path: string): Promise<unknown> => {
@@ -187,21 +185,6 @@ export async function hold($: EngineInterface, text: string, origin: PromptOrigi
     await $.fs.write(path, text)
 
     return text
-  }
-  // Waits for the reason; null when the prompt went back to the box instead.
-  const awaitReason = async (file: string): Promise<string | null> => {
-    const giveBack = () => void $.fs.write(file, RETURNED)
-    signal.addEventListener('abort', giveBack)
-    try {
-      await $.process.run(['/bin/sh', '-c', WAIT_SCRIPT, file], { timeoutMs: WAIT_MS })
-      const reason = (await $.fs.read(file)).trim()
-
-      return reason === RETURNED ? null : reason
-    } catch {
-      return null
-    } finally {
-      signal.removeEventListener('abort', giveBack)
-    }
   }
   // The other active sessions when this prompt would be one more past the limit.
   const crowd = async (limit: SessionLimit, timeZone: string, home: string, line: { at: number; session: string }): Promise<string[]> => {
@@ -220,8 +203,11 @@ export async function hold($: EngineInterface, text: string, origin: PromptOrigi
       return r.state === 'working' ? `${where}: working` : `${where}: waiting since ${clockLabel(r.turnEnded, timeZone)}`
     })
   }
-  // Holds the prompt outside its window or into one session more than the limit; null lets it on.
-  const gate = async (settings: LoadSettings, home: string, line: { at: number; session: string; cwd: string; kind: Kind }): Promise<string | null> => {
+  // Puts the question on the band for a prompt outside its window or into one session more than the limit.
+  const gate = async (settings: LoadSettings, home: string, line: { at: number; session: string; cwd: string; kind: Kind }) => {
+    if ((await read($, loadAsk)) !== null) {
+      return
+    }
     let window = !inWindow(settings, line.kind, line.at)
     const pass = window ? ((await readJson(`${dir}/pass.json`)) as LoadPass | null) : null // Written by this module alone.
     if (pass !== null && pass.until > line.at) {
@@ -230,35 +216,39 @@ export async function hold($: EngineInterface, text: string, origin: PromptOrigi
     }
     const others = settings.sessions === undefined ? [] : await crowd(settings.sessions, settings.timeZone, home, line)
     if (!window && others.length === 0) {
-      return null
+      return
     }
-    const why = { ...line, held: [...(window ? ['window'] : []), ...(others.length > 0 ? ['sessions'] : [])], active: others.length }
+    const entry = { ...line, held: [...(window ? ['window'] : []), ...(others.length > 0 ? ['sessions'] : [])], active: others.length }
     if (origin?.kind === 'bridge') {
-      await append(`${dir}/holds.jsonl`, { ...why, reason: null, via: 'phone', outcome: 'sent' })
+      await append(`${dir}/holds.jsonl`, { ...entry, reason: null, via: 'phone', outcome: 'sent' })
 
-      return null
+      return
     }
+    await append(`${dir}/holds.jsonl`, { ...entry, reason: null, via: 'band', outcome: 'asked' })
     const file = `${dir}/reason-${line.session}`
     await $.fs.write(file, '')
-    const held: LoadHeld = { kind: line.kind, window, crowd: others, preview: clip(text, 80), file }
-    await update($, loadHeld, () => held)
-    const reason = await awaitReason(file)
-    await update($, loadHeld, () => null)
-    if (reason === null) {
-      await append(`${dir}/holds.jsonl`, { ...why, reason: null, via: 'band', outcome: 'returned' })
-      const box = (await $.prompt.read()).text
-      await $.prompt.fill({ text: withHeld(box, text), mode: 'replace' })
-
-      return window ? 'Held outside your window: the prompt is back in the box.' : `Held with ${others.length} other sessions active: the prompt is back in the box.`
+    const ask: LoadAsk = { kind: line.kind, window, crowd: others, preview: clip(text, 80), file }
+    await update($, loadAsk, () => ask)
+    void settle(settings, file, entry, window)
+  }
+  // Waits, apart from the session, for the band's answer, then logs it; a reason for the window opens the pass.
+  const settle = async (settings: LoadSettings, file: string, entry: { session: string }, window: boolean) => {
+    try {
+      let answer = ''
+      while (answer === '') {
+        await $.process.run(['/bin/sh', '-c', WAIT_SCRIPT, file], { timeoutMs: WAIT_MS }).catch(() => null) // The wait's bound: the loop waits again.
+        answer = (await readText(file)).trim()
+      }
+      const reason = answer === DISMISSED ? null : answer
+      await append(`${dir}/holds.jsonl`, { ...entry, reason, via: 'band', outcome: reason === null ? 'dismissed' : 'answered' })
+      if (reason !== null && window) {
+        const until = (await $.clock.now()) + settings.passMinutes * MINUTE_MS
+        await $.fs.write(`${dir}/pass.json`, JSON.stringify({ until, session: entry.session, reason }))
+        await update($, loadPass, () => ({ until, label: clockLabel(until, settings.timeZone) }))
+      }
+    } catch {
+      // Nothing to do: the answer goes unlogged and the next prompt outside the window asks again (C1).
     }
-    await append(`${dir}/holds.jsonl`, { ...why, reason, via: 'band', outcome: 'sent' })
-    if (window) {
-      const until = (await $.clock.now()) + settings.passMinutes * MINUTE_MS
-      await $.fs.write(`${dir}/pass.json`, JSON.stringify({ until, session: line.session, reason }))
-      await update($, loadPass, () => ({ until, label: clockLabel(until, settings.timeZone) }))
-    }
-
-    return null
   }
   // Counts a prompt that goes on against this week's focus list, which is copied beside the log for the week's review.
   const tally = async (home: string, timeZone: string, line: { at: number; session: string; cwd: string }) => {
@@ -291,33 +281,26 @@ export async function hold($: EngineInterface, text: string, origin: PromptOrigi
   try {
     const home = await $.env.get('HOME')
     if (home === undefined) {
-      return null
+      return
     }
     dir = `${home}/.claude/session-kit/load`
     const settings = (await readJson(`${dir}/settings.json`)) as LoadSettings | null // The owner's own file, read as the kit wrote its shape.
     if (settings === null) {
-      return null
+      return
     }
     const line = { at: await $.clock.now(), session: await $.session.id(), cwd: await $.session.cwd() }
-    const returned = await gate(settings, home, { ...line, kind: kindOf(settings, line.cwd, home) })
-    if (returned === null) {
-      await tally(home, settings.timeZone, line)
-    }
-
-    return returned
+    await gate(settings, home, { ...line, kind: kindOf(settings, line.cwd, home) })
+    await tally(home, settings.timeZone, line)
   } catch {
-    return null
+    // Nothing to do: the prompt has gone on, and the next one asks again (C1).
   }
 }
 
-/** The band's reason field: a reason sends the held prompt on. */
-export function giveReason($: EngineInterface, held: LoadHeld, reason: string): void {
-  if (reason.trim() !== '') {
-    void $.fs.write(held.file, reason.trim())
+/** The band's answer: a reason, or null for the ✕; the wait under way logs it. */
+export function answerAsk($: EngineInterface, ask: LoadAsk, reason: string | null): void {
+  const why = reason?.trim() ?? null
+  if (why !== '') {
+    void $.fs.write(ask.file, why ?? DISMISSED)
+    void update($, loadAsk, () => null)
   }
-}
-
-/** The band's ✕: the held prompt goes back to the box. */
-export function returnHeld($: EngineInterface, held: LoadHeld): void {
-  void $.fs.write(held.file, RETURNED)
 }

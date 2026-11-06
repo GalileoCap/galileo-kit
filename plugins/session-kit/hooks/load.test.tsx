@@ -1,8 +1,8 @@
-// The owner's working window, held for them alone (A92): outside it, the
-// owner's prompt waits on the band for a one-line reason, which sends it on
-// unchanged, logs it and opens a pass for every session for 30 minutes. A
-// prompt into a session past the active ones is held the same way (A95), and
-// each prompt that goes on is tagged against the owner's focus list (A94).
+// The owner's working window, for them alone (A96): outside it, the owner's
+// prompt goes on at once and the band asks why in a line; a reason is logged
+// and opens a pass for every session for 30 minutes, and the ✕ is logged as
+// dismissed. A prompt into a session past the active ones is asked the same
+// way, and each prompt is tagged against the owner's focus list (A94).
 // Nothing of it reaches the model.
 
 import { expect, mock, test } from 'claude-code/testing'
@@ -38,7 +38,6 @@ function engine(on: On, options: { now: number; cwd: string; settings?: boolean;
   const files: { [path: string]: string } = { ...(options.settings === false ? {} : { [`${LOAD}/settings.json`]: JSON.stringify(SETTINGS) }), ...options.files }
   const status: (string | undefined)[] = []
   const entered: string[] = []
-  const box = { text: '' }
   const waiting: { path: string; resolve: () => void }[] = []
   const clock = mock.clock(on, { now: options.now })
   mock.env(on, { HOME, TMPDIR: '/var/tmp/t' })
@@ -63,7 +62,7 @@ function engine(on: On, options: { now: number; cwd: string; settings?: boolean;
     return { value: undefined }
   })
   on('fs.exists', (_, e) => ({ value: e.path in files }))
-  // The hold's wait: a shell loop that ends once the reason file holds text.
+  // The answer's wait: a shell loop that ends once the answer file holds text.
   on('process.run', async (_, e) => {
     const path = e.argv.at(-1) ?? ''
     // The registry's listing: each record on a line.
@@ -87,12 +86,6 @@ function engine(on: On, options: { now: number; cwd: string; settings?: boolean;
 
     return { text: e.text, context: e.context }
   })
-  on('prompt.read', () => ({ value: { text: box.text } }))
-  on('prompt.fill', (_, e) => {
-    box.text = e.text
-
-    return { value: undefined }
-  })
   on('tool.register', (_, e) => ({ value: { tool: `mcp__session-kit__${e.name}` } }))
   on('ui.status', (_, e) => {
     status.push(e.text)
@@ -114,63 +107,69 @@ function engine(on: On, options: { now: number; cwd: string; settings?: boolean;
       .filter((l) => l !== '')
       .map((l): { [k: string]: unknown } => JSON.parse(l))
 
-  return { clock, entered, files, log, box, status }
+  return { clock, entered, files, log, status }
 }
 
-test('outside its window a work prompt waits for a reason on the band; the reason sends it unchanged, logs it, and opens a pass for every session', async ($, on) => {
+test('outside its window a work prompt goes on at once and the band asks why; the reason is logged and opens a pass for every session', async ($, on) => {
   const { clock, entered, files, log } = engine(on, { now: AT_19, cwd: '/home/me/devel/iquall/tagents/lane5' })
   await $.session.start({ cwd: '/home/me/devel/iquall/tagents/lane5', surface: 'desktop', isInteractive: true })
 
-  const sending = $.prompt.submit({ text: 'merge lane5', wait: false, origin: COMPOSER })
-  await clock.settle()
-  expect(entered).toEqual([])
+  await $.prompt.submit({ text: 'merge lane5', wait: false, origin: COMPOSER })
+  expect(entered).toEqual(['merge lane5'])
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const texts = (await ui.findAll({ type: 'Text' })).map((t) => t.text).join(' | ')
   expect(texts).toContain('Outside your work window')
   await ui.input({ key: 'load-reason', text: 'the demo is tomorrow at 9' })
+  await clock.settle()
   await ui.unmount()
-  await sending
-  expect(entered).toEqual(['merge lane5'])
 
-  expect(log()).toEqual([expect.objectContaining({ session: 'sess-1', kind: 'work', reason: 'the demo is tomorrow at 9', via: 'band', outcome: 'sent' })])
+  expect(log()).toEqual([
+    expect.objectContaining({ session: 'sess-1', kind: 'work', reason: null, via: 'band', outcome: 'asked' }),
+    expect.objectContaining({ session: 'sess-1', kind: 'work', reason: 'the demo is tomorrow at 9', via: 'band', outcome: 'answered' }),
+  ])
   const pass = JSON.parse(files[`${LOAD}/pass.json`] ?? '{}')
   expect(pass.until).toBe(AT_19 + 30 * MINUTE)
 
-  // Within the pass the next prompt goes straight on; past it, it is held again.
+  // Within the pass the next prompt is not asked about; past it, it is.
   await clock.advance(10 * MINUTE)
   await $.prompt.submit({ text: 'and push', wait: false, origin: COMPOSER })
-  expect(entered).toEqual(['merge lane5', 'and push'])
+  expect(log()).toHaveLength(2)
   await clock.advance(25 * MINUTE)
-  void $.prompt.submit({ text: 'one more', wait: false, origin: COMPOSER })
-  await clock.settle()
-  expect(entered).toEqual(['merge lane5', 'and push'])
+  await $.prompt.submit({ text: 'one more', wait: false, origin: COMPOSER })
+  expect(entered).toEqual(['merge lane5', 'and push', 'one more'])
+  expect(log().at(-1)).toEqual(expect.objectContaining({ outcome: 'asked' }))
 })
 
-test('a personal prompt in its slot, a work prompt in its window and any prompt without settings go straight on; in the sleeping hours a personal one waits', async ($, on) => {
-  const { clock, entered } = engine(on, { now: AT_19, cwd: '/home/me/devel/galileo/misc/galileo-kit' })
+test('a personal prompt in its slot is not asked about; in the sleeping hours it is, and the ✕ logs the question dismissed with no pass', async ($, on) => {
+  const { clock, entered, files, log } = engine(on, { now: AT_19, cwd: '/home/me/devel/galileo/misc/galileo-kit' })
   await $.session.start({ cwd: '/home/me/devel/galileo/misc/galileo-kit', surface: 'desktop', isInteractive: true })
   await $.prompt.submit({ text: 'kit work in the evening', wait: false, origin: COMPOSER })
-  expect(entered).toEqual(['kit work in the evening'])
+  expect(log()).toEqual([])
 
   await clock.advance(AT_23 - AT_19)
-  void $.prompt.submit({ text: 'kit work at night', wait: false, origin: COMPOSER })
+  await $.prompt.submit({ text: 'kit work at night', wait: false, origin: COMPOSER })
+  expect(entered).toEqual(['kit work in the evening', 'kit work at night'])
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'load-dismiss' })
   await clock.settle()
-  expect(entered).toEqual(['kit work in the evening'])
+  await ui.unmount()
+  expect(log()).toEqual([expect.objectContaining({ kind: 'personal', outcome: 'asked' }), expect.objectContaining({ kind: 'personal', reason: null, outcome: 'dismissed' })])
+  expect(files[`${LOAD}/pass.json`]).toBeUndefined()
 })
 
-test('a work prompt inside the window goes straight on', async ($, on) => {
-  const { entered } = engine(on, { now: AT_09, cwd: '/home/me/devel/iquall/tagents/lane5' })
+test('a work prompt inside the window is not asked about', async ($, on) => {
+  const { log } = engine(on, { now: AT_09, cwd: '/home/me/devel/iquall/tagents/lane5' })
   await $.session.start({ cwd: '/home/me/devel/iquall/tagents/lane5', surface: 'desktop', isInteractive: true })
   await $.prompt.submit({ text: 'morning work', wait: false, origin: COMPOSER })
-  expect(entered).toEqual(['morning work'])
+  expect(log()).toEqual([])
 })
 
-test('without settings nothing is held', async ($, on) => {
-  const { entered } = engine(on, { now: AT_23, cwd: '/home/me/devel/iquall/tagents/lane5', settings: false })
+test('without settings nothing is asked', async ($, on) => {
+  const { log } = engine(on, { now: AT_23, cwd: '/home/me/devel/iquall/tagents/lane5', settings: false })
   await $.session.start({ cwd: '/home/me/devel/iquall/tagents/lane5', surface: 'desktop', isInteractive: true })
   await $.prompt.submit({ text: 'night work', wait: false, origin: COMPOSER })
-  expect(entered).toEqual(['night work'])
+  expect(log()).toEqual([])
 })
 
 test('a prompt from the phone, which draws no band, goes on and is logged with no reason', async ($, on) => {
@@ -202,7 +201,7 @@ test("each prompt that goes on is tagged against this week's focus list by its f
   expect(status.at(-1)).toContain("the focus list is not this week's")
 })
 
-test('with three other sessions active a prompt into one more waits for a reason, the band naming them; the reason sends it on with no pass, and a session already active goes straight on', async ($, on) => {
+test('with three other sessions active a prompt into one more goes on and the band asks why, naming them; the reason opens no pass, and a session already active is not asked', async ($, on) => {
   const record = (id: string, cwd: string, state: string, beatAgo: number, turnAgo: number): Record => ({
     id, cwd, state, since: AT_09 - turnAgo, beat: AT_09 - beatAgo, question: false, turnEnded: turnAgo === 0 ? 0 : AT_09 - turnAgo,
   })
@@ -216,25 +215,25 @@ test('with three other sessions active a prompt into one more waits for a reason
     record('f', '/home/me/devel/iquall/tagents/dev', 'ended', MINUTE / 2, 0),
   ]
   const settings = JSON.stringify({ ...SETTINGS, sessions: { max: 3, idleMinutes: 30 } })
-  const { entered, files, log } = engine(on, { now: AT_09, cwd: '/home/me/devel/iquall/tagents/lane5', files: { [`${LOAD}/settings.json`]: settings }, sessions })
+  const { clock, entered, files, log } = engine(on, { now: AT_09, cwd: '/home/me/devel/iquall/tagents/lane5', files: { [`${LOAD}/settings.json`]: settings }, sessions })
   await $.session.start({ cwd: '/home/me/devel/iquall/tagents/lane5', surface: 'desktop', isInteractive: true })
 
-  const sending = $.prompt.submit({ text: 'start lane5', wait: false, origin: COMPOSER })
+  await $.prompt.submit({ text: 'start lane5', wait: false, origin: COMPOSER })
+  expect(entered).toEqual(['start lane5'])
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const texts = (await ui.findAll({ type: 'Text' })).map((t) => t.text).join(' | ')
-  expect(texts).toContain('3 other sessions are active. A reason sends it on.')
+  expect(texts).toContain('3 other sessions are active. Why now?')
   expect(texts).not.toContain('Outside your')
   expect(texts).toContain('~/devel/iquall/tagents/lane1: working')
   expect(texts).toContain('~/devel/iquall/tagents/lane2: waiting since 08:50')
   expect(texts).not.toContain('lane4')
   await ui.input({ key: 'load-reason', text: 'lane5 is the week' })
+  await clock.settle()
   await ui.unmount()
-  await sending
-  expect(entered).toEqual(['start lane5'])
-  expect(log()).toEqual([expect.objectContaining({ held: ['sessions'], active: 3, reason: 'lane5 is the week', outcome: 'sent' })])
+  expect(log()).toEqual([expect.objectContaining({ outcome: 'asked' }), expect.objectContaining({ held: ['sessions'], active: 3, reason: 'lane5 is the week', outcome: 'answered' })])
   expect(files[`${LOAD}/pass.json`]).toBeUndefined()
 
   sessions.push(record('sess-1', '/home/me/devel/iquall/tagents/lane5', 'waiting', MINUTE / 2, MINUTE))
   await $.prompt.submit({ text: 'and go on', wait: false, origin: COMPOSER })
-  expect(entered).toEqual(['start lane5', 'and go on'])
+  expect(log()).toHaveLength(2)
 })

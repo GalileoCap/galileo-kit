@@ -1,11 +1,11 @@
 """The owner's week against their working window, for the owner alone (A93).
 
 ``session-transcripts week`` writes the Friday review of the rules-and-load
-audit's part 2a to ``week-<monday>.md`` beside the hold's settings, under
+audit's part 2a to ``week-<monday>.md`` beside the load settings, under
 ``~/.claude/session-kit/load/``, and prints its path and nothing else: no
 figure of it reaches a session that runs it (C5). It reads the owner's own
-prompts from the transcripts, the settings the hold reads (``settings.json``)
-and the hold's log (``holds.jsonl``). It gives, from Monday to the day asked
+prompts from the transcripts, the settings (``settings.json``) and the log
+of the questions why now (``holds.jsonl``, A96). It gives, from Monday to the day asked
 for: the hours and the messages in and out of the work window by day, the
 day's first and last message, the streak, the sittings reopened within an
 hour of the window closing, the messages by folder, with the settings'
@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -292,26 +293,32 @@ def holds_of(path: Path, start: datetime, end: datetime) -> list[dict]:
             at = datetime.fromtimestamp(record["at"] / 1000, timezone.utc)
             if start <= at < end:
                 found.append(record | {"_at": at})
-    return found
+    # A question is logged as asked, then answered or dismissed: its last line stands for it.
+    last = {(h.get("session"), h["at"]): h for h in found}
+    return list(last.values())
 
 
 def held_for(hold: dict) -> str:
-    """What held a prompt: the window, the sessions active past the limit, or both; a line from before 0.48.0 was the window's."""
+    """What asked about a prompt: the window, the sessions active past the limit, or both; a line from before 0.48.0 was the window's."""
     held = hold.get("held") if isinstance(hold.get("held"), list) else ["window"]
     return ", ".join("the window" if h == "window" else f"{hold.get('active')} sessions active" for h in held)
 
 
 def holds_table(holds: list[dict], tz: ZoneInfo, home: str) -> str:
     if not holds:
-        return "No prompt was held."
+        return "No prompt was asked about."
     rows = [[
         h["_at"].astimezone(tz).strftime("%a %H:%M"), f"`{folder_of(h.get('cwd'), home)}`", str(h.get("kind")), held_for(h), str(h.get("via")),
         str(h.get("outcome")), "-" if h.get("reason") is None else " ".join(str(h["reason"]).split()).replace("|", "\\|"),
     ] for h in holds]
-    sent = sum(1 for h in holds if h.get("outcome") == "sent" and h.get("via") == "band")
-    back = sum(1 for h in holds if h.get("outcome") == "returned")
-    phone = sum(1 for h in holds if h.get("via") == "phone")
-    return f"{table(['When', 'Folder', 'Kind', 'Held for', 'Via', 'Outcome', 'Reason'], rows)}\n\n{sent} sent with a reason, {back} put back in the box, {phone} from the phone with none."
+    count = Counter("phone" if h.get("via") == "phone" else str(h.get("outcome")) for h in holds)
+    said = [
+        f"{count['answered'] + count['sent']} answered with a reason",
+        f"{count['dismissed']} dismissed",
+        f"{count['asked']} left unanswered",
+        f"{count['phone']} from the phone with none",
+    ] + ([f"{count['returned']} put back in the box before 0.49.0"] if count["returned"] else [])
+    return f"{table(['When', 'Folder', 'Kind', 'Asked for', 'Via', 'Outcome', 'Reason'], rows)}\n\n{', '.join(said)}."
 
 
 def bar_section(bar: dict | None, week: list[Message], lasts: list[tuple[date, datetime]], monday: date, watch: list[str]) -> str:

@@ -2,7 +2,7 @@
 id: A95
 from: [O24]
 source: owner
-status: decided 2026-10-30
+status: retired 2026-11-06
 kind: behaviour
 implemented_by: [plugins/session-kit/hooks/load.ts, plugins/session-kit/hooks/registry.ts, plugins/session-kit/hooks/band.tsx, plugins/session-kit/transcripts/week.py]
 proven_by: [plugins/session-kit/hooks/load.test.tsx, plugins/session-kit/hooks/registry.test.ts, plugins/session-kit/transcripts/test_week.py]

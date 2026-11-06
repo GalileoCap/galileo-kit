@@ -1,6 +1,6 @@
 // The band above the prompt and the line that closes a turn. The band keeps
 // only what needs the person: a failure, the session's question once a handoff
-// took the next-step box's place, a message the pre-send check held, the
+// took the next-step box's place, the owner's question why now, a message the pre-send check held, the
 // owner's tagged items a reply left without a line, the offer or the chain or
 // the context figure from its firmer tier, the cold-cache timer that will act
 // on its own (a line under the context row when that row offers the same
@@ -15,7 +15,7 @@
 import { atom, read } from 'claude-code'
 import type { ElementTable, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { TurnFigure, ChainState, ContextFigure, Failure, LoadHeld, NewTaskState, PendingQuestion, PresendHeld, TaggedItem } from '../types'
+import type { TurnFigure, ChainState, ContextFigure, Failure, LoadAsk, NewTaskState, PendingQuestion, PresendHeld, TaggedItem } from '../types'
 import {
   adviceTier,
   chainByPerson,
@@ -33,7 +33,7 @@ import {
 } from './context'
 import { LIMIT_FIRM, LIMIT_WARN, coldClause, coldText, compact, limitFigures, newTaskBody, showsLimit, stageLine } from './lines'
 import { readOptions, triggerTokens, withinStep } from './options'
-import { giveReason, returnHeld } from './load'
+import { answerAsk } from './load'
 import { dismissHeld, sendAsIs, useRewrite } from './presend'
 import { answerQuestion, dismissQuestion } from './question'
 import { dismissMissed } from './tags'
@@ -46,7 +46,7 @@ const NO_ITEMS: TaggedItem[] = []
 const chain = atom({ plugin: 'session-kit', key: 'chain' } as const, null)
 const coldTimerAt = atom({ plugin: 'session-kit', key: 'coldTimerAt' } as const, 0)
 const failure = atom({ plugin: 'session-kit', key: 'failure' } as const, null)
-const loadHeld = atom({ plugin: 'session-kit', key: 'loadHeld' } as const, null)
+const loadAsk = atom({ plugin: 'session-kit', key: 'loadAsk' } as const, null)
 const figure = atom({ plugin: 'session-kit', key: 'contextFigure' } as const, null)
 const pendingQuestion = atom({ plugin: 'session-kit', key: 'pendingQuestion' } as const, null)
 const presendHeld = atom({ plugin: 'session-kit', key: 'presendHeld' } as const, null)
@@ -170,21 +170,21 @@ function missedRow($: EngineInterface, missed: readonly TaggedItem[]): Row {
   }
 }
 
-/** The owner's prompt held outside its window or into a session past the active ones: a reason in the field sends it on, and the ✕ puts it back in the box. */
-function loadRow($: EngineInterface, held: LoadHeld): Row {
-  const crowd = held.crowd.length === 0 ? '' : `${held.crowd.length} other sessions are active. `
-  const window = held.window ? `Outside your ${held.kind} window. ` : ''
-  const pass = held.window ? 'A reason sends it on, and opens a pass for every session.' : 'A reason sends it on.'
+/** Why now, for the owner's prompt that went on outside its window or into a session past the active ones: a reason answers it, and the ✕ dismisses it. */
+function loadRow($: EngineInterface, ask: LoadAsk): Row {
+  const crowd = ask.crowd.length === 0 ? '' : `${ask.crowd.length} other sessions are active. `
+  const window = ask.window ? `Outside your ${ask.kind} window. ` : ''
+  const pass = ask.window ? 'Why now? A reason spares every session the question for a while.' : 'Why now?'
 
   return {
     key: 'load',
-    label: 'Held',
+    label: 'Why now',
     tone: 'warning',
     text: [{ text: `${window}${crowd}${pass}` }],
     actions: [],
-    details: [{ text: held.preview, dim: true }, ...held.crowd.map((line) => ({ text: line }))],
-    field: { key: 'load-reason', placeholder: 'why now, in a line', submitLabel: 'send', onSubmit: (value) => giveReason($, held, value) },
-    dismiss: { key: 'load-return', label: '✕', onPress: () => returnHeld($, held) },
+    details: [{ text: ask.preview, dim: true }, ...ask.crowd.map((line) => ({ text: line }))],
+    field: { key: 'load-reason', placeholder: 'why now, in a line', submitLabel: 'send', onSubmit: (value) => answerAsk($, ask, value) },
+    dismiss: { key: 'load-dismiss', label: '✕', onPress: () => answerAsk($, ask, null) },
   }
 }
 
@@ -313,7 +313,7 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const below = await next(e)
     const held = await read($, failure)
-    const holding = await read($, loadHeld)
+    const holding = await read($, loadAsk)
     const missed = await read($, itemsMissed)
     const kept = await read($, presendHeld)
     const asked = await read($, pendingQuestion)

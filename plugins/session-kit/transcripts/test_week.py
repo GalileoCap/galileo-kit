@@ -75,6 +75,9 @@ def test_week_four_gives_the_verdict_from_the_weeks_figures_and_prints_only_the_
         {"at": int(at(23, "19:00").timestamp() * 1000), "session": "s1", "cwd": LANE, "kind": "work", "reason": "the demo | tomorrow", "via": "band", "outcome": "sent"},
         {"at": int(at(20, "19:00").timestamp() * 1000), "session": "s1", "cwd": LANE, "kind": "work", "reason": "last week", "via": "band", "outcome": "sent"},
         {"at": int(at(24, "10:00").timestamp() * 1000), "session": "s2", "cwd": KIT, "kind": "personal", "held": ["sessions"], "active": 3, "reason": "the review", "via": "band", "outcome": "sent"},
+        # Asked, then dismissed: one row, as its last line says.
+        {"at": int(at(25, "23:00").timestamp() * 1000), "session": "s3", "cwd": LANE, "kind": "work", "held": ["window"], "active": 0, "reason": None, "via": "band", "outcome": "asked"},
+        {"at": int(at(25, "23:00").timestamp() * 1000), "session": "s3", "cwd": LANE, "kind": "work", "held": ["window"], "active": 0, "reason": None, "via": "band", "outcome": "dismissed"},
     ]
     # Value metrics was lane5's must-have until Tuesday morning, when the owner dropped it from the list.
     tagged = [(at(23, "08:59"), "value metrics (O18)"), (at(24, "09:59"), None)]
@@ -102,6 +105,8 @@ def test_week_four_gives_the_verdict_from_the_weeks_figures_and_prints_only_the_
     assert "the demo \\| tomorrow" in review and "last week" not in review, review
     # A line from before 0.48.0 was held by the window alone.
     assert "| work | the window | band | sent |" in review and "| personal | 3 sessions active | band | sent | the review |" in review, review
+    assert "| work | the window | band | dismissed | - |" in review and "| band | asked |" not in review, review
+    assert "2 answered with a reason, 1 dismissed, 0 left unanswered, 0 from the phone with none." in review, review
 
 
 def test_before_its_weeks_are_up_the_bar_gives_no_verdict_and_a_list_of_another_week_is_no_focus_list() -> None:
