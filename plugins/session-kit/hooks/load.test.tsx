@@ -32,7 +32,7 @@ const BAND = {
 
 const COMPOSER: PromptOrigin = { kind: 'composer' }
 
-type Record = { id: string; cwd: string; state: string; since: number; beat: number; question: boolean; turnEnded: number }
+type Record = { id: string; cwd: string; state: string; since: number; beat: number; question: boolean; turnEnded: number; side?: boolean }
 
 function engine(on: On, options: { now: number; cwd: string; settings?: boolean; files?: { [path: string]: string }; sessions?: Record[] }) {
   const files: { [path: string]: string } = { ...(options.settings === false ? {} : { [`${LOAD}/settings.json`]: JSON.stringify(SETTINGS) }), ...options.files }
@@ -236,4 +236,24 @@ test('with three other sessions active a prompt into one more goes on and the ba
   sessions.push(record('sess-1', '/home/me/devel/iquall/tagents/lane5', 'waiting', MINUTE / 2, MINUTE))
   await $.prompt.submit({ text: 'and go on', wait: false, origin: COMPOSER })
   expect(log()).toHaveLength(2)
+})
+
+test('a sidechat is not counted among the active sessions, and a prompt into one is not asked about', async ($, on) => {
+  const record = (id: string, cwd: string, side: boolean): Record => ({ id, cwd, state: 'working', since: AT_09, beat: AT_09 - MINUTE / 2, question: false, turnEnded: 0, side })
+  const sessions = [
+    record('a', '/home/me/devel/iquall/tagents/lane1', false),
+    record('b', '/home/me/devel/iquall/tagents/lane2', false),
+    record('c', '/home/me/devel/iquall/tagents/lane2', true),
+  ]
+  const settings = JSON.stringify({ ...SETTINGS, sessions: { max: 3, idleMinutes: 30 } })
+  const { entered, log } = engine(on, { now: AT_09, cwd: '/home/me/devel/iquall/tagents/lane5', files: { [`${LOAD}/settings.json`]: settings }, sessions })
+  await $.session.start({ cwd: '/home/me/devel/iquall/tagents/lane5', surface: 'desktop', isInteractive: true })
+
+  await $.prompt.submit({ text: 'start lane5', wait: false, origin: COMPOSER })
+  expect(entered).toEqual(['start lane5'])
+  expect(log()).toEqual([])
+
+  sessions.splice(2, 1, record('c', '/home/me/devel/iquall/tagents/lane3', false), record('sess-1', '/home/me/devel/iquall/tagents/lane5', true))
+  await $.prompt.submit({ text: 'what is A224?', wait: false, origin: COMPOSER })
+  expect(log()).toEqual([])
 })

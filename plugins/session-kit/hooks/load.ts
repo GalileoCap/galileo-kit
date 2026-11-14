@@ -138,9 +138,12 @@ export function isActive(record: SessionRecord, now: number, limit: SessionLimit
   return record.state !== 'ended' && now - record.beat < ALIVE_MS && (record.state === 'working' || (ended > 0 && now - ended < limit.idleMinutes * MINUTE_MS))
 }
 
-/** The other active sessions when they reach the limit and this one is not among the active; empty otherwise. */
+/** The other active sessions, sidechats left out, when they reach the limit and this one is neither among them nor a sidechat; empty otherwise. */
 export function crowdOf(records: readonly SessionRecord[], session: string, now: number, limit: SessionLimit): SessionRecord[] {
-  const active = records.filter((r) => isActive(r, now, limit))
+  if (records.some((r) => r.id === session && r.side === true)) {
+    return []
+  }
+  const active = records.filter((r) => r.side !== true && isActive(r, now, limit))
   const others = active.filter((r) => r.id !== session)
 
   return others.length >= limit.max && others.length === active.length ? others : []

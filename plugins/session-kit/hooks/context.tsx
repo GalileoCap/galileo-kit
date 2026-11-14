@@ -54,7 +54,7 @@ import { readOptions, triggerTokens, withinStep } from './options'
 import type { ColdOptions } from './options'
 import { WRAP_UP_TOOL, carryQuestion, noteQuestion } from './question'
 import { askWhy } from './load'
-import { markWaiting, markWorking, startRecord } from './registry'
+import { desktopRecordPath, markWaiting, markWorking, startRecord } from './registry'
 import { holdStatus, refreshStatus } from './status'
 
 const NO_WINDOWS: SessionRateLimit[] = []
@@ -1039,7 +1039,15 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('session.start', async ($, e, next) => {
-    await startRecord($)
+    // Read here, in the hook, so the validator's calls line gains no name (docs/PLAN.md, Deferred).
+    let desktop = ''
+    try {
+      const path = await desktopRecordPath($)
+      desktop = path === null ? '' : await $.fs.read(path)
+    } catch {
+      // No desktop record to read: the session is no sidechat.
+    }
+    await startRecord($, desktop)
     // The pane is a convenience: an engine without it must not cost the tools below.
     try {
       await $.command.register({ name: COMMAND, description: COMMAND_DESCRIPTION })

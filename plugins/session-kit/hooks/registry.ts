@@ -6,14 +6,16 @@
 // minute while it lives, so a reader tells a closed session by its age. A clear ends the old session's record as
 // the new one starts. It rides on context.tsx's hooks, since a hook of its own
 // would put the kit's hooks line past the validator's cut. A write that fails
-// is skipped: the registry is never the reason a turn goes wrong.
+// is skipped: the registry is never the reason a turn goes wrong. A sidechat,
+// the desktop's btw opened beside a session, says so in its record, read from
+// the desktop's own record of the session, so the owner's load leaves it out.
 
 import type { EngineInterface, Timer } from 'claude-code'
 
 type State = 'working' | 'waiting' | 'ended'
 
-/** A session's record; `turnEnded` is 0 before its first main-loop turn ends. */
-export type SessionRecord = { id: string; cwd: string; state: State; since: number; beat: number; question: boolean; turnEnded: number }
+/** A session's record; `turnEnded` is 0 before its first main-loop turn ends, and `side` is true for a sidechat. */
+export type SessionRecord = { id: string; cwd: string; state: State; since: number; beat: number; question: boolean; turnEnded: number; side?: boolean }
 
 const BEAT_MS = 60_000
 
@@ -41,15 +43,44 @@ async function mark($: EngineInterface, state: State, question: boolean): Promis
   await write($, current)
 }
 
-/** At session start: a cleared session's record ends, and this one's starts, waiting, beating each minute. */
-export async function startRecord($: EngineInterface): Promise<void> {
+/**
+ * Where the desktop keeps its record of this session, from the variables it
+ * sets: its host session id, under the account and organization the session
+ * runs as. Null outside the desktop.
+ */
+export async function desktopRecordPath($: EngineInterface): Promise<string | null> {
+  const home = await $.env.get('HOME')
+  const host = await $.env.get('CLAUDE_CODE_HOST_SESSION_ID')
+  const account = await $.env.get('CLAUDE_CODE_ACCOUNT_UUID')
+  const org = await $.env.get('CLAUDE_CODE_ORGANIZATION_UUID')
+
+  return home === undefined || host === undefined || account === undefined || org === undefined ? null : `${home}/Library/Application Support/Claude/claude-code-sessions/${account}/${org}/${host}.json`
+}
+
+/**
+ * Whether the desktop's record of the session, its text, says it opened the
+ * session as a sidechat (`spawnedFrom.btw`). False for no text, or for a
+ * record whose shape changed, so a sidechat then counts like every session.
+ */
+function isSidechat(desktop: string): boolean {
+  try {
+    const record = JSON.parse(desktop) as { spawnedFrom?: { btw?: unknown } } | null // The desktop's file, read for this one field.
+
+    return record?.spawnedFrom?.btw === true
+  } catch {
+    return false
+  }
+}
+
+/** At session start: a cleared session's record ends, and this one's starts, waiting, beating each minute; `desktop` is the desktop's record of it, empty when there is none. */
+export async function startRecord($: EngineInterface, desktop: string): Promise<void> {
   try {
     const id = await $.session.id()
     const at = await $.clock.now()
     if (current !== null && current.id !== id) {
       await write($, { ...current, state: 'ended', beat: at })
     }
-    current = { id, cwd: await $.session.cwd(), state: 'waiting', since: at, beat: at, question: false, turnEnded: 0 }
+    current = { id, cwd: await $.session.cwd(), state: 'waiting', since: at, beat: at, question: false, turnEnded: 0, side: isSidechat(desktop) }
     await write($, current)
     beating?.cancel()
     beating = $.clock.every(BEAT_MS, async () => {

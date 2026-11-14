@@ -247,6 +247,12 @@ The test log and the guard read `plugins/session-kit/bin/session-watched -- <run
 
 `session-intent check` accepts a retired entry that no entry names in `supersedes` when its header says why in `retired_because`, and `INDEX.md` lists it with that reason. To see: in a project with such an entry (the stance project's `O5`), set its status to `retired <date>` with a `retired_because:` line, run `session-intent index` then `session-intent check`, and the check passes. It reaches a session as 0.49.0 does.
 
+## At the install of session-kit 0.50.0
+
+### main: a sidechat is not counted among the active sessions
+
+`A97` (a sidechat is not counted among the active sessions). Nothing to change in the settings. To see: with three sessions worked in the last half hour, open a sidechat (btw) beside one of them and send a prompt into a fourth session. The band's Why now row names the three and not the sidechat, and a prompt into the sidechat itself shows no row for the sessions. A sidechat started before the install counts until it starts again.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

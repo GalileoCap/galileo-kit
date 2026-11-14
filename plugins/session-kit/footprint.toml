@@ -3,7 +3,7 @@
 # written by --write and compared as counts. [why] gives the reason for each
 # $ member and each hook event, and a new one waits on its reason.
 
-engine = "2.1.308"
+engine = "2.1.321"
 
 [validator]
 "./kit.tsx calls" = [
@@ -14,7 +14,7 @@ engine = "2.1.308"
   "$.command.run (via clearThenResend, compactByCommand, handoffCommand, runHandoffBeforeClear, setEffort)",
   "$.env.get",
   "$.fs.exists (via askWhy, handoffState)",
-  "$.fs.read (via askWhy, indexOf, journalLine, ownerTask, paneFacts, past, projectRunners, writeFacts)",
+  "$.fs.read",
   "$.fs.stat (via handoffState)",
   "$.fs.write",
   "$.model.complete (via judgeChain, review)",
@@ -43,6 +43,9 @@ engine = "2.1.308"
   "$.ui.toast (via moment)",
 ]
 "./kit.tsx env reads" = [
+  "CLAUDE_CODE_ACCOUNT_UUID",
+  "CLAUDE_CODE_HOST_SESSION_ID",
+  "CLAUDE_CODE_ORGANIZATION_UUID",
   "HOME",
   "TMPDIR",
 ]
@@ -227,9 +230,9 @@ engine = "2.1.308"
 "$.clock.now" = "Stamps the chain file's lines, the test log's runs, the person's last prompt and the handoff's facts, and dates the cold-cache deadline."
 "$.command.register" = "Registers /kit, the command that shows or hides the kit's pane."
 "$.command.run" = "Runs the handoff command (for the chain, and for the band's Handoff button), /compact for the chain's compaction, and /clear after the new-task offer's press, then /effort when the person chose the effort the model proposed."
-"$.env.get" = "TMPDIR for the chain file and the test log, HOME for the timeline's directory, the session registry's and the working window's."
+"$.env.get" = "TMPDIR for the chain file and the test log, HOME for the timeline's directory, the session registry's and the working window's, and the desktop's host session, account and organization ids, which name the desktop's record of a session that says whether it is a sidechat."
 "$.fs.exists" = "Whether CLAUDE.local.md exists, for the checkout's handoff advice."
-"$.fs.read" = "The chain file before a line is added, the Task section of CLAUDE.local.md for the judge, CLAUDE.local.md before its facts are added, its next step and open questions for the pane, a document's length after an edit, the suppressions index, and test_commands in .claude/claude-kit.json."
+"$.fs.read" = "The chain file before a line is added, the Task section of CLAUDE.local.md for the judge, CLAUDE.local.md before its facts are added, its next step and open questions for the pane, a document's length after an edit, the suppressions index, test_commands in .claude/claude-kit.json, and the desktop's record of the session at its start, for whether it is a sidechat."
 "$.fs.stat" = "When CLAUDE.local.md was last written, against the last commit, for the stale-handoff advice."
 "$.fs.write" = "The chain file and the test log under the temporary directory, the timeline's files under ~/.claude/session-kit/measure/, each session's record under ~/.claude/session-kit/sessions/, and the facts section of CLAUDE.local.md, after the model's text, and the working window's answer, pass and log under ~/.claude/session-kit/load/."
 "$.model.complete" = "Haiku reads the unattended chain at its third, fifth and every later signal for a loop or a step beyond the task, and reads a ?? message or one of four bullets against the owner's rules before it is sent, on the session's own credentials."

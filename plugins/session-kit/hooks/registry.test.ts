@@ -13,13 +13,13 @@ const MINUTE = 60_000
 const T0 = 1_700_000_000_000
 const START = { cwd: '/proj', surface: 'desktop', isInteractive: true } as const
 
-type Record = { id: string; cwd: string; state: string; since: number; beat: number; question: boolean; turnEnded: number }
+type Record = { id: string; cwd: string; state: string; since: number; beat: number; question: boolean; turnEnded: number; side: boolean }
 
-function engine(on: On) {
-  const files: { [path: string]: string } = {}
+function engine(on: On, env: { [name: string]: string } = {}, seeded: { [path: string]: string } = {}) {
+  const files: { [path: string]: string } = { ...seeded }
   const now = { id: 'sess-1' }
   const clock = mock.clock(on, { now: T0 })
-  mock.env(on, { HOME })
+  mock.env(on, { HOME, ...env })
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.end', (_, e) => ({ sessionId: e.sessionId }))
   on('session.cwd', () => ({ value: '/proj' }))
@@ -50,7 +50,7 @@ function engine(on: On) {
 
   const record = (id: string): Record => JSON.parse(files[`${DIR}/${id}.json`] ?? 'null')
 
-  return { clock, now, record }
+  return { clock, files, now, record }
 }
 
 function reply(turnId: string, agentId?: string): TurnCompleteInput {
@@ -60,7 +60,7 @@ function reply(turnId: string, agentId?: string): TurnCompleteInput {
 test('a main-loop turn marks the session working, its end waiting on the owner, with a question when one waits; a subagent writes nothing', async ($, on) => {
   const { clock, record } = engine(on)
   await $.session.start(START)
-  expect(record('sess-1')).toMatchObject({ id: 'sess-1', cwd: '/proj', state: 'waiting', question: false, turnEnded: 0 })
+  expect(record('sess-1')).toMatchObject({ id: 'sess-1', cwd: '/proj', state: 'waiting', question: false, turnEnded: 0, side: false })
 
   await clock.advance(5_000)
   await $.turn.start({ text: 'go', turnId: 't1' })
@@ -99,4 +99,25 @@ test('a live session beats each minute, so a closed one is told by its age; a cl
   await clock.advance(2 * MINUTE)
   expect(record('sess-1').beat).toBe(ended.beat)
   expect(record('sess-2').beat).toBeGreaterThan(T0 + 3 * MINUTE)
+})
+
+test('a session the desktop opened as a sidechat (its btw) says so in its record; any other, or one whose desktop record is missing, does not', async ($, on) => {
+  const env = { CLAUDE_CODE_HOST_SESSION_ID: 'local_s', CLAUDE_CODE_ACCOUNT_UUID: 'acct', CLAUDE_CODE_ORGANIZATION_UUID: 'org' }
+  const path = `${HOME}/Library/Application Support/Claude/claude-code-sessions/acct/org/local_s.json`
+  const desktop = (btw: boolean) => JSON.stringify({ cliSessionId: 'sess-1', spawnedFrom: { sessionId: 'local_p', sideSession: true, userFork: true, btw } })
+  const { files, now, record } = engine(on, env, { [path]: desktop(true) })
+  await $.session.start(START)
+  expect(record('sess-1')).toMatchObject({ side: true })
+
+  for (const [id, text] of [['sess-2', desktop(false)], ['sess-3', undefined]] as const) {
+    await $.session.end({ reason: 'clear', sessionId: now.id, resume: { id: now.id } })
+    now.id = id
+    if (text === undefined) {
+      delete files[path]
+    } else {
+      files[path] = text
+    }
+    await $.session.start(START)
+    expect(record(id)).toMatchObject({ side: false })
+  }
 })
