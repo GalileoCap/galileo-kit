@@ -54,6 +54,18 @@ supersedes: []
 ---
 ```
 
+A retired entry is named in another entry's `supersedes`, or, when nothing takes its place, says why in a header field of its own, `retired_because`, and the index lists it with that reason:
+
+```
+---
+id: O5
+from: [G1]
+source: inferred
+status: retired 2026-11-14
+retired_because: the owner does not care about it
+---
+```
+
 A proposal carries only the id, the text and what it comes from. The other fields are filled when an objective is approved or an action validated, and a clause each is enough. A field may say "not yet known".
 
 | Level | Fields | Source | Status |
@@ -73,7 +85,7 @@ An id is never reused. The four levels are the default: a project may name its o
 - When an objective is approved, it has at least one action or says "no action yet". When an action is decided it names what implements it, and when it is validated, what proved it.
 - When an action misfires (it costs more than expected, fires at the wrong moment, or is worked around), the error is fixed at the level that holds it. An action wrong for a right objective is superseded by the session. An objective that produces wrong actions is put to the owner. The consequences field names the result that undoes the action, so the undoing is argued once, when it is decided.
 - When a piece of the work is changed or released, the actions it carries are re-read against their objectives. A piece whose objective was retired goes with it. The actions that name a part of a tool's interface are re-read when that interface changes.
-- The tool that generates `INDEX.md` is also the check on the record (`session-intent`, the kit's `A21`): ids resolve, every path in *implemented by* exists, every approved objective has an action, every action an objective, no status lacks a date, and every retired entry names its successor. A dangling path is how a stale entry announces itself.
+- The tool that generates `INDEX.md` is also the check on the record (`session-intent`, the kit's `A21`): ids resolve, every path in *implemented by* exists, every approved objective has an action, every action an objective, no status lacks a date, and every retired entry has a successor or a `retired_because`. A dangling path is how a stale entry announces itself.
 
 ## Over time
 

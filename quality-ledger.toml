@@ -744,10 +744,19 @@ why = "a goal with no objective, an objective with no action, an entry without t
 site = "plugins/session-kit/intent/session_intent.py"
 where = "render_index"
 form = "or"
-code = "[line(e) + (', superseded by ' + ', '.join((f'`{s}`' for s in successors[e.id])) if e.id in successors else ', nothing …"
+code = "[line(e) + retirement(e, successors) for e in retired] or ['None.']"
 class = "spoken"
 disposition = "keep"
 why = "the substituted word is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "Entry.retired_because"
+form = "get"
+code = "self.fields.get('retired_because', '')"
+class = "spoken"
+disposition = "keep"
+why = "an entry without the field gives no reason, and the check names a retirement that needs one"
 
 [[fallbacks]]
 site = "plugins/session-kit/rulebook/session_rulebook.py"

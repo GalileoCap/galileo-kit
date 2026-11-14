@@ -154,6 +154,29 @@ run(root, "index")
 code, out = run(root, "check")
 case("an approved objective that says no action yet passes", code == 0, out)
 
+# A retirement nothing supersedes passes when its header says why, and the index lists the reason.
+DROPPED = (
+    "---\nid: O3\nfrom: [G1]\nsource: inferred\nstatus: retired 2026-10-06\n"
+    "retired_because: the owner does not care about it\n---\n\n# O3 A dropped objective\n\nText.\n"
+)
+root = project({**CLEAN, "docs/intent/O3-a-dropped-objective.md": DROPPED})
+run(root, "index")
+code, out = run(root, "check")
+case("a retired entry nothing supersedes passes when retired_because says why", code == 0 and out.strip() == "", out)
+retired = Path(root, "docs/intent/INDEX.md").read_text(encoding="utf-8").split("## Retired")[1]
+case("the index lists it under Retired with its reason, the superseded one with its successor",
+     "O3 A dropped objective](O3-a-dropped-objective.md): retired 2026-10-06, because the owner does not care about it" in retired
+     and "superseded by `A1`" in retired and "nothing supersedes it" not in retired, retired)
+for name, header in (("an empty retired_because", "retired_because:\n"), ("no retired_because", "")):
+    root = project({**CLEAN, "docs/intent/O3-a-dropped-objective.md": DROPPED.replace("retired_because: the owner does not care about it\n", header)})
+    run(root, "index")
+    code, out = run(root, "check")
+    case(f"a retired entry nothing supersedes with {name} fails", code == 1 and "O3" in out and "retired_because" in out, out)
+root = project(with_change(CLEAN, "docs/intent/O2-a-proposed-objective.md", "---\n\n#", "retired_because: a reason\n---\n\n#"))
+run(root, "index")
+code, out = run(root, "check")
+case("retired_because on an entry that is not retired is a problem", code == 1 and "O2" in out and "not retired" in out, out)
+
 # A retired action's paths are not checked: what implemented it may be gone by design.
 root = project(with_change(CLEAN, "docs/intent/A2-a-retired-action.md", "implemented_by: [CLAUDE.md]", "implemented_by: [hooks/gone.py]"))
 run(root, "index")

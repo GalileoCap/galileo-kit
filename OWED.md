@@ -241,6 +241,12 @@ The test log and the guard read `plugins/session-kit/bin/session-watched -- <run
 
 `A96` (the owner's prompt goes on, and the band asks why). Nothing to change in the settings. To see: a prompt outside the window, or into a fourth session, starts at once, and the band's Why now row asks for a line. A reason opens the window's pass, and the ✕ dismisses the row, each logged in `holds.jsonl`. A session started before the install still holds its prompts until it reloads the plugin.
 
+## At the install of session-kit 0.49.1
+
+### main: a retirement nothing supersedes passes with its reason
+
+`session-intent check` accepts a retired entry that no entry names in `supersedes` when its header says why in `retired_because`, and `INDEX.md` lists it with that reason. To see: in a project with such an entry (the stance project's `O5`), set its status to `retired <date>` with a `retired_because:` line, run `session-intent index` then `session-intent check`, and the check passes. It reaches a session as 0.49.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
