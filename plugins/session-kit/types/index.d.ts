@@ -110,13 +110,6 @@ export type TaggedItem = {
   text: string
 }
 
-/** A message the pre-send check held: the text as the person wrote it (the `??` taken off), Haiku's findings, and its rewrite when it gave one. */
-export type PresendHeld = {
-  text: string
-  findings: string[]
-  rewrite: string | null
-}
-
 /**
  * The question on the band after the owner's prompt went on outside its
  * window or into a session past the active ones: the window's kind, whether
@@ -211,10 +204,6 @@ declare module 'claude-code' {
       loadPass: LoadPass | null
       /** The session's focus tag and the week's share, for the status line; null without a focus list. */
       loadFocus: LoadFocus | null
-      /** The message the pre-send check holds for the person's decision; null while none is. */
-      presendHeld: PresendHeld | null
-      /** The text Send as is sent or Use the rewrite prepared, let through unchecked once; empty while none is. */
-      presendPass: string
       /** Per tag, the last number given to an item in this session; a clear starts them over. */
       tagCounts: Record<string, number>
       /** The owner's tagged items not yet reported done, decided, parked or answered, oldest first. */

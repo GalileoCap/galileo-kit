@@ -2,7 +2,8 @@
 id: A85
 from: [O19]
 source: owner
-status: decided 2026-10-29
+status: retired 2026-11-17
+retired_because: the owner ignored its findings every time and asked for it gone on 2026-11-17, coming back to the concept later
 kind: check
 implemented_by: [plugins/session-kit/hooks/presend.ts, plugins/session-kit/hooks/band.tsx]
 proven_by: [plugins/session-kit/hooks/presend.test.tsx]
@@ -27,5 +28,7 @@ The proposal counted 96 messages of four bullets or more in the live sessions, w
 - A guard in Haiku's system prompt against instructions inside the message. Not taken, by the owner on 2026-10-29: the owner is the only person who sends the messages it reads.
 
 ## Consequences
+
+Retired on 2026-11-17 by the owner: "Remove the haiku check, I am ignoring it all of the time. We'll come back to this concept later". The code went in session-kit 0.51.0, and the idea waits under Deferred in `docs/PLAN.md`.
 
 The owner waits a few seconds on every message of four bullets or more. Undone if the owner accepts fewer than three findings in ten, in which case the four-bullet trigger goes and `??` stays.

@@ -124,6 +124,8 @@
 
 ## Deferred
 
+- The pre-send check (`A85`, a pre-send check by Haiku, held on the band), removed by the owner on 2026-11-17: "I am ignoring it all of the time. We'll come back to this concept later". Its code is in git before session-kit 0.51.0. Coming back means asking first what a check would have to find for its findings to be read, since every hold was sent as is.
+
 - The validator's cut. `claude plugin validate` cuts a line of its report at about a thousand characters, and the footprint gate (`A60`, the kit's reach held to a reviewed footprint) refuses a cut line. Since `A87` (the kit's pane is shown and hidden by a chip, and kept across sessions) the kit's hooks line stands at 987 and its calls line at 950, so nearly any new hook or helper making `$` calls trips the gate. Two ways out: the gate accepts a cut line whose hidden length is unchanged, or the kit merges hooks to keep the lines short. Deferred by the owner on 2026-10-29. Once there is room, `A87` can record the pane's own close mark through a `ui.close` hook.
 
 - Part B of `docs/analyses/proposal-prefixes-and-check-ins.md`, the check-ins: `session-watched`'s new options, `check_in`, the watcher and the detached-run gate. Deferred by the owner on 2026-10-29 so the prefixes go first. The read in `docs/analyses/prefixes-and-check-ins-read.md` holds what it has to answer, the cold-cache timer proven in a real session first.

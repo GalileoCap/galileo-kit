@@ -253,6 +253,12 @@ The test log and the guard read `plugins/session-kit/bin/session-watched -- <run
 
 `A97` (a sidechat is not counted among the active sessions). Nothing to change in the settings. To see: with three sessions worked in the last half hour, open a sidechat (btw) beside one of them and send a prompt into a fourth session. The band's Why now row names the three and not the sidechat, and a prompt into the sidechat itself shows no row for the sessions. A sidechat started before the install counts until it starts again.
 
+## At the install of session-kit 0.51.0
+
+### main: the pre-send check removed
+
+`A85` (a pre-send check by Haiku, held on the band) is retired by the owner's ask of 2026-11-17. A message starting with `??` or holding four bullets or more goes on as typed, with the `??` left in, and the band draws no Held row. To see: a message of five bullets goes on at once. It reaches a session as 0.50.0 does.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
