@@ -2,7 +2,7 @@
 id: A42
 from: [O5, O13]
 source: owner
-status: decided 2026-10-25
+status: retired 2026-11-17
 kind: behaviour
 implemented_by: [global/CLAUDE.md]
 proven_by: [unproven]
