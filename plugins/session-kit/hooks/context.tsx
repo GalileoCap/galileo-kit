@@ -3,8 +3,9 @@
 // warning to the model every `step` tokens past `thresholdTokens` (or past
 // `threshold` percent of the window, whichever comes first), a band above the prompt with the figure for the person, and, with
 // the `chain` option on, two tools: `clear_point`, after which the kit writes
-// the handoff when the turn ends, then compacts and continues, or clears and
-// stops when the next step is the owner's, and `new_task`,
+// the handoff when the turn ends, then compacts and continues, compacts and
+// stops when the next step is the owner's, or clears and stops when the owner
+// asked for a clear, and `new_task`,
 // after which the band offers the handoff and a clear, or to keep going here,
 // and sends the person's prompt again. In a context that holds no task yet
 // (new, just cleared, or compacted at the person's own press) `new_task`
@@ -143,10 +144,11 @@ const TOOL_DESCRIPTION =
   'Call this at a clear point: the tree is committed and green, nothing is in ' +
   'flight, and the next step is known. When this turn ends, session-kit writes ' +
   'the handoff (CLAUDE.local.md), so do not write it yourself. Then it compacts ' +
-  'the context and continues with the next step, or, when that step is the ' +
-  'owner\'s, clears the context and stops, so the owner\'s next prompt starts ' +
-  'from the handoff alone. When the owner asks for a handoff and a compaction ' +
-  'or a clear, call this with next_step owner. Then end the turn with nothing ' +
+  'the context and continues with the next step, or stops when that step is ' +
+  'the owner\'s. When the owner asks for a handoff and a compaction, call this ' +
+  'with next_step owner. Set clear only when the owner\'s own words asked for a ' +
+  'clear: the context is then cleared instead of compacted, and the owner\'s ' +
+  'next prompt starts from the handoff alone. Then end the turn with nothing ' +
   'more started.'
 
 const NEW_TASK_DESCRIPTION =
@@ -610,7 +612,7 @@ async function clearByCommand($: EngineInterface, state: ChainState, asOf: numbe
   await notifyOwner($, `session-kit: cleared, the next step is yours: ${state.note}`)
 }
 
-/** The step after the handoff: a clear when the owner takes the next step from the model, a compaction otherwise. */
+/** The step after the handoff: a clear when the owner asked for one, a compaction otherwise. */
 async function endContext($: EngineInterface, state: ChainState, asOf: number): Promise<void> {
   await (state.clears === true ? clearByCommand($, state, asOf) : compactByCommand($, state, asOf))
 }
@@ -1143,6 +1145,10 @@ export const register: Register = (on, options) => {
             description: 'Who takes the next step: the session, or the owner (a review, an answer, an approval).',
           },
           note: { type: 'string', description: 'The next step, in one line.' },
+          clear: {
+            type: 'boolean',
+            description: 'True only when the owner\'s own words asked for a clear, with next_step owner: the context is cleared instead of compacted.',
+          },
         },
         required: ['next_step', 'note'],
       },
@@ -1218,6 +1224,10 @@ export const register: Register = (on, options) => {
     if ((nextStep !== 'session' && nextStep !== 'owner') || note === '') {
       return refuse('next_step must be "session" or "owner", and note the next step in one line.')
     }
+    const clears = e.clear === true
+    if (clears && nextStep !== 'owner') {
+      return refuse('A clear stops the chain, so it takes next_step owner, and only when the owner asked for a clear.')
+    }
     if ((await read($, pendingQuestion)) !== null) {
       stage($, 'a clear point with a question waiting on the owner: the chain does not start')
 
@@ -1235,7 +1245,7 @@ export const register: Register = (on, options) => {
     }
     const waitsOnOwner = nextStep === 'owner' || stopped !== undefined
     const asked: ChainState = stopped === undefined ? { stage: 'requested', waitsOnOwner, note } : { stage: 'requested', waitsOnOwner, note, stopped }
-    const requested: ChainState = nextStep === 'owner' ? { ...asked, clears: true } : asked
+    const requested: ChainState = clears ? { ...asked, clears: true } : asked
     await update($, chain, () => requested)
     await moment($, stageLine(requested))
     if (stopped !== undefined) {
@@ -1251,7 +1261,11 @@ export const register: Register = (on, options) => {
       'Clear point noted. End this turn now, with nothing more started, and do ' +
         'not write the handoff yourself. When it ends, session-kit writes the ' +
         'handoff, then ' +
-        (nextStep === 'owner' ? 'clears the context and stops, since the next step is the owner\'s.' : `compacts the context and continues with: ${note}`),
+        (clears
+          ? 'clears the context and stops, as the owner asked.'
+          : nextStep === 'owner'
+            ? 'compacts the context and stops, since the next step is the owner\'s.'
+            : `compacts the context and continues with: ${note}`),
     )
   }).catch(() => refuse('session-kit could not record the clear point, so the chain did not start.'))
 }

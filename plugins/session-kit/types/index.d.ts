@@ -29,7 +29,7 @@ export type ChainState = {
   note: string
   /** Why the judge stopped the chain, when it did: the next step is then the owner's. */
   stopped?: string
-  /** True when the model gave the next step to the owner: the handoff is followed by a clear instead of a compaction. */
+  /** True when the owner asked for a clear: the handoff is followed by a clear instead of a compaction. */
   clears?: true
   /** True when the person pressed for the handoff and the compaction: their next prompt opens a context with no task to clear. */
   pressed?: true

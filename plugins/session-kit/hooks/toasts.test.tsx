@@ -89,7 +89,7 @@ async function moments($: EngineInterface, clock: MockClock, host: Host, percent
   await $.session.measure(measured(percent, [fiveHour(window)]))
   await $.tool.call({ tool: NEW_TASK, task: 'rewrite the README' })
   await dismissOffer($)
-  await $.tool.call({ tool: CLEAR_POINT, next_step: 'owner', note: 'approve the plan' })
+  await $.tool.call({ tool: CLEAR_POINT, next_step: 'owner', note: 'approve the plan', clear: true })
   await $.turn.complete(turn(`${id}-signal`))
   await clock.settle()
   await $.turn.complete(turn(`${id}-handoff`))

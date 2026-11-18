@@ -277,6 +277,12 @@ The test log and the guard read `plugins/session-kit/bin/session-watched -- <run
 
 A new command, `session-reread`, in its own uv package with its own environment, `venv-reread`, built on its first run in each install's data directory. To see: in a project where a session committed edits to Markdown files after your prompt, `session-reread --open` prints which sections to read again and opens the page.
 
+## At the install of session-kit 0.55.0
+
+### main, A106: an owner-step clear point compacts again
+
+`A106` (an owner-step clear point compacts, and clears only on the owner's word) supersedes `A101` and comes with the version. To see: a `clear_point` with `next_step: owner` ends in a compaction and "Compacted. The next step is yours", and the reply before it stays in the chat. A clear runs only when you ask for one in words.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

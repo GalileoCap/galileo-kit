@@ -127,7 +127,7 @@ test('on: the model signals, the mod writes the handoff, compacts and continues'
   expect(asked.length).toBe(4)
 })
 
-test('when the next step is the owner\'s, the handoff is followed by a clear instead of a compaction, and the band says the next step is theirs', { options: { chain: true } }, async ($, on) => {
+test('when the next step is the owner\'s and no clear was asked for, the handoff is followed by a compaction and nothing continues', { options: { chain: true } }, async ($, on) => {
   const clock = mock.clock(on)
   const asked = engine(on)
   on('ui.render', ($, e) => {
@@ -137,7 +137,40 @@ test('when the next step is the owner\'s, the handoff is followed by a clear ins
   })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
-  const signalled = await $.tool.call({ tool: TOOL, next_step: 'owner', note: 'approve O14 to O16' })
+  // lane4, 2026-11-18: past the warning, the reply the owner was to answer ended in a clear.
+  const signalled = await $.tool.call({ tool: TOOL, next_step: 'owner', note: 'the owner reads the report' })
+  expect(signalled.result).toMatch(/compacts the context and stops/)
+  await $.turn.complete(turn('t1'))
+  await clock.settle()
+  await $.turn.complete(turn('t2'))
+  await clock.settle()
+  expect(asked.slice(1, 3)).toEqual(['command session-kit:handoff', expect.stringMatching(/^command compact /)])
+  expect(asked.slice(3)).toEqual([])
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /next step/ }))?.text).toMatch(/^Compacted\. The next step is yours/)
+  await ui.unmount()
+})
+
+test('a clear the owner asked for refuses a next step of the session\'s', { options: { chain: true } }, async ($, on) => {
+  const asked = engine(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+
+  const answered = await $.tool.call({ tool: TOOL, next_step: 'session', note: 'next', clear: true })
+  expect(answered.deny).toMatch(/clear/)
+  expect(asked).toEqual(['register clear_point'])
+})
+
+test('when the owner asked for a clear, the handoff is followed by a clear instead of a compaction, and the band says the next step is theirs', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const asked = engine(on)
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+
+  const signalled = await $.tool.call({ tool: TOOL, next_step: 'owner', note: 'approve O14 to O16', clear: true })
   expect(signalled.result).toMatch(/clears the context/)
   await $.turn.complete(turn('t1'))
   await clock.settle()

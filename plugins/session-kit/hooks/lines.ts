@@ -180,7 +180,9 @@ export function stageLine(state: ChainState): string {
     case 'requested':
       return state.clears === true
         ? 'Clear point: the handoff and the clear run when this turn ends.'
-        : 'Clear point: the handoff, the compaction and the continue run when this turn ends.'
+        : state.waitsOnOwner
+          ? 'Clear point: the handoff and the compaction run when this turn ends.'
+          : 'Clear point: the handoff, the compaction and the continue run when this turn ends.'
     case 'handoff':
       return 'session-kit is writing the handoff.'
     case 'compacting':
