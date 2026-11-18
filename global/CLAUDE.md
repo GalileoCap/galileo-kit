@@ -1,6 +1,6 @@
 # Working rules for every project
 
-These come from `session-kit` (`global/CLAUDE.md`). A project's `CLAUDE.md` adds to them and wins where it differs. Each rule's reason is under the same heading in `RATIONALE.md` beside this file: read it before arguing with a rule. A pure-core project also imports `CODE.md`. The plugin's commands (`session-intent`, `session-docs`, `session-tells`, `session-suppressions`, `session-rulebook`, `session-owed`, `session-watched`, `session-codeintel`, `session-transcripts`) are on PATH, each with `--help`.
+These come from `session-kit` (`global/CLAUDE.md`). A project's `CLAUDE.md` adds to them and wins where it differs. Each rule's reason is under the same heading in `RATIONALE.md` beside this file: read it before arguing with a rule. A pure-core project also imports `CODE.md`. The plugin's commands (`session-intent`, `session-docs`, `session-tells`, `session-suppressions`, `session-rulebook`, `session-owed`, `session-watched`, `session-codeintel`, `session-transcripts`, `session-reread`) are on PATH, each with `--help`.
 
 ## How to work
 

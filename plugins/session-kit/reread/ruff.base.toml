@@ -1,0 +1,30 @@
+# Written by session-codeintel template: the bar every project holds. Edit the
+# template, not this file: `session-codeintel template check` fails on any
+# difference, and `refresh` writes it back. This project's own exceptions go in
+# pyproject.toml's [tool.ruff]: `ignore` there accumulates onto this file's. Use
+# `extend-select` and `extend-per-file-ignores`, never `select` or
+# `per-file-ignores`, which discard it.
+line-length = 100
+src = ["src"]
+
+[lint]
+select = ["ALL"]
+ignore = [
+    "D203",    # one-blank-line-before-class: D211 is kept, and ruff warns on the pair
+    "D213",    # multi-line-summary-second-line: D212 is kept, likewise
+    "COM812",  # missing-trailing-comma: conflicts with the formatter
+    "CPY001",  # per-file copyright headers: licensing lives in LICENSE
+]
+
+[lint.mccabe]
+max-complexity = 8
+
+[lint.pylint]
+max-statements = 35
+max-branches = 10
+
+[lint.per-file-ignores]
+"tests/**" = [
+    "S101",    # assert: the point of a test
+    "PLR2004", # magic value in comparison: the expected value is the assertion
+]

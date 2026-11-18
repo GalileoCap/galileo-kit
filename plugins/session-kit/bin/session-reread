@@ -1,0 +1,5 @@
+#!/bin/sh
+# Which sections of the Markdown files a session changed to read again, and
+# how. Claude Code puts bin/ on the Bash tool's PATH while the plugin is enabled.
+. "$(dirname "$0")/../lib/uv_package.sh"
+run_package reread venv-reread session-reread "$@"

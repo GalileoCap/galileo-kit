@@ -23,7 +23,7 @@ Everything its owner works with agents through: the rules every session follows 
 | `test_log.ts` | `tool.call` (Bash) | Keeps the last test run's whole output in `<tempdir>/claude-kit-last-test-<session>.log`, and on a failure says where it is. In-process, through `kit.tsx`. |
 | `direnv_env.sh` | SessionStart, CwdChanged, FileChanged | Puts the project's direnv environment in front of every Bash command, with the plugin's `bin/` kept at the end of PATH. A project with no `.envrc` is left alone. |
 | `pyright_env.py` | SessionStart | For a project whose `.claude/claude-kit.json` sets `"pyright_env": true`, writes the root `pyrightconfig.json` with `session-codeintel pyright-env`, one execution environment per uv package, and names any package it left out. Off by default, because it would replace a root config kept by hand. |
-| `bin/session-tells`, `bin/session-codeintel` | Bash tool's PATH | The two packages below as commands, while the plugin is enabled. Each runs in the environment its hook uses, in `CLAUDE_PLUGIN_DATA`. |
+| `bin/session-tells`, `bin/session-codeintel`, `bin/session-reread` | Bash tool's PATH | The three packages below as commands, while the plugin is enabled. Each runs in the environment its hook uses, in `CLAUDE_PLUGIN_DATA`. |
 | `bin/session-intent` | Bash tool's PATH | `session-intent index` writes `docs/intent/INDEX.md`, the entries waiting on the owner first, `session-intent check` reads the record and the `CLAUDE.md` Intent block, one line per problem, `session-intent names` prints each entry's id and name, and `session-intent next <level>` claims the next id of a level under a lock, from a counter kept outside every checkout under `~/.claude/session-kit/intent/`, one per clone, so an id is never given twice. One `--title` per id claims several, and `check` refuses an entry the branch adds that this checkout never claimed. Standard library Python. |
 | `bin/session-docs` | Bash tool's PATH | `session-docs check` fails on a markdown file under `docs/` that `CLAUDE.md` does not name, by its path or by a directory's above it (`docs/intent/`), and on a path it names that does not exist, fenced code aside. The directory and the indexes are settable under `docs` in `.claude/claude-kit.json`. Standard library Python. |
 | `bin/session-rulebook` | Bash tool's PATH | Counts the words of what every turn loads (the user's `~/.claude/CLAUDE.md` and the project's `CLAUDE.md` with their `@path` imports, `.claude/rules/`, `CLAUDE.local.md`) and, apart, of the skills, each file listed, and fails when a group is over its budget: 7,500 and 16,000 words, or the project's own under `rulebook` in `.claude/claude-kit.json`. Standard library Python. |
@@ -110,6 +110,8 @@ bash plugins/session-kit/hooks/test_direnv_env.sh
 python3 plugins/session-kit/hooks/test_format.py
 plugins/session-kit/tells/scripts/check     # ruff ALL, basedpyright strict, zero warnings
 plugins/session-kit/tells/scripts/test
+plugins/session-kit/reread/scripts/check   # the same bar
+plugins/session-kit/reread/scripts/test
 claude plugin validate . && claude plugin validate plugins/session-kit --strict
 claude plugin test plugins/session-kit            # the hooks module's tests, against the engine itself
 python3 plugins/session-kit/intent/test_session_intent.py
@@ -134,6 +136,15 @@ nix-shell -p typescript --run "tsc -p <that tsconfig>"
 ```
 
 The guard's cases live in a file because the guard matches the text of a command: a shell harness whose own arguments carry the patterns is denied by the rules it checks.
+
+## What to read again
+
+`plugins/session-kit/reread/` is a Python package, `session-reread`: after a session revises Markdown files you read, it gives each section a verdict against the version you read (unchanged, moved, renamed, edited, rewritten, new, removed), and writes a page with the table of verdicts, the edited sections' changes marked in their rendered text, and the rewritten and new ones whole. By default the version you read is HEAD when your prompt opened the last turn that committed to the files; `--since <ref>` names another (`A105`, session-reread sorts a document's sections by what changed since the owner read it).
+
+```bash
+session-reread --open               # every Markdown file changed since you read it
+session-reread docs/spec/ --since main
+```
 
 ## Code intelligence
 

@@ -1,0 +1,6 @@
+// Written by session-codeintel template: the bar every project holds. Edit the
+// template, not this file. pyrightconfig.json extends it, and include and
+// pythonVersion are the project's.
+{
+  "typeCheckingMode": "strict"
+}

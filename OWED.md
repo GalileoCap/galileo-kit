@@ -271,6 +271,12 @@ The test log and the guard read `plugins/session-kit/bin/session-watched -- <run
 
 `session-intent next` refuses a claim with no `--title`, and `check` refuses an entry the branch adds that this checkout never claimed (`A104`, every new entry's id is claimed, and check refuses one that was not). tagents' worktrees merge into `dev`, so its `.claude/claude-kit.json` needs `"integration": "dev"` under `intent` before its sessions run `check` on 0.53.0. Without it the remote's default branch is the base and entries already on `dev` are refused. Its lane1 then has seven actions to renumber (`A224` to `A228`, `A231`, `A232`), which its `check` names. To see: in any project, a hand-numbered entry above the last claim fails `session-intent check`, naming `next`.
 
+## At the install of session-kit 0.54.0
+
+### main, A105: session-reread
+
+A new command, `session-reread`, in its own uv package with its own environment, `venv-reread`, built on its first run in each install's data directory. To see: in a project where a session committed edits to Markdown files after your prompt, `session-reread --open` prints which sections to read again and opens the page.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

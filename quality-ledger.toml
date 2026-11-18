@@ -1893,3 +1893,149 @@ code = "integration.strip() if isinstance(integration, str) else ''"
 class = "declared"
 disposition = "keep"
 why = "no integration branch set means the remote's default branch, as the module says"
+
+# session-reread (A105)
+
+[[duplicates]]
+members = [
+    "plugins/session-kit/codeintel/src/session_codeintel/settings.py:is_record",
+    "plugins/session-kit/reread/src/session_reread/baseline.py:is_record",
+]
+home = "plugins/session-kit/codeintel/src/session_codeintel/settings.py:is_record"
+disposition = "keep"
+why = "each uv package is built in its own environment and imports nothing from another, so a two-line guard is written in each"
+
+[[duplicates]]
+members = [
+    "plugins/session-kit/codeintel/src/session_codeintel/settings.py:is_list",
+    "plugins/session-kit/reread/src/session_reread/baseline.py:is_list",
+]
+home = "plugins/session-kit/codeintel/src/session_codeintel/settings.py:is_list"
+disposition = "keep"
+why = "each uv package is built in its own environment and imports nothing from another, so a two-line guard is written in each"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/baseline.py"
+where = "find"
+form = "or"
+code = "git(root, 'log', '--since=' + datetime.fromtimestamp(said[0].at, UTC).isoformat(), '--format=%ct', '--', *paths) or ''"
+class = "spoken"
+disposition = "keep"
+why = "a failed log is read as no commit, and the baseline falls to HEAD with the reason printed on the page and in the summary"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/baseline.py"
+where = "head_at"
+form = "or"
+code = "git(root, 'log', '-g', '--date=unix', '--format=%H %gd', 'HEAD') or ''"
+class = "spoken"
+disposition = "keep"
+why = "no reflog gives no commit, and find falls to HEAD saying the reflog does not reach the prompt"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/baseline.py"
+where = "prompts"
+form = "except-returns"
+code = "except ValueError: continue"
+class = "declared"
+disposition = "keep"
+why = "a line of the transcript that is not JSON, such as one cut by a write in progress, holds no prompt"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/baseline.py"
+where = "transcript"
+form = "get"
+code = "os.environ.get('CLAUDE_CODE_SESSION_ID', '')"
+class = "declared"
+disposition = "keep"
+why = "outside a session the variable is unset, and the newest transcript of the checkout is the documented choice"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/baseline.py"
+where = "typed"
+form = "get"
+code = "b.get('text', '')"
+class = "declared"
+disposition = "keep"
+why = "a text block without text holds no words"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/cli.py"
+where = "changed_markdown"
+form = "or"
+code = "git(root, 'diff', '--name-only', ref, '--', '*.md') or ''"
+class = "spoken"
+disposition = "keep"
+why = "the ref was verified before, and a failure lists no file, which the command prints as no Markdown file changed"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/cli.py"
+where = "changed_markdown"
+form = "or"
+code = "git(root, 'ls-files', '--others', '--exclude-standard', '--', '*.md') or ''"
+class = "spoken"
+disposition = "keep"
+why = "a failure lists no untracked file, and the summary names every file it read"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/cli.py"
+where = "main"
+form = "if-none"
+code = "prompts(found) if found else []"
+class = "spoken"
+disposition = "keep"
+why = "with no transcript there is no prompt, and the baseline falls to HEAD saying so"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/cli.py"
+where = "main"
+form = "or"
+code = "given or ['*.md']"
+class = "declared"
+disposition = "keep"
+why = "with no file named, every Markdown file counts, as --help says"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/cli.py"
+where = "reports_for"
+form = "if-none"
+code = "'' if gone else file.read_text(encoding='utf-8')"
+class = "spoken"
+disposition = "keep"
+why = "a deleted file is empty on the new side, and its report is marked deleted"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/cli.py"
+where = "reports_for"
+form = "or"
+code = "git(root, 'show', f'{ref}:{path}') or ''"
+class = "declared"
+disposition = "keep"
+why = "a file the baseline lacks is new, so every section shows as new and is read whole"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/page.py"
+where = "summary"
+form = "get"
+code = "counts.get(change.verdict, 0)"
+class = "declared"
+disposition = "keep"
+why = "a verdict not yet counted has none"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/sections.py"
+where = "Section.title"
+form = "or"
+code = "self.heading or '(before the first heading)'"
+class = "spoken"
+disposition = "keep"
+why = "the substituted name is what the reader sees printed"
+
+[[fallbacks]]
+site = "plugins/session-kit/reread/src/session_reread/sections.py"
+where = "compare"
+form = "if-none"
+code = "0 if not before else len(changes)"
+class = "declared"
+disposition = "keep"
+why = "a removed section with nothing before it in the old document goes first"

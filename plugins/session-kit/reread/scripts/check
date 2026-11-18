@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# This project's quality gate: the bar's own legs, then the project's. Zero
+# warnings or it fails. Every leg runs, so one run shows every failure there is.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+status=0
+bash scripts/check.base.sh || status=1
+# This project's own legs go here, after the bar's. The drift check is one:
+# session-codeintel template check ., through the project's pinned wrapper.
+[ "$status" -eq 0 ] && echo "== all clean =="
+exit $status
