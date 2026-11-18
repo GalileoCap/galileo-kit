@@ -71,7 +71,7 @@
 
 **Publishing is the owner's.** A push or a published page reaches people, and may be cached or indexed even after it is removed. When work is seen is the owner's decision.
 
-**What a change leaves to do outside the code is written in `OWED.md`.** The first project needed a key in an instance file, a one-off command after the deploy and four keys in every worktree's `.env`, and all three lived in a landing-log entry and in one lane's uncommitted notes, where neither the deploy nor a lane would meet them. A file at the root, appended in the commit that makes the step owed, is met by whoever reads a range of history: the deploy reads what the release owes since the release the instance runs, the sync what the lane owes since its last head. An entry is never removed, so a range reads whole, and the command fails on a removal, the half of the rule a program can see.
+**What a change leaves to do outside the code is written in `OWED.md`.** The first project needed a key in an instance file, a one-off command after the deploy and four keys in every worktree's `.env`, and all three lived in a landing-log entry and in one lane's uncommitted notes, where neither the deploy nor a lane would meet them. A file at the root, appended in the commit that makes the step owed, is met by whoever reads a range of history: the deploy reads what the release owes since the release the instance runs, the sync what the lane owes since its last head. An entry is never removed, so a range reads whole, and the command fails on a removal, the half of the rule a program can see. A done entry shrinks to one line under its heading, since every done step in full is paid for at each read, and git keeps the text (`A107`).
 
 ## Gates and tests
 

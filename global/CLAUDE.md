@@ -43,7 +43,7 @@ The record of why a project is what it is, one file per entry under `docs/intent
 - **Work only in your own checkout and on your own branch.** Never merge, rebase, cherry-pick or pull another branch into yours, or commit to one that is not yours, unless asked.
 - **Refused outright:** the guard refuses these and says the alternative: `git commit --no-verify`, `git reset --hard`, amending a pushed commit, a force-push without lease, a bare `git stash` or `stash pop`, a test run piped into a filter or stopped at `-x`, a shell `timeout` around a call, and an Artifact.
 - **Publishing is the owner's.** Never push, open a pull request or publish anything unless asked.
-- **What a change leaves to do outside the code is written in `OWED.md`.** A step a deploy, a sync or another worktree has to take is a `###` entry, in the commit that makes it owed, under a `##` section naming when it is due. An entry is never removed.
+- **What a change leaves to do outside the code is written in `OWED.md`.** A step a deploy, a sync or another worktree has to take is a `###` entry, in the commit that makes it owed, under a `##` section naming when it is due. An entry is never removed: once it is done everywhere it was owed, and the file is tracked in git, its body becomes one line saying so and when.
 
 ## Gates and tests
 
