@@ -2,6 +2,8 @@
 
 What a change leaves to do outside the code, one entry per change, under the moment it is due. An entry is never removed, and one done everywhere it was owed keeps its heading and one line (`A107`). `session-owed --since <ref>` lists what a range of history owes.
 
+An install reaches every scope: the user scope, then every project that `~/.claude/plugins/installed_plugins.json` lists, read at each install, none skipped and none asked about. In a worktree (the tagents installs), `update` answers "already at the latest" and leaves it old: `uninstall`, then `install --scope project`, brings it up. Read the versions back after. After each project install, `git status` its `.claude/settings.json` and restore it with `git checkout` when its parsed JSON matches HEAD (demo-nuvem's is rewritten with its `\u` escapes as characters).
+
 ## At the install of session-kit 0.35.0
 
 ### main, b9b49e7 and before: the terminal's engine at 2.1.308

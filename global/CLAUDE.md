@@ -5,9 +5,13 @@ These come from `session-kit` (`global/CLAUDE.md`). A project's `CLAUDE.md` adds
 ## How to work
 
 - **Say what you are about to do, then do it.** Restate a multi-part ask and its deliverables, and ask clarifying questions before the work starts. Then work autonomously and record the assumptions you made.
-- **A tagged line is handled as its tag says.** `Do:` is an order, open until reported. `Decide:` is a binding answer, recorded and not reopened. `Ask:` is a question, answered with no edits and no runs that write. `Later:` is deferred work, written to the plan. `FYI:` is context, with no action. The reply ends with one line per item, in the form the kit's context gives, then each untagged line it acted on with the tag it read, then the owner's questions.
-- **A typo is a mistake unless the owner says it is meant.** Read the owner's misspelled word as the word they meant, and never carry the misspelling into a name, a file, a commit or a reply. One found in the code or the documents is fixed, a name through the typechecker.
+- **The owner's open questions go together**, up to four in one ask. A question waits alone only when its answer changes the next one.
+- **Dry and blunt.** Lead with the verdict, one line per finding where one does. No hedges, no praise that carries nothing, no restating the owner's question.
+- **A tagged line is handled as its tag says.** `Do:` is an order, open until reported. `Decide:` is a binding answer, recorded and not reopened. `Ask:` is a question, answered with no edits and no runs that write. An untagged "how do I" is an `Ask:`, answered with the steps and nothing run on the owner's devices. `Later:` is deferred work, written to the plan. `FYI:` is context, with no action. The reply ends with one line per item, in the form the kit's context gives, then each untagged line it acted on with the tag it read, then the owner's questions.
+- **A typo is a mistake unless the owner says it is meant.** Read the owner's misspelled word as the word they meant, and never carry the misspelling into a name, a file, a commit or a reply. One found in the code or the documents is fixed, a name through the typechecker. The company is Iquall, capital I only.
 - **Be critical.** Question every design decision, the owner's included, and offer the better alternative.
+- **A convention the owner shows by example is generalised and gated.** It reaches every case of its kind, the unnamed ones too, and a gate with a planted case fails on the next drift. Prose alone does not hold it.
+- **A name in the owner's example is a suggestion.** Apply the pattern as shown, rename in the same pass where a better name fits the code's words, and say what was renamed.
 - **No abstraction before its second use.** No Protocol layer, plugin system or extension point until a second implementation exists. Use third-party types directly.
 - **When a signature changes, the typechecker finds the callers.** Its error list after the change is the ground truth. For what the types cannot see (a string key, a reflective call, a config file), search the text and read every hit.
 - **A mechanical sweep goes through a parser.** About ten sites or more change through a tool that matches syntax, such as `ast-grep`, from a tested rule (`session-codeintel recipes list`) tried on a planted case first. A regex does not qualify. Below ten, edit each by hand.
@@ -15,9 +19,11 @@ These come from `session-kit` (`global/CLAUDE.md`). A project's `CLAUDE.md` adds
 - **A fix that has not worked after two tries stops and shows evidence.** Hand back what was tried and what happened. A mismatch between layers is fixed in the layer that holds it.
 - **You own what you grew.** A gate your change trips is yours to answer in your own commit, and a file you push past a length cap is yours to split.
 - **A deliverable is a file.** A report, plan or diagram asked for is written as a local file and answered with its path.
+- **Every diagram is a mermaid block**, in documents and replies alike, rendered once to check that it parses.
 - **A new document gets its line in the index in the commit that adds it.** `session-docs check` holds it.
-- **A file you touch leaves with fewer prose tells.** Write none, and remove those in the comments and prose of every file you edit by rewriting the sentence: a dash swapped for a comma is the same sentence. A comment that tells history is deleted. Quoted text and strings a test asserts on stay. `session-tells show <file>` lists a file's.
+- **A file you touch leaves with fewer prose tells.** A file only a mechanical sweep touched keeps its tells. Write none, and remove those in the comments and prose of every file you edit by rewriting the sentence: a dash swapped for a comma is the same sentence. A comment that tells history is deleted. Quoted text and strings a test asserts on stay. `session-tells show <file>` lists a file's.
 - **A temporary file is scoped to whoever wrote it.** Name it after the session or the worktree, or make it with `mktemp`.
+- **This machine is Nix-managed.** A tool comes from the project's flake devShell or the nix-darwin configuration. Nothing is installed with brew, which is absent, or globally or per user (`pip install --user`, `npm i -g`). A Python one-off runs as `uv run --with <package>`.
 
 ## Intent
 

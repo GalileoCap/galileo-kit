@@ -1,6 +1,6 @@
 # Memory sweep: the plan, for the owner's review
 
-Prepared on 2026-11-17 and 2026-11-18 from proposal 3 of [memories-and-context-boundaries.md](memories-and-context-boundaries.md). It says, for each of the 82 memory files under `~/.claude/projects/<folder>/memory/`, what happens to it, where its content goes and in which words. Every verdict was checked by reading the memory and its target as they stand today. Nothing in it is applied: no memory, no project file and no rule was changed, and nothing waits on a session until the owner approves.
+Prepared on 2026-11-17 and 2026-11-18 from proposal 3 of [memories-and-context-boundaries.md](memories-and-context-boundaries.md). It says, for each of the 82 memory files under `~/.claude/projects/<folder>/memory/`, what happens to it, where its content goes and in which words. Every verdict was checked by reading the memory and its target as they stand today. The owner approved it on 2026-11-18 with four changes: rule 11 is not adopted, core5g's text goes into an untracked `.claude/CLAUDE.md`, tagents' moves are made in its `dev` worktree, and twinlab waits for later. The Ollama token is dropped. Rules 1 to 9 are `A108`.
 
 ## Counts
 

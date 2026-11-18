@@ -61,6 +61,8 @@ A transcript holds the owner's words and the model's. The reader prints counts, 
 
 Built beside these on 2026-10-25: `chains` (`A57`, chains of sessions and each session's own cost) joins the sessions a clear, a resume, a fork or a shared running cost split. `waste` (`A58`, what a session read or ran again) answers question 9 in reads. `asks` (`A59`, the person's repeated asks) ranks them, and only `--quote` prints their words. The reading moved into `records.py`, and it counts each record once, since the engine writes some of them again.
 
+In tagents, the `work*` worktrees (work6, work9) were renamed `lane*` around late October 2026, so a cut by worktree takes them as one kind.
+
 ### `measure`, a module
 
 A fourth file behind `kit.tsx`, written once the first real session shows what the transcript keeps of a module's `context` entries. It hooks `turn.complete`, `tool.call`, `session.compact` and `session.measure`, and appends one JSON line per event to `<CLAUDE_PLUGIN_DATA>/measure/<session id>.jsonl`: the event, the time, the context figure, the cost, and for each of the kit's own hooks whether it fired, what it added, and the milliseconds around `next`. The reader joins the file to the transcript by session id, which makes questions 7 and 8 answerable, and makes question 1 exact where the transcript only shows the warning's text.
