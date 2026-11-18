@@ -274,6 +274,12 @@ A new command, `session-reread`, in its own uv package with its own environment,
 
 The page opens on an Overview tab with one row per file, and each file has its own tab. A section to read is a fold, open unless it was removed. The sections that need no reading are folded together at the end, and Expand all and Collapse all act on a tab. A button at the top switches between light and dark, and the page remembers the choice. To see: `session-reread --open` after a session edits Markdown.
 
+## At the next install of session-kit
+
+### main: does a project's own install override the user one
+
+Before the procedure above, update the user scope alone, then start a session in `~/devel/galileo/sofi/checklist` (`claude -p` with `--output-format stream-json --verbose`) and read the plugin version its init event names. The new version means a project's install never decides what loads, and `session-install` in `docs/PLAN.md` is dropped. The old one means it does, and `session-install` is built. A project that declares the plugin in its `.claude/settings.json` gets its own install back at its next session start (checklist, 2026-11-18), so the project installs cannot be removed while the declarations stay. Then run the procedure as usual.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file
