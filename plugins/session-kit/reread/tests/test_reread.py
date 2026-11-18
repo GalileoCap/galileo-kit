@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from typing import TYPE_CHECKING
 
 from session_reread.baseline import Prompt, find
-from session_reread.page import marked
+from session_reread.page import FileReport, marked, page
 from session_reread.sections import Verdict, compare
 
 if TYPE_CHECKING:
@@ -105,6 +106,23 @@ def test_marks_never_wrap_a_tag() -> None:
     assert "<del><" not in out
     assert "<ins>d</ins>" in out
     assert "<del>c</del>" in out
+
+
+def _details(text: str) -> dict[str, bool]:
+    """Each section block's own heading, and whether it opens unfolded."""
+    found = re.findall(
+        r'<details class="section"[^>]*?( open)?>\s*<summary>.*?<b>(.*?)</b>', text, re.DOTALL
+    )
+    return {name: bool(opened) for opened, name in found}
+
+
+def test_a_section_to_read_opens_and_the_rest_fold() -> None:
+    """Edited, rewritten and new sections open, a removed one folds, and the rest fold together."""
+    text = page([FileReport("a.md", compare(OLD, NEW, 0.4))], "HEAD", 0.4)
+    assert _details(text) == {"(front matter)": True, "Risks": True, "Other": True, "Gone": False}
+    rest = re.search(r'<details class="rest">(.*?)</details>', text, re.DOTALL)
+    assert rest is not None
+    assert all(name in rest.group(1) for name in ("Spec", "Aims", "Detail"))
 
 
 def _git(repo: Path, *args: str, at: int = 0) -> str:

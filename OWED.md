@@ -266,6 +266,12 @@ A new command, `session-reread`, in its own uv package with its own environment,
 
 `A106` (an owner-step clear point compacts, and clears only on the owner's word) supersedes `A101` and comes with the version. To see: a `clear_point` with `next_step: owner` ends in a compaction and "Compacted. The next step is yours", and the reply before it stays in the chat. A clear runs only when you ask for one in words.
 
+## At the install of session-kit 0.55.1
+
+### main: session-reread's page in tabs and folds
+
+The page opens on an Overview tab with one row per file, and each file has its own tab. A section to read is a fold, open unless it was removed. The sections that need no reading are folded together at the end, and Expand all and Collapse all act on a tab. A button at the top switches between light and dark, and the page remembers the choice. To see: `session-reread --open` after a session edits Markdown.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

@@ -3,12 +3,14 @@
 An edited section shows its rendered text with the words taken out struck and the words put in
 marked. The two versions are rendered first and compared tag by tag and word by word, so a mark
 never breaks the Markdown it sits in. A rewritten or new section shows whole, a removed one folded.
+Each file is a tab, and each section to read a fold, open unless it was removed.
 """
 
 from __future__ import annotations
 
 import html
 import re
+from collections import Counter
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 
@@ -32,12 +34,13 @@ ADVICE = {
 }
 
 STYLE = """
+:root { --fg: #1f2328; --bg: #fff; --line: #d0d7de; color-scheme: light; }
+:root[data-theme="dark"] { --fg: #e6edf3; --bg: #0d1117; --line: #30363d; color-scheme: dark; }
 body { font: 15px/1.55 -apple-system, system-ui, sans-serif; max-width: 52rem;
-  margin: 2rem auto; padding: 0 1rem; color: #1f2328; background: #fff; }
-@media (prefers-color-scheme: dark) { body { color: #e6edf3; background: #0d1117; }
-  table td, table th { border-color: #30363d; } section { border-color: #30363d; } }
+  margin: 2rem auto; padding: 0 1rem; color: var(--fg); background: var(--bg); }
+.theme { float: right; font: inherit; font-size: 13px; cursor: pointer; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
-td, th { border-bottom: 1px solid #d0d7de; padding: .25rem .5rem; text-align: left;
+td, th { border-bottom: 1px solid var(--line); padding: .25rem .5rem; text-align: left;
   vertical-align: top; }
 .quiet { opacity: .55; }
 .tag { font-size: 12px; font-weight: 600; padding: .05rem .4rem; border-radius: 1rem;
@@ -46,12 +49,29 @@ td, th { border-bottom: 1px solid #d0d7de; padding: .25rem .5rem; text-align: le
 .edited { background: #fff3b0; color: #4d3b00; }
 .removed { background: #ffd1d1; color: #5c0000; }
 .moved, .renamed, .unchanged { background: #e1e4e8; color: #333; }
-section { border-left: 3px solid #d0d7de; padding-left: 1rem; margin: 2rem 0; }
+.tabs > input { display: none; }
+.panel { display: none; padding-top: 1rem; }
+nav { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 1px solid var(--line); }
+.tab { cursor: pointer; padding: .35rem .75rem; border: 1px solid transparent;
+  border-radius: .4rem .4rem 0 0; margin-bottom: -1px; }
+.count { font-size: 12px; opacity: .7; }
+.name { display: inline-block; max-width: 16rem; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; vertical-align: bottom; }
+.link { cursor: pointer; text-decoration: underline; }
+details.section { border: 1px solid var(--line); border-radius: .4rem; margin: .6rem 0; }
+details.section > summary { padding: .4rem .6rem; }
+details.section[open] > summary { border-bottom: 1px solid var(--line); }
+.body { padding: 0 1rem; }
+details.rest { margin: 1rem 0; }
+details.rest li { margin: .2rem 0; list-style: none; }
+.tools button { font: inherit; font-size: 13px; cursor: pointer; }
 ins { background: #c9f2d0; color: #0b3d16; text-decoration: none; }
 del { background: #ffd1d1; color: #5c0000; }
 details > summary { cursor: pointer; }
 a { color: inherit; }
 """
+
+PICKED = "border-color: var(--line); border-bottom-color: transparent; font-weight: 600;"
 
 
 @dataclass(frozen=True)
@@ -91,12 +111,6 @@ def marked(old: str, new: str) -> str:
 def title(section: Section) -> str:
     """Return the section's heading as HTML, its inline Markdown rendered."""
     return MarkdownIt("commonmark").renderInline(section.title)
-
-
-def heading(change: Change) -> str:
-    """Return the section's heading, one level below the file's."""
-    level = min(max(change.section.level, 1) + 1, 6)
-    return f"<h{level}>{title(change.section)}</h{level}>"
 
 
 def blocks(rendered: str) -> list[str]:
@@ -150,54 +164,152 @@ def body(change: Change) -> str:
     return ""
 
 
-def row(anchor: str, change: Change) -> str:
-    """Return the section's row in the file's table."""
-    s = change.section
-    indent = "&nbsp;" * 3 * max(s.level - 1, 0)
-    name = title(s)
-    if body(change):
-        name = f'<a href="#{anchor}">{name}</a>'
+NO_READING = frozenset({Verdict.UNCHANGED, Verdict.MOVED, Verdict.RENAMED})
+
+THEME = """
+const root = document.documentElement;
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+root.dataset.theme = localStorage.getItem('reread-theme') || (dark ? 'dark' : 'light');
+"""
+
+SCRIPT = """
+const toggle = document.querySelector('.theme');
+const name = () => document.documentElement.dataset.theme === 'dark' ? 'Light' : 'Dark';
+toggle.textContent = name();
+toggle.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('reread-theme', next);
+  toggle.textContent = name();
+});
+document.querySelectorAll('[data-fold]').forEach(b => b.addEventListener('click', () => {
+  const open = b.dataset.fold === 'open';
+  b.closest('.panel').querySelectorAll('details').forEach(d => { d.open = open; });
+}));
+"""
+
+
+def tag(change: Change) -> str:
+    """Return the verdict as a coloured tag, with the share of words changed where it counts."""
     share = ""
     if change.verdict in {Verdict.EDITED, Verdict.REWRITTEN}:
         share = f" {round(change.changed * 100)}%"
-    notes = html.escape(", ".join(change.notes))
-    quiet = ' class="quiet"' if change.verdict is Verdict.UNCHANGED else ""
-    tag = f'<span class="tag {change.verdict}">{change.verdict}{share}</span>'
-    cells = [f"{indent}{name}", tag, ADVICE[change.verdict], notes]
-    return f"<tr{quiet}>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>"
+    return f'<span class="tag {change.verdict}">{change.verdict}{share}</span>'
+
+
+def where(change: Change) -> str:
+    """Return the headings above the section, quiet, then its own in bold."""
+    above = [MarkdownIt("commonmark").renderInline(p) for p in change.section.path[:-1]]
+    lead = f'<span class="quiet">{" / ".join(above)} / </span>' if above else ""
+    return f"{lead}<b>{title(change.section)}</b>"
+
+
+def block(change: Change) -> str:
+    """Return a section to read as a fold, open unless the section was removed."""
+    opened = "" if change.verdict is Verdict.REMOVED else " open"
+    said = f'<span class="quiet"> · {ADVICE[change.verdict]}</span>{noted(change)}'
+    return (
+        f'<details class="section"{opened}>\n<summary>{tag(change)} {where(change)}{said}'
+        f'</summary><div class="body">{body(change)}</div></details>'
+    )
+
+
+def noted(change: Change) -> str:
+    """Return the section's notes, quiet, or nothing."""
+    if not change.notes:
+        return ""
+    return f' <span class="quiet">· {html.escape(", ".join(change.notes))}</span>'
+
+
+def rest(changes: list[Change]) -> str:
+    """Return the sections that need no reading, folded together."""
+    if not changes:
+        return ""
+    items = "".join(f"<li>{tag(c)} {where(c)}{noted(c)}</li>" for c in changes)
+    return (
+        f'<details class="rest"><summary>{len(changes)} sections need no reading</summary>'
+        f"<ul>{items}</ul></details>"
+    )
+
+
+def counts(report: FileReport) -> str:
+    """Return the file's verdicts counted, as tags."""
+    found = Counter(change.verdict for change in report.changes)
+    return " ".join(f'<span class="tag {v}">{n} {v}</span>' for v, n in found.items())
+
+
+def to_read(report: FileReport) -> list[Change]:
+    """Return the file's sections that need reading, in document order."""
+    return [c for c in report.changes if c.verdict not in NO_READING]
+
+
+def panel(f: int, report: FileReport) -> str:
+    """Return a file's tab: its sections to read, each a fold, then the rest folded together."""
+    gone = " (deleted)" if report.gone else ""
+    reading = to_read(report)
+    tools = (
+        '<p class="tools"><button data-fold="open">Expand all</button> '
+        '<button data-fold="close">Collapse all</button></p>'
+    )
+    shown = "".join(block(c) for c in reading)
+    if not reading:
+        shown = "<p>Nothing to read again.</p>"
+    rested = rest([c for c in report.changes if c.verdict in NO_READING])
+    return (
+        f'<div class="panel" id="p{f}"><h2>{html.escape(report.path)}{gone}</h2>'
+        f"<p>{counts(report)}</p>{tools}{shown}{rested}</div>"
+    )
+
+
+def overview(reports: list[FileReport]) -> str:
+    """Return the first tab: one row per file, its sections to read and its counts."""
+    rows = "".join(
+        f'<tr><td><label for="t{f}" class="link">{html.escape(r.path)}</label>'
+        f"{' (deleted)' if r.gone else ''}</td><td>{len(to_read(r))}</td><td>{counts(r)}</td></tr>"
+        for f, r in enumerate(reports)
+    )
+    return (
+        '<div class="panel" id="pov"><table><tr><th>File</th><th>To read</th><th>Verdicts</th>'
+        f"</tr>{rows}</table></div>"
+    )
 
 
 def page(reports: list[FileReport], why: str, threshold: float) -> str:
-    """Return the whole page: per file, the table of verdicts, then the sections to read."""
-    parts = [
-        "<!doctype html><meta charset='utf-8'><title>What to read again</title>",
-        f"<style>{STYLE}</style>",
-        "<h1>What to read again</h1>",
-        f"<p>Compared with {html.escape(why)}.</p>",
-        f"<p class='quiet'>Rewritten: over {round(threshold * 100)}% of the words changed.</p>",
-    ]
-    for f, report in enumerate(reports):
-        parts.append(f"<h2>{html.escape(report.path)}{' (deleted)' if report.gone else ''}</h2>")
-        parts.append(
-            "<table><tr><th>Section</th><th>Verdict</th><th>What to do</th><th>Notes</th></tr>"
-        )
-        parts.extend(row(f"s{f}-{c}", change) for c, change in enumerate(report.changes))
-        parts.append("</table>")
-        for c, change in enumerate(report.changes):
-            shown = body(change)
-            if shown:
-                parts.append(f'<section id="s{f}-{c}">{heading(change)}{shown}</section>')
-    return "\n".join(parts)
+    """Return the whole page: an overview tab, then a tab per file with its sections as folds."""
+    ids = ["ov", *(str(f) for f in range(len(reports)))]
+    radios = "".join(
+        f'<input type="radio" name="tab" id="t{i}"{" checked" if i == "ov" else ""}>' for i in ids
+    )
+    labels = '<label class="tab" for="tov">Overview</label>' + "".join(
+        f'<label class="tab" for="t{f}" title="{html.escape(r.path)}">'
+        f'<span class="name">{html.escape(r.path.rsplit("/", 1)[-1])}</span>'
+        f' <span class="count">{len(to_read(r))}</span></label>'
+        for f, r in enumerate(reports)
+    )
+    shows = ", ".join(f"#t{i}:checked ~ #p{i}" for i in ids)
+    picked = ", ".join(f"#t{i}:checked ~ nav label[for=t{i}]" for i in ids)
+    return "\n".join(
+        [
+            "<!doctype html><meta charset='utf-8'><title>What to read again</title>",
+            f"<script>{THEME}</script>",
+            f"<style>{STYLE}{shows} {{ display: block; }} {picked} {{ {PICKED} }}</style>",
+            '<button class="theme">Dark</button><h1>What to read again</h1>',
+            f"<p>Compared with {html.escape(why)}.</p>",
+            f"<p class='quiet'>Rewritten: over {round(threshold * 100)}% of the words changed.</p>",
+            f'<div class="tabs">{radios}<nav>{labels}</nav>',
+            overview(reports),
+            *(panel(f, r) for f, r in enumerate(reports)),
+            f"</div><script>{SCRIPT}</script>",
+        ]
+    )
 
 
 def summary(reports: list[FileReport]) -> str:
     """Return one line per file with its counts, then one per section to read."""
     lines: list[str] = []
     for report in reports:
-        counts: dict[Verdict, int] = {}
-        for change in report.changes:
-            counts[change.verdict] = counts.get(change.verdict, 0) + 1
-        said = ", ".join(f"{n} {v}" for v, n in counts.items())
+        found = Counter(change.verdict for change in report.changes)
+        said = ", ".join(f"{n} {v}" for v, n in found.items())
         lines.append(f"{report.path}{' (deleted)' if report.gone else ''}: {said}")
         for change in report.changes:
             if change.verdict not in {Verdict.UNCHANGED, Verdict.MOVED, Verdict.RENAMED}:

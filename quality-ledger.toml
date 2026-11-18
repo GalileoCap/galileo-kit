@@ -2014,15 +2014,6 @@ disposition = "keep"
 why = "a file the baseline lacks is new, so every section shows as new and is read whole"
 
 [[fallbacks]]
-site = "plugins/session-kit/reread/src/session_reread/page.py"
-where = "summary"
-form = "get"
-code = "counts.get(change.verdict, 0)"
-class = "declared"
-disposition = "keep"
-why = "a verdict not yet counted has none"
-
-[[fallbacks]]
 site = "plugins/session-kit/reread/src/session_reread/sections.py"
 where = "Section.title"
 form = "or"
