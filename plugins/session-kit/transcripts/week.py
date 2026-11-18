@@ -11,7 +11,10 @@ day's first and last message, the streak, the sittings reopened within an
 hour of the window closing, the messages by folder, with the settings'
 ``watch`` folders on lines of their own, the share on the week's focus list
 (A94), each message keeping the tag the hold gave it, the reasons log, and the 2b bar with its verdict once its weeks are up. A message in the personal slot counts as
-off-window for the bar, as it did in the October baseline.
+off-window for the bar, as it did in the October baseline. Last, the memory
+files each project folder holds, with the folders whose project is gone from
+disk flagged: by the rules a note goes to its project's files, so each line
+there is one to move.
 """
 
 from __future__ import annotations
@@ -354,7 +357,68 @@ def bar_section(bar: dict | None, week: list[Message], lasts: list[tuple[date, d
     return "\n".join(lines)
 
 
-def report(sessions: list[Session], settings: dict, load_dir: Path, as_of: date, home: str) -> str:
+def folder_cwd(folder: Path) -> str | None:
+    """The working directory the folder's sessions recorded: the folder's name drops what tells a dash from a slash."""
+    for path in sorted(folder.glob("*.jsonl")):
+        with path.open(encoding="utf-8", errors="replace") as lines:
+            for line in lines:
+                found = re.search(r'"cwd":\s*"([^"]+)"', line)
+                if found is not None:
+                    return found.group(1)
+    return None
+
+
+def decoded(name: str) -> str | None:
+    """The directory a folder's name stands for, found on disk; None when nothing there matches, as for a project removed."""
+    parts = name.lstrip("-").split("-")
+
+    def walk(at: Path, i: int) -> Path | None:
+        if i == len(parts):
+            return at
+        for j in range(len(parts), i, -1):
+            for sep in ("-", "_", ".", " "):
+                piece = sep.join(parts[i:j])
+                # An empty part is a dot the name turned into a dash: `--claude` is `/.claude`.
+                child = at / ("." + piece[1:] if parts[i] == "" else piece)
+                if child.is_dir() and (found := walk(child, j)) is not None:
+                    return found
+        return None
+
+    found = walk(Path("/"), 0)
+    return None if found is None else str(found)
+
+
+def memory_section(projects: Path, home: str) -> str:
+    """Each project folder's memory files and their words, the largest first, a gone project flagged."""
+    rows: list[tuple[int, list[str]]] = []
+    files = gone = 0
+    for folder in sorted(p for p in projects.iterdir() if (p / "memory").is_dir()):
+        notes = [n for n in (folder / "memory").glob("*.md") if n.name != "MEMORY.md"]
+        if not notes:
+            continue
+        words = sum(len(n.read_text(encoding="utf-8", errors="replace").split()) for n in notes)
+        index = folder / "memory" / "MEMORY.md"
+        index_words = len(index.read_text(encoding="utf-8", errors="replace").split()) if index.is_file() else 0
+        cwd = folder_cwd(folder)
+        checkout = decoded(folder.name) if cwd is None else re.sub(r"/\.claude/worktrees/.*$", "", cwd)
+        files += len(notes)
+        if checkout is None:
+            gone += len(notes)
+            rows.append((words, [folder.name, str(len(notes)), str(words), str(index_words), "**gone from disk**"]))
+            continue
+        alive = Path(checkout).is_dir()
+        if not alive:
+            gone += len(notes)
+        rows.append((words, [f"`{folder_of(checkout, home)}`", str(len(notes)), str(words), str(index_words), "-" if alive else "**gone from disk**"]))
+    if not rows:
+        return "No project folder holds a memory file."
+    rows.sort(key=lambda r: -r[0])
+    return (f"{files} memory files in {len(rows)} folders, {gone} of them where no project is left to read them. "
+            "A note belongs in its project's `CLAUDE.md`, a skill or its docs, so each line is one to move.\n\n"
+            + table(["Folder", "Files", "Words", "Index words", "State"], [r for _, r in rows]))
+
+
+def report(sessions: list[Session], settings: dict, load_dir: Path, as_of: date, home: str, projects: Path) -> str:
     tz = ZoneInfo(settings["timeZone"])
     watch = [w.rstrip("/") for w in settings.get("watch", [])]
     everything = messages_of(sessions, settings, home)
@@ -396,10 +460,14 @@ def report(sessions: list[Session], settings: dict, load_dir: Path, as_of: date,
         "",
         bar_section(settings.get("bar"), week, lasts, monday, watch),
         "",
+        "## Memory",
+        "",
+        memory_section(projects, home),
+        "",
     ])
 
 
-def write(sessions: list[Session], load_dir: Path, as_of: date, home: str) -> int:
+def write(sessions: list[Session], load_dir: Path, as_of: date, home: str, projects: Path) -> int:
     """Writes the review beside the settings and prints its path alone."""
     settings_path = load_dir / "settings.json"
     if not settings_path.is_file():
@@ -408,6 +476,6 @@ def write(sessions: list[Session], load_dir: Path, as_of: date, home: str) -> in
     settings = json.loads(settings_path.read_text(encoding="utf-8"))
     monday = as_of - timedelta(days=as_of.weekday())
     out = load_dir / f"week-{monday.isoformat()}.md"
-    out.write_text(report(sessions, settings, load_dir, as_of, home), encoding="utf-8")
+    out.write_text(report(sessions, settings, load_dir, as_of, home, projects), encoding="utf-8")
     print(out)
     return 0

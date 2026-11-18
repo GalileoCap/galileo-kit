@@ -259,6 +259,12 @@ The test log and the guard read `plugins/session-kit/bin/session-watched -- <run
 
 `A85` (a pre-send check by Haiku, held on the band) is retired by the owner's ask of 2026-11-17. A message starting with `??` or holding four bullets or more goes on as typed, with the `??` left in, and the band draws no Held row. To see: a message of five bullets goes on at once. It reaches a session as 0.50.0 does.
 
+## At the install of session-kit 0.52.0
+
+### main: the boundaries at 150,000, a clear for the owner, the timer on the wall clock
+
+`A99` (the warning and the cold floor start at 150,000 tokens) comes with the plugin's default: no settings file on this machine saves `thresholdTokens` (read 2026-11-18), so nothing needs changing at the install. `A101` (an owner-step clear point clears, and the kit alone writes the handoff), `A102` (the first prompt after the person's Handoff and compact holds no task) and `A100` (the cold-cache timer reads the wall clock) come with the version. To see: past 150,000 the band shows its context row. A `clear_point` with `next_step: owner` ends in `/clear` and "Cleared. The next step is yours". After Handoff and compact, a prompt about other work draws no new-task offer. The global rules change with no install, through the import at `~/.claude/CLAUDE.md`.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

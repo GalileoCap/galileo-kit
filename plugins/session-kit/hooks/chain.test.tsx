@@ -127,7 +127,7 @@ test('on: the model signals, the mod writes the handoff, compacts and continues'
   expect(asked.length).toBe(4)
 })
 
-test('when the next step is the owner\'s, the chain stops after the compaction and the band says so', { options: { chain: true } }, async ($, on) => {
+test('when the next step is the owner\'s, the handoff is followed by a clear instead of a compaction, and the band says the next step is theirs', { options: { chain: true } }, async ($, on) => {
   const clock = mock.clock(on)
   const asked = engine(on)
   on('ui.render', ($, e) => {
@@ -137,18 +137,18 @@ test('when the next step is the owner\'s, the chain stops after the compaction a
   })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
-  await $.tool.call({ tool: TOOL, next_step: 'owner', note: 'approve O14 to O16' })
+  const signalled = await $.tool.call({ tool: TOOL, next_step: 'owner', note: 'approve O14 to O16' })
+  expect(signalled.result).toMatch(/clears the context/)
   await $.turn.complete(turn('t1'))
   await clock.settle()
   await $.turn.complete(turn('t2'))
   await clock.settle()
-  expect(asked[2]).toMatch(/^command compact /)
-  expect(asked.length).toBe(3)
+  expect(asked.slice(1)).toEqual(['command session-kit:handoff', 'command clear'])
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
     const row = await ui.find({ type: 'Text', text: /next step/ })
-    expect(row?.text).toMatch(/yours.*approve O14 to O16/)
+    expect(row?.text).toMatch(/^Cleared\. The next step is yours.*approve O14 to O16/)
     // The chain's line draws above the band beneath it, never in its place.
     expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
     await ui.unmount()

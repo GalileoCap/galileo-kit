@@ -3,10 +3,12 @@
 // warning to the model every `step` tokens past `thresholdTokens` (or past
 // `threshold` percent of the window, whichever comes first), a band above the prompt with the figure for the person, and, with
 // the `chain` option on, two tools: `clear_point`, after which the kit writes
-// the handoff, compacts and continues when the turn ends, and `new_task`,
+// the handoff when the turn ends, then compacts and continues, or clears and
+// stops when the next step is the owner's, and `new_task`,
 // after which the band offers the handoff and a clear, or to keep going here,
 // and sends the person's prompt again. In a context that holds no task yet
-// (new, or just cleared) `new_task` offers nothing: there is nothing to clear.
+// (new, just cleared, or compacted at the person's own press) `new_task`
+// offers nothing: there is nothing to clear.
 // The band itself is drawn in band.tsx, the status line in status.ts and the
 // pane in pane.tsx. This file keeps the state they read and the actions their
 // buttons run: `Handoff` and `Handoff and compact` (the person's own signal,
@@ -24,7 +26,10 @@
 // floor with nobody at the prompt arms the cold-cache timer: a lead before
 // the prompt cache's lifetime runs out, the kit writes the handoff and
 // compacts, and stops there, so the person's next prompt writes a small
-// context to the cache instead of all of it. The lifetime is an option, 60
+// context to the cache instead of all of it. The timer reads the wall clock
+// every minute, since a machine asleep holds a timer back: on waking past the
+// deadline it runs at once, and past the cache's lifetime it drops the
+// deadline, the cache being cold already. The lifetime is an option, 60
 // minutes on a subscription, and what the engine states (a subagent's
 // result, a model switch) replaces it. A 5-minute cache arms no timer. The
 // figure's line says how much the context grew over the last turn, read at
@@ -72,6 +77,7 @@ const sessionEffort = atom({ plugin: 'session-kit', key: 'sessionEffort' } as co
 const lastPrompt = atom({ plugin: 'session-kit', key: 'lastPrompt' } as const, '')
 const lastPromptAt = atom({ plugin: 'session-kit', key: 'lastPromptAt' } as const, 0)
 const freshContext = atom({ plugin: 'session-kit', key: 'freshContext' } as const, false)
+const compactedAtPress = atom({ plugin: 'session-kit', key: 'compactedAtPress' } as const, false)
 const figureDismissedAt = atom({ plugin: 'session-kit', key: 'contextDismissedAt' } as const, 0)
 const coldTimerAt = atom({ plugin: 'session-kit', key: 'coldTimerAt' } as const, 0)
 const statedCacheMinutes = atom({ plugin: 'session-kit', key: 'cacheMinutes' } as const, 0)
@@ -96,6 +102,7 @@ const TEXT_SHOWN = 2000
 const COMMITS_SHOWN = 12
 const SUBJECT_SHOWN = 200
 const MINUTE_MS = 60000
+const COLD_TICK_MS = MINUTE_MS
 // Tool output costs 2.42 characters a token over 669 pairs of requests in the
 // transcripts on disk, and never more than 3.21: at 3.5 the projection stays
 // below the engine's next figure, so a measurement never reads as a compaction.
@@ -135,9 +142,12 @@ const EFFORTS: readonly Effort[] = ['low', 'medium', 'high', 'xhigh', 'max']
 const TOOL_DESCRIPTION =
   'Call this at a clear point: the tree is committed and green, nothing is in ' +
   'flight, and the next step is known. When this turn ends, session-kit writes ' +
-  'the handoff (CLAUDE.local.md), compacts the context, and continues with the ' +
-  'next step, or stops when that step waits on the owner. Then end the turn ' +
-  'with nothing more started.'
+  'the handoff (CLAUDE.local.md), so do not write it yourself. Then it compacts ' +
+  'the context and continues with the next step, or, when that step is the ' +
+  'owner\'s, clears the context and stops, so the owner\'s next prompt starts ' +
+  'from the handoff alone. When the owner asks for a handoff and a compaction ' +
+  'or a clear, call this with next_step owner. Then end the turn with nothing ' +
+  'more started.'
 
 const NEW_TASK_DESCRIPTION =
   'Call this when the prompt just given is a task unrelated to the task this ' +
@@ -145,13 +155,14 @@ const NEW_TASK_DESCRIPTION =
   'then offers the person the handoff and a clear, or to keep going here, and ' +
   'sends their prompt again after. Then end the turn, saying in one line that ' +
   'it is a new task, with nothing started. A context that holds no task yet ' +
-  '(new, or just cleared) takes the prompt as its task, whatever ' +
+  '(new, just cleared, or compacted at the owner\'s word) takes the prompt as its task, whatever ' +
   'CLAUDE.local.md describes. When the new task needs another effort than ' +
   'this session runs at, name it with its reason: the person may take it ' +
   'with the clear, and never in this context.'
 
 const NOTHING_TO_CLEAR =
-  'This context holds no other task (it is new, or just cleared), so there is ' +
+  'This context holds no other task (it is new, just cleared, or compacted at ' +
+  'the owner\'s word), so there is ' +
   'nothing to clear: start on the prompt. CLAUDE.local.md still describes the ' +
   'last task, and the next handoff rewrites it for this one.'
 
@@ -238,7 +249,9 @@ function figureLine(f: ContextFigure, grewBy: number, chainOn: boolean): string 
   const growth = grewBy > 0 ? `, up ${grewBy.toLocaleString('en-US')} in the last turn` : ''
   const close = chainOn ? `call ${TOOL_NAME}.` : 'ask to compact.'
 
-  return `Context ${f.tokens.toLocaleString('en-US')} tokens (${f.percent}% of ${f.window.toLocaleString('en-US')})${growth}: find a clear point, commit, write the handoff, ${close}`
+  const steps = chainOn ? `find a clear point, commit, ${close}` : `find a clear point, commit, write the handoff, ${close}`
+
+  return `Context ${f.tokens.toLocaleString('en-US')} tokens (${f.percent}% of ${f.window.toLocaleString('en-US')})${growth}: ${steps}`
 }
 
 /** The band is raised on the terminal and desktop surfaces only. */
@@ -514,7 +527,8 @@ async function runHandoff($: EngineInterface): Promise<void> {
     const state = await read($, chain)
     await update($, chain, () => null)
     stage($, `the handoff did not run (${reason(error)}), so the chain stops here`)
-    await failed($, `the handoff did not run (${reason(error)}), so the chain stopped`, state === null ? undefined : { stage: 'handoff', waitsOnOwner: state.waitsOnOwner, note: state.note })
+    const retry: Failure['retry'] = state === null ? undefined : { stage: 'handoff', waitsOnOwner: state.waitsOnOwner, note: state.note }
+    await failed($, `the handoff did not run (${reason(error)}), so the chain stopped`, retry !== undefined && state?.clears === true ? { ...retry, clears: true } : retry)
   }
 }
 
@@ -527,6 +541,9 @@ async function afterCompaction($: EngineInterface, state: ChainState, asOf: numb
   if (state.waitsOnOwner) {
     const waiting: ChainState = { ...state, stage: 'waiting' }
     await update($, chain, () => waiting)
+    if (state.pressed === true) {
+      await update($, compactedAtPress, () => true)
+    }
     stage($, 'compacted, and waiting on the owner')
     await moment($, stageLine(waiting))
     await notifyOwner($, `session-kit: compacted, the next step is yours: ${state.note}`)
@@ -564,6 +581,38 @@ async function compactByCommand($: EngineInterface, state: ChainState, asOf: num
   }
   stage($, printed === '' ? 'the /compact command returned' : `the /compact command returned: ${clip(printed, SUBJECT_SHOWN)}`)
   await afterCompaction($, state, asOf)
+}
+
+/**
+ * With the next step the owner's, the handoff carries the state and the
+ * context is cleared, so the owner's next prompt starts from the handoff
+ * alone. The clear starts the session's named values over, so the band's
+ * waiting row is written after it.
+ */
+async function clearByCommand($: EngineInterface, state: ChainState, asOf: number): Promise<void> {
+  if (asOf !== chainDismissals) {
+    return
+  }
+  stage($, 'clearing through the /clear command')
+  try {
+    await $.command.run({ command: CLEAR_COMMAND })
+  } catch (error) {
+    await update($, chain, () => null)
+    stage($, `the /clear command did not run (${reason(error)}), so the chain stops here`)
+    await failed($, `the clear did not run (${reason(error)}), so the chain stopped`, { stage: 'compacting', waitsOnOwner: true, note: state.note, clears: true })
+
+    return
+  }
+  const waiting: ChainState = { ...state, stage: 'waiting' }
+  await update($, chain, () => waiting)
+  stage($, 'cleared, and waiting on the owner')
+  await moment($, stageLine(waiting))
+  await notifyOwner($, `session-kit: cleared, the next step is yours: ${state.note}`)
+}
+
+/** The step after the handoff: a clear when the owner takes the next step from the model, a compaction otherwise. */
+async function endContext($: EngineInterface, state: ChainState, asOf: number): Promise<void> {
+  await (state.clears === true ? clearByCommand($, state, asOf) : compactByCommand($, state, asOf))
 }
 
 export async function dismissChain($: EngineInterface): Promise<void> {
@@ -635,18 +684,18 @@ async function runColdChain($: EngineInterface, lead: number): Promise<void> {
   coldTimer = null
   await setColdAt($, 0)
   const text = `the cache goes cold in ${lead} minutes with nobody at the prompt: writing the handoff`
-  if (await beginChain($, COLD_NOTE, text)) {
+  if (await beginChain($, { stage: 'handoff', waitsOnOwner: true, note: COLD_NOTE }, text)) {
     await moment($, `session-kit: ${text}.`)
   }
 }
 
 /** The chain from its handoff stage, stopping after the compaction since the next step is the owner's; false when a chain or an offer is under way. */
-async function beginChain($: EngineInterface, note: string, why: string): Promise<boolean> {
+async function beginChain($: EngineInterface, state: ChainState, why: string): Promise<boolean> {
   if ((await read($, chain)) !== null || (await read($, newTask)) !== null) {
     return false
   }
   await update($, failure, () => null)
-  await update($, chain, () => ({ stage: 'handoff', waitsOnOwner: true, note }))
+  await update($, chain, () => state)
   stage($, why)
   await runHandoff($)
 
@@ -663,7 +712,7 @@ function later($: EngineInterface, run: () => Promise<void>): void {
 /** The person's own signal: the handoff, then the compaction, and the next step is theirs. */
 export async function chainByPerson($: EngineInterface): Promise<void> {
   later($, async () => {
-    await beginChain($, PRESSED_NOTE, 'the person asked for the handoff and the compaction')
+    await beginChain($, { stage: 'handoff', waitsOnOwner: true, note: PRESSED_NOTE, pressed: true }, 'the person asked for the handoff and the compaction')
   })
 }
 
@@ -699,17 +748,33 @@ export async function retryFailure($: EngineInterface): Promise<void> {
   if ((await read($, chain)) !== null) {
     return
   }
-  const state: ChainState = { stage: retry.stage, waitsOnOwner: retry.waitsOnOwner, note: retry.note }
+  const base: ChainState = { stage: retry.stage, waitsOnOwner: retry.waitsOnOwner, note: retry.note }
+  const state: ChainState = retry.clears === true ? { ...base, clears: true } : base
   await update($, chain, () => state)
-  stage($, `the person asked to try the ${retry.stage === 'handoff' ? 'handoff' : 'compaction'} again`)
+  stage($, `the person asked to try the ${retry.stage === 'handoff' ? 'handoff' : state.clears === true ? 'clear' : 'compaction'} again`)
   const asOf = chainDismissals
-  later($, async () => (retry.stage === 'handoff' ? runHandoff($) : compactByCommand($, state, asOf)))
+  later($, async () => (retry.stage === 'handoff' ? runHandoff($) : endContext($, state, asOf)))
 }
 
-function holdColdTimer($: EngineInterface, wait: number, lead: number): void {
+/** The timer looks at the wall clock each minute up to the deadline `at`: it runs once that has passed, and drops it once the cache has gone cold as well. */
+function holdColdTimer($: EngineInterface, at: number, lead: number): void {
   coldTimer?.cancel()
-  coldTimer = $.clock.after(wait, () => {
-    void runColdChain($, lead)
+  const look = async (): Promise<void> => {
+    const now = await $.clock.now()
+    if (now >= at + lead * MINUTE_MS) {
+      coldTimer = null
+      await setColdAt($, 0)
+      stage($, 'the cache went cold while the timer was held back, most likely by the machine sleeping, so no handoff is written for it')
+    } else if (now >= at) {
+      await runColdChain($, lead)
+    } else {
+      coldTimer = $.clock.after(Math.min(at - now, COLD_TICK_MS), () => {
+        void look()
+      })
+    }
+  }
+  coldTimer = $.clock.after(0, () => {
+    void look()
   })
 }
 
@@ -728,8 +793,8 @@ async function armCold($: EngineInterface, cold: ColdOptions, trigger: (window: 
     return
   }
   const at = (await $.clock.now()) + wait
-  holdColdTimer($, wait, cold.lead)
   await setColdAt($, at)
+  holdColdTimer($, at, cold.lead)
 }
 
 /** After a hot reload the deadline outlives the timer: set the timer again, or drop a deadline already past. */
@@ -740,7 +805,7 @@ async function holdColdTimerAgain($: EngineInterface, lead: number): Promise<voi
   }
   const now = await $.clock.now()
   if (at > now) {
-    holdColdTimer($, at - now, lead)
+    holdColdTimer($, at, lead)
   } else {
     await setColdAt($, 0)
   }
@@ -803,10 +868,10 @@ async function stepChain($: EngineInterface, e: Pick<TurnCompleteInput, 'reason'
     }
     case 'handoff': {
       await update($, chain, () => ({ ...state, stage: 'compacting' }))
-      stage($, 'the handoff turn ended: compacting')
+      stage($, `the handoff turn ended: ${state.clears === true ? 'clearing' : 'compacting'}`)
       const asOf = chainDismissals
       $.clock.after(0, () => {
-        void compactByCommand($, state, asOf)
+        void endContext($, state, asOf)
       })
       break
     }
@@ -1005,7 +1070,12 @@ export const register: Register = (on, options) => {
       }
     }
     if (chainOn && e.command === undefined) {
-      const isFresh = await opensFreshContext($)
+      // The person's first prompt after their own press for the handoff and the compaction opens no task: the press closed the last.
+      const afterPress = isThePersons(e.origin) && e.text.trim() !== '' && (await read($, compactedAtPress))
+      if (afterPress) {
+        await update($, compactedAtPress, () => false)
+      }
+      const isFresh = afterPress || (await opensFreshContext($))
       await update($, freshContext, () => isFresh)
     }
 
@@ -1164,7 +1234,8 @@ export const register: Register = (on, options) => {
       }
     }
     const waitsOnOwner = nextStep === 'owner' || stopped !== undefined
-    const requested: ChainState = stopped === undefined ? { stage: 'requested', waitsOnOwner, note } : { stage: 'requested', waitsOnOwner, note, stopped }
+    const asked: ChainState = stopped === undefined ? { stage: 'requested', waitsOnOwner, note } : { stage: 'requested', waitsOnOwner, note, stopped }
+    const requested: ChainState = nextStep === 'owner' ? { ...asked, clears: true } : asked
     await update($, chain, () => requested)
     await moment($, stageLine(requested))
     if (stopped !== undefined) {
@@ -1177,9 +1248,10 @@ export const register: Register = (on, options) => {
     }
 
     return answer(
-      'Clear point noted. End this turn now, with nothing more started. When it ' +
-        'ends, session-kit writes the handoff and compacts the context, then ' +
-        (waitsOnOwner ? 'stops, since the next step is the owner\'s.' : `continues with: ${note}`),
+      'Clear point noted. End this turn now, with nothing more started, and do ' +
+        'not write the handoff yourself. When it ends, session-kit writes the ' +
+        'handoff, then ' +
+        (nextStep === 'owner' ? 'clears the context and stops, since the next step is the owner\'s.' : `compacts the context and continues with: ${note}`),
     )
   }).catch(() => refuse('session-kit could not record the clear point, so the chain did not start.'))
 }

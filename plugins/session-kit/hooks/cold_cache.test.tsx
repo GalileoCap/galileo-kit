@@ -237,3 +237,73 @@ test('the band gives when the chain runs inside the context row, above the band 
   await clock.advance(55 * MINUTE)
   expect(asked).toEqual(['command session-kit:handoff'])
 })
+
+// A clock whose timers count the machine's awake time while `now` reads the
+// wall clock, which runs on through a sleep: the engine's mock clock keeps the
+// two together, so this test brings its own.
+function sleepingClock(on: On) {
+  let awake = 0
+  let slept = 0
+  const timers: { due: number; fire: () => void }[] = []
+  const flush = async () => {
+    for (let i = 0; i < 200; i += 1) {
+      await Promise.resolve()
+    }
+  }
+  on('clock.now', () => ({ value: awake + slept }))
+  on('clock.after', (_, e) => new Promise((resolve) => {
+    timers.push({ due: awake + e.ms, fire: () => resolve({ value: null }) })
+  }))
+
+  const clock = {
+    sleep(ms: number) {
+      slept += ms
+    },
+    async advance(ms: number) {
+      const until = awake + ms
+      for (;;) {
+        await flush()
+        timers.sort((a, b) => a.due - b.due)
+        const next = timers[0]
+        if (next === undefined || next.due > until) {
+          break
+        }
+        timers.shift()
+        awake = next.due
+        next.fire()
+      }
+      awake = until
+      await flush()
+    },
+  }
+
+  return { ...clock, settle: () => clock.advance(0) }
+}
+
+test('after a sleep, the timer reads the wall clock: it runs as soon as the deadline has passed, and drops a deadline whose cache has gone cold', { options: { chain: true } }, async ($, on) => {
+  const clock = sleepingClock(on)
+  const asked = engine(on, { percent: 30 })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const turnOf = async (id: string) => {
+    await $.turn.start({ text: 'go on', turnId: id })
+    await $.tool.call({ tool: 'Bash', command: 'ls' })
+    await $.turn.complete(turn(id))
+    await clock.settle()
+  }
+
+  // Asleep 52 minutes of the 55: three minutes on, the deadline has passed by the wall clock.
+  await turnOf('t1')
+  clock.sleep(52 * MINUTE)
+  await clock.advance(3 * MINUTE)
+  expect(asked).toEqual(['command session-kit:handoff'])
+  await $.turn.start({ text: '', turnId: 't-handoff' })
+  await $.turn.complete(turn('t-handoff'))
+  await clock.settle()
+  asked.length = 0
+
+  // Asleep past the cache's hour: the cache is cold already, so nothing is written for it.
+  await turnOf('t2')
+  clock.sleep(70 * MINUTE)
+  await clock.advance(181 * MINUTE)
+  expect(asked).toEqual([])
+})

@@ -298,3 +298,29 @@ test('an effort the model proposes for the new task is set by the person\'s pres
   await ui.unmount()
   expect(asked).toEqual([`prompt as user: ${PROMPT}`])
 })
+
+test('after the person\'s own Handoff and compact, their first prompt opens a context with no task to clear, and the one after it holds one', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const asked = engine(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.prompt.submit({ text: 'build the parser', wait: false, origin: { kind: 'composer' } })
+  await $.tool.call({ tool: 'Bash', command: 'ls' })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'context-chain' })
+  await ui.unmount()
+  await clock.settle()
+  await $.turn.complete(turn('t-handoff'))
+  await clock.settle()
+  expect(asked.filter((a) => a.startsWith('command'))).toEqual(['command session-kit:handoff', expect.stringMatching(/^command compact /)])
+
+  await $.prompt.submit({ text: PROMPT, wait: false, origin: { kind: 'composer' } })
+  const first = await $.tool.call({ tool: TOOL, task: 'rewrite the README install section' })
+  expect(first.result).toMatch(/nothing to clear/)
+
+  await $.turn.complete(turn('t-readme'))
+  await clock.settle()
+  await $.prompt.submit({ text: 'now the changelog', wait: false, origin: { kind: 'composer' } })
+  const second = await $.tool.call({ tool: TOOL, task: 'write the changelog' })
+  expect(second.result).toMatch(/New task noted/)
+})

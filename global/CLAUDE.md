@@ -32,9 +32,9 @@ The record of why a project is what it is, one file per entry under `docs/intent
 ## Sessions
 
 - **One task per context.** A prompt unrelated to the task this context holds is named as such before anything starts on it. A new or just-cleared context takes the prompt as its task, whatever `CLAUDE.local.md` describes. Call the `new_task` tool and end the turn, or without it propose the handoff and `/clear` in one line.
-- **Ask for a compaction at a clear point.** Past 150,000 tokens of context, at a boundary between two phases of work, commit, write `CLAUDE.local.md` (`/session-kit:handoff`) and end the turn asking to compact.
+- **Ask for a compaction at a clear point.** Past 150,000 tokens of context, at a boundary between two phases of work, commit and call `clear_point`, which writes `CLAUDE.local.md` itself, so never write it first. When the owner asks for a handoff, call it with `next_step: owner`. Without the tool, write the file (`/session-kit:handoff`) and end the turn asking to compact.
 - **After a compaction or a clear, read again in full the documents the work rests on**: those `CLAUDE.local.md` lists and any the owner named.
-- **Memory holds what crosses conversations: preferences and feedback.** A project's state lives in its files. A note goes where it belongs: a rule in `CLAUDE.md`, deferred work in the plan, a preference in memory.
+- **Memory holds only what no file can.** A project's rule or fact goes in its `CLAUDE.md`, a skill or its docs, and deferred work in its plan. A rule the owner gives for every project is named in the reply as a candidate for the kit's global rules, and kept in memory until it is one.
 
 ## Git
 

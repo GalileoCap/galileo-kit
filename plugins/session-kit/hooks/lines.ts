@@ -178,15 +178,20 @@ export function statusText(now: ContextFigure | null, grewBy: number, sinceMs: n
 export function stageLine(state: ChainState): string {
   switch (state.stage) {
     case 'requested':
-      return 'Clear point: the handoff, the compaction and the continue run when this turn ends.'
+      return state.clears === true
+        ? 'Clear point: the handoff and the clear run when this turn ends.'
+        : 'Clear point: the handoff, the compaction and the continue run when this turn ends.'
     case 'handoff':
       return 'session-kit is writing the handoff.'
     case 'compacting':
-      return 'session-kit is compacting the context.'
-    case 'waiting':
+      return state.clears === true ? 'session-kit is clearing the context.' : 'session-kit is compacting the context.'
+    case 'waiting': {
+      const done = state.clears === true ? 'Cleared' : 'Compacted'
+
       return state.stopped === undefined
-        ? `Compacted. The next step is yours: ${state.note}`
-        : `Compacted. The next step is yours: ${sentence(state.note)} The chain stopped since ${state.stopped}`
+        ? `${done}. The next step is yours: ${state.note}`
+        : `${done}. The next step is yours: ${sentence(state.note)} The chain stopped since ${state.stopped}`
+    }
   }
 }
 

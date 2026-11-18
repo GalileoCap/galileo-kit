@@ -465,7 +465,7 @@ def main() -> int:
         return 0
     if args.command == "week":
         as_of = date.fromisoformat(args.week) if args.week else date.today()
-        return week.write(read_all(roots, args.project, None, measure), Path(args.load_dir).expanduser(), as_of, str(Path.home()))
+        return week.write(read_all(roots, args.project, None, measure), Path(args.load_dir).expanduser(), as_of, str(Path.home()), roots[0])
     sessions = read_all(roots, args.project, since, measure)
     if args.command == "list":
         print(list_table(sessions))

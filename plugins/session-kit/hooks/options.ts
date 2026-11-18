@@ -2,7 +2,7 @@
 // two figures that follow from them: where the context warning starts and
 // whether the context has grown a step past a mark.
 
-export const THRESHOLD_TOKENS = 250000
+export const THRESHOLD_TOKENS = 150000
 const STEP_TOKENS = 25000
 const CACHE_MINUTES = 60
 const CACHE_LEAD_MINUTES = 5

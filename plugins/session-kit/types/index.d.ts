@@ -29,6 +29,10 @@ export type ChainState = {
   note: string
   /** Why the judge stopped the chain, when it did: the next step is then the owner's. */
   stopped?: string
+  /** True when the model gave the next step to the owner: the handoff is followed by a clear instead of a compaction. */
+  clears?: true
+  /** True when the person pressed for the handoff and the compaction: their next prompt opens a context with no task to clear. */
+  pressed?: true
 }
 
 /** One chain that went on by itself: the next step it named, and HEAD when it continued (null outside a repository). */
@@ -59,7 +63,7 @@ export type NewTaskState = {
  */
 export type Failure = {
   text: string
-  retry?: { stage: 'handoff' | 'compacting'; waitsOnOwner: boolean; note: string }
+  retry?: { stage: 'handoff' | 'compacting'; waitsOnOwner: boolean; note: string; clears?: true }
 }
 
 /** One line of the chain's journal, kept for the pane: when it was written, in epoch milliseconds, and what it says. */
@@ -174,6 +178,8 @@ declare module 'claude-code' {
       lastPromptAt: number
       /** True while the prompt under way opened a context that held no task (new or just cleared). */
       freshContext: boolean
+      /** True from the compaction the person pressed Handoff and compact for, to their next prompt, which opens no task. */
+      compactedAtPress: boolean
       /** When the cold-cache timer runs the handoff and the compaction, in epoch milliseconds; 0 while none is set. */
       coldTimerAt: number
       /** The prompt cache's lifetime in minutes as the engine last stated it; 0 before any statement, when the option holds. */

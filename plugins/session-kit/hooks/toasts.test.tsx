@@ -110,11 +110,11 @@ test('with a phone attached, the moments that matter go out as a toast, and with
   await $.prompt.submit({ text: 'go on', wait: false, origin: { kind: 'composer' } })
   await moments($, clock, host, 28, 95, 'b')
   expect(toasts).toEqual([
-    'Context 280,000 tokens (28% of 1,000,000): find a clear point, commit, write the handoff, call clear_point.',
+    'Context 280,000 tokens (28% of 1,000,000): find a clear point, commit, call clear_point.',
     expect.stringMatching(/^The 5-hour usage window is at 95% and resets at \d\d:\d\d\./),
     expect.stringMatching(/^New task: rewrite the README\. From a terminal or the desktop, the band offers/),
-    'Clear point: the handoff, the compaction and the continue run when this turn ends.',
-    'Compacted. The next step is yours: approve the plan',
+    'Clear point: the handoff and the clear run when this turn ends.',
+    'Cleared. The next step is yours: approve the plan',
   ])
 
   // A window that moves within a tier says nothing again; the cold-cache timer firing does.
