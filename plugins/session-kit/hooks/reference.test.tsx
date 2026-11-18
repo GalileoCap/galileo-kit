@@ -46,3 +46,10 @@ test('an id already named, in code, in a path, or unknown to the index is drawn 
   ].join('\n')
   expect(await drawn($, text)).toBe(text)
 })
+
+test('a parenthesis after an id that does not hold its name still gets the name', async ($, on) => {
+  project(on)
+  await $.session.start({ cwd: '/proj', surface: 'desktop', isInteractive: true })
+
+  expect(await drawn($, '`A24` (built today) works.')).toBe('`A24` (the reference mod) (built today) works.')
+})

@@ -11,7 +11,7 @@ supersedes: []
 
 # A24 The reference mod
 
-A hooks module of `session-kit` that draws the name beside each intent id in a reply, on the screen alone. The engine's `ui.render` hook on `AssistantMessage` rewrites a reply's drawn text and leaves the stored message untouched, so `A20` is drawn as `A20` (one module per concern) with no change to what the model wrote or to the transcript. The names come from the project's generated `INDEX.md`, under `intent.directory` in `.claude/claude-kit.json`, read again only when its modification time moves. An id is named at its first mention in each block of a reply. It is drawn as written when the model already named it there (the name's first words in the sentence, an aside after a comma, or a parenthesis right after it), when it stands in a code block, a path or a file name, and when the index does not hold it.
+A hooks module of `session-kit` that draws the name beside each intent id in a reply, on the screen alone. The engine's `ui.render` hook on `AssistantMessage` rewrites a reply's drawn text and leaves the stored message untouched, so `A20` is drawn as `A20` (one module per concern) with no change to what the model wrote or to the transcript. The names come from the project's generated `INDEX.md`, under `intent.directory` in `.claude/claude-kit.json`, read again only when its modification time moves. An id is named at its first mention in each block of a reply. It is drawn as written when the model already named it there (the name's first words in the sentence, in a parenthesis or not, or an aside after a comma), when it stands in a code block, a path or a file name, and when the index does not hold it.
 
 ## Context
 

@@ -3,7 +3,7 @@
 // The stored message keeps what the model wrote. The names come from the
 // project's generated INDEX.md, one read, again only when its mtime moves.
 // An id is named at its first mention in a block, unless the model named it
-// there, by its name, an aside after a comma, or a parenthesis. Ids in code,
+// there, by its name or an aside after a comma. Ids in code,
 // in a path or a file name, and ids the index does not hold are drawn as
 // written. A hook that fails draws the reply as is.
 
@@ -29,12 +29,12 @@ export function namesIn(index: string): Names {
 }
 
 /**
- * Whether the words after an id already carry its name: a parenthesis or a
- * comma and words right after it (`A24`, the mod), which a paraphrase passes
- * too, or the name's first three words before the sentence ends.
+ * Whether the words after an id already carry its name: a comma and words
+ * right after it (`A24`, the mod), which a paraphrase passes too, or the
+ * name's first three words before the sentence ends, in a parenthesis or not.
  */
 function alreadyNamed(after: string, name: string): boolean {
-  if (/^\s*\(|^,\s+(?![A-Z]+\d)[a-z`'"]/.test(after)) {
+  if (/^,\s+(?![A-Z]+\d)[a-z`'"]/.test(after)) {
     return true
   }
   const sentence = after.split(/(?<=[.!?])\s|\n/, 1)[0] ?? ''
