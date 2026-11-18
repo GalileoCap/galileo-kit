@@ -280,6 +280,12 @@ The page opens on an Overview tab with one row per file, and each file has its o
 
 Before the procedure above, update the user scope alone, then start a session in `~/devel/galileo/sofi/checklist` (`claude -p` with `--output-format stream-json --verbose`) and read the plugin version its init event names. The new version means a project's install never decides what loads, and `session-install` in `docs/PLAN.md` is dropped. The old one means it does, and `session-install` is built. A project that declares the plugin in its `.claude/settings.json` gets its own install back at its next session start (checklist, 2026-11-18), so the project installs cannot be removed while the declarations stay. Then run the procedure as usual.
 
+## At the install of session-kit 0.56.0
+
+### main, A24: each intent id in a reply drawn with its name
+
+A reply's ids of the project's intent are drawn with their names beside them, `A20` as `A20` (one module per concern), at their first mention in each block, on the screen alone: the transcript keeps what the model wrote. To see: in this repository or tagents, a reply that names an id bare shows its name in parentheses after it, and one that already names it shows no second name.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

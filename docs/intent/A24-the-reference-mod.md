@@ -4,14 +4,14 @@ from: [O18]
 source: owner
 status: decided 2026-10-25
 kind: behaviour
-implemented_by: not yet built
-proven_by: unproven
+implemented_by: [plugins/session-kit/hooks/reference.ts, plugins/session-kit/hooks/kit.tsx]
+proven_by: [plugins/session-kit/hooks/reference.test.tsx]
 supersedes: []
 ---
 
 # A24 The reference mod
 
-A hooks module of `session-kit` that draws the name beside every id in a reply, on the screen alone, for every kind of id the project declares. The engine's `ui.render` hook on `AssistantMessage` rewrites a reply's drawn text and leaves the stored message untouched, so `A20` is drawn as `A20 (one module per concern)` with no change to what the model wrote or to the transcript. Each project declares its kinds of id in `.claude/claude-kit.json`, under `references`: for each, the pattern an id matches and where its name is found, a directory of files named by the id whose first heading is the name (the intent's shape), or a command that prints `id name` lines (an issue tracker's). The intent is the first kind, declared by default. The names are read through the engine's file access, once per turn.
+A hooks module of `session-kit` that draws the name beside each intent id in a reply, on the screen alone. The engine's `ui.render` hook on `AssistantMessage` rewrites a reply's drawn text and leaves the stored message untouched, so `A20` is drawn as `A20` (one module per concern) with no change to what the model wrote or to the transcript. The names come from the project's generated `INDEX.md`, under `intent.directory` in `.claude/claude-kit.json`, read again only when its modification time moves. An id is named at its first mention in each block of a reply. It is drawn as written when the model already named it there (the name's first words in the sentence, an aside after a comma, or a parenthesis right after it), when it stands in a code block, a path or a file name, and when the index does not hold it.
 
 ## Context
 
@@ -25,4 +25,6 @@ The owner proposed it on 2026-10-25, as the alternative to a rule: "a mod identi
 
 ## Consequences
 
-The drawing costs a read of the intent directory per turn. An id the directory does not know is drawn as written. It is built after the real-session run of the modules already waiting, since the display hook is unproven in this kit and one more untested module adds nothing until the first one runs.
+Built on 2026-11-18, by the owner's word that `A23` (an id carries its name) is often not kept. The `references` setting for other kinds of id (an issue tracker's, printed by a command) waits for a project that has a second kind, since the intent is the only one today. In this repository, which alone writes about other projects' entries, an id of tagents' is drawn with this kit's name for the same id. The owner judged that rare and accepted it on 2026-11-18.
+
+The drawing costs one read of `INDEX.md` after each change to it, and a check of its modification time per drawn block. An id the index does not hold is drawn as written. A stale `INDEX.md` gives a new entry no name until `session-intent index` runs, which `session-intent check` already demands. Only a real session shows the drawing: the engine's tests prove the text it hands the surface.

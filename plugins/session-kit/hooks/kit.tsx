@@ -16,6 +16,7 @@ import { register as facts } from './facts'
 import { lap, lapBeneath, register as measure } from './measure'
 import { register as nudge } from './nudge'
 import { register as pane } from './pane'
+import { register as reference } from './reference'
 import { register as suppressions } from './suppressions'
 import { register as tags } from './tags'
 import { register as testLog } from './test_log'
@@ -42,5 +43,7 @@ export const register: Register = (on, options) => {
   checkout(on, options)
   lap(on, options, 'suppressions')
   suppressions(on, options)
+  lap(on, options, 'reference')
+  reference(on, options)
   lapBeneath(on, options)
 }
