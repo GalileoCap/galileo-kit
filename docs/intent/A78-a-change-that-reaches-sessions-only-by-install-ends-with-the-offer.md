@@ -11,7 +11,7 @@ supersedes: []
 
 # A78 A change that reaches sessions only by install ends with the offer to install it
 
-When a commit changes what a session of the kit loads (the `session-kit` plugin, its hooks, its tools, its bin), the reply that delivers it offers, in one line, to push `main` and update the plugin at user scope and in each project install, as `OWED.md` describes. The session does not push or update unasked, since publishing is the owner's (`O2`, what runs in my sessions changes only when I choose). It offers every time, so the owner is not the one who has to remember that a change is not in a session until it is installed.
+When a commit changes what a session of the kit loads (the `session-kit` plugin, its hooks, its tools, its bin), the reply that delivers it offers, in one line, to push `main` and update the plugin as `OWED.md` describes, which since 2026-11-18 is the user scope alone. The session does not push or update unasked, since publishing is the owner's (`O2`, what runs in my sessions changes only when I choose). It offers every time, so the owner is not the one who has to remember that a change is not in a session until it is installed.
 
 ## Context
 

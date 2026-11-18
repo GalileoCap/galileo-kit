@@ -2,7 +2,7 @@
 
 What a change leaves to do outside the code, one entry per change, under the moment it is due. An entry is never removed, and one done everywhere it was owed keeps its heading and one line (`A107`). `session-owed --since <ref>` lists what a range of history owes.
 
-An install reaches every scope: the user scope, then every project that `~/.claude/plugins/installed_plugins.json` lists, read at each install, none skipped and none asked about. In a worktree (the tagents installs), `update` answers "already at the latest" and leaves it old: `uninstall`, then `install --scope project`, brings it up. Read the versions back after. After each project install, `git status` its `.claude/settings.json` and restore it with `git checkout` when its parsed JSON matches HEAD (demo-nuvem's is rewritten with its `\u` escapes as characters).
+An install is `claude plugin marketplace update galileo-kit`, then `claude plugin update session-kit@galileo-kit --scope user`. A project's own install, which its declaration in `.claude/settings.json` puts back at each session start, does not decide what loads there: on 2026-11-18, with the user scope at 0.56.0, sessions in checklist and in tagents' lane1 loaded 0.56.0 while their project installs read 0.55.1. The check after: a session started in a project names the new version in its init event (`claude -p` with `--output-format stream-json --verbose`).
 
 ## At the install of session-kit 0.35.0
 
@@ -278,7 +278,7 @@ The page opens on an Overview tab with one row per file, and each file has its o
 
 ### main: does a project's own install override the user one
 
-Before the procedure above, update the user scope alone, then start a session in `~/devel/galileo/sofi/checklist` (`claude -p` with `--output-format stream-json --verbose`) and read the plugin version its init event names. The new version means a project's install never decides what loads, and `session-install` in `docs/PLAN.md` is dropped. The old one means it does, and `session-install` is built. A project that declares the plugin in its `.claude/settings.json` gets its own install back at its next session start (checklist, 2026-11-18), so the project installs cannot be removed while the declarations stay. Then run the procedure as usual.
+Done on 2026-11-18: it does not. Checklist and tagents' lane1 loaded 0.56.0 with their project installs at 0.55.1, so `session-install` is dropped and an install is the user scope alone.
 
 ## At the install of session-kit 0.56.0
 
