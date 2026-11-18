@@ -265,6 +265,12 @@ The test log and the guard read `plugins/session-kit/bin/session-watched -- <run
 
 `A99` (the warning and the cold floor start at 150,000 tokens) comes with the plugin's default: no settings file on this machine saves `thresholdTokens` (read 2026-11-18), so nothing needs changing at the install. `A101` (an owner-step clear point clears, and the kit alone writes the handoff), `A102` (the first prompt after the person's Handoff and compact holds no task) and `A100` (the cold-cache timer reads the wall clock) come with the version. To see: past 150,000 the band shows its context row. A `clear_point` with `next_step: owner` ends in `/clear` and "Cleared. The next step is yours". After Handoff and compact, a prompt about other work draws no new-task offer. The global rules change with no install, through the import at `~/.claude/CLAUDE.md`.
 
+## At the install of session-kit 0.53.0
+
+### main, A104: every new entry's id claimed, with its title
+
+`session-intent next` refuses a claim with no `--title`, and `check` refuses an entry the branch adds that this checkout never claimed (`A104`, every new entry's id is claimed, and check refuses one that was not). tagents' worktrees merge into `dev`, so its `.claude/claude-kit.json` needs `"integration": "dev"` under `intent` before its sessions run `check` on 0.53.0. Without it the remote's default branch is the base and entries already on `dev` are refused. Its lane1 then has seven actions to renumber (`A224` to `A228`, `A231`, `A232`), which its `check` names. To see: in any project, a hand-numbered entry above the last claim fails `session-intent check`, naming `next`.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

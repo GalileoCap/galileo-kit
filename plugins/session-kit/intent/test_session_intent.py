@@ -204,28 +204,105 @@ root = project(CLEAN)
 state = tempfile.mkdtemp(prefix="session-intent-state-")
 code, out = run(root, "next", "A", "--state", state, "--title", "The first claim")
 case("next A gives the id after the record's highest action", code == 0 and out.strip() == "A4", out)
-code, out = run(root, "next", "A", "--state", state)
+code, out = run(root, "next", "A", "--state", state, "--title", "The second claim")
 case("a second claim moves on although no file was written", code == 0 and out.strip() == "A5", out)
 log = Path(state, "claims.log").read_text(encoding="utf-8").splitlines()
 case("the claims log names each id with its checkout and title",
      len(log) == 2 and log[0].startswith("A4 ") and log[0].endswith(" The first claim") and Path(root).name in log[0], "\n".join(log))
-code, out = run(root, "next", "objective", "--state", state)
+code, out = run(root, "next", "objective", "--state", state, "--title", "An objective")
 case("a level may be named by its word", code == 0 and out.strip() == "O3", out)
-code, out = run(root, "next", "X", "--state", state)
+code, out = run(root, "next", "X", "--state", state, "--title", "Nothing")
 case("an unknown level is refused", code == 2 and "no such level" in out, out)
 Path(state, "G.next").write_text("1\n", encoding="utf-8")
-code, out = run(root, "next", "G", "--state", state)
+code, out = run(root, "next", "G", "--state", state, "--title", "A goal")
 case("a counter below the record's highest is raised to it", code == 0 and out.strip() == "G2", out)
 Path(state, ".lock").mkdir()
 dead = subprocess.run([sys.executable, "-c", "import os; print(os.getpid())"], capture_output=True, text=True, timeout=30).stdout.strip()
 Path(state, ".lock", "pid").write_text(dead, encoding="utf-8")
-code, out = run(root, "next", "C", "--state", state)
+code, out = run(root, "next", "C", "--state", state, "--title", "A constraint")
 case("a lock left by a dead process is reclaimed", code == 0 and out.strip() == "C2" and not Path(state, ".lock").exists(), out)
 import concurrent.futures
 with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
-    results = list(pool.map(lambda _: run(root, "next", "A", "--state", state), range(8)))
+    results = list(pool.map(lambda _: run(root, "next", "A", "--state", state, "--title", "One"), range(8)))
 ids = {out.strip() for _, out in results}
 case("eight claims at once get eight distinct ids", all(code == 0 for code, _ in results) and ids == {f"A{n}" for n in range(6, 14)}, str(sorted(ids)))
+code, out = run(root, "next", "A", "--state", state, "--title", "One", "--title", "Two", "--title", "Three")
+lines = Path(state, "claims.log").read_text(encoding="utf-8").splitlines()[-3:]
+case("three titles claim three consecutive ids, each logged with its title",
+     code == 0 and out.split() == ["A14", "A15", "A16"] and [l.split(maxsplit=4)[::4] for l in lines] == [["A14", "One"], ["A15", "Two"], ["A16", "Three"]], out + "\n".join(lines))
+with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+    results = list(pool.map(lambda _: run(root, "next", "A", "--state", state, "--title", "x", "--title", "y", "--title", "z"), range(4)))
+ids = [i for _, out in results for i in out.split()]
+case("four claims of three at once share no id", len(ids) == 12 and set(ids) == {f"A{n}" for n in range(17, 29)}, str(ids))
+code, out = run(root, "next", "A", "--state", state)
+case("a claim without a title is refused", code == 2 and "--title" in out, out)
+code, out = run(root, "next", "A", "--state", state, "--title", " ")
+case("a blank title is refused", code == 2 and "--title" in out, out)
+
+# check refuses an entry the branch adds that this checkout never claimed.
+def git_in(where: str, *args: str) -> None:
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", *args],
+                   cwd=where, capture_output=True, text=True, timeout=30, check=True)
+
+
+def action(n: int, slug: str) -> tuple[str, str]:
+    return f"docs/intent/A{n}-{slug}.md", ACTION.replace("id: A1", f"id: A{n}").replace("# A1 A decided action", f"# A{n} {slug}").replace("supersedes: [A2]", "supersedes: []")
+
+
+lanes = tempfile.mkdtemp(prefix="session-intent-lanes-")
+root = str(Path(lanes, "lane1"))
+merged = action(5, "merged-from-dev")
+Path(root).mkdir()
+for name, text in {**CLEAN, ".claude/claude-kit.json": '{"intent": {"integration": "dev"}}'}.items():
+    Path(root, name).parent.mkdir(parents=True, exist_ok=True)
+    Path(root, name).write_text(text, encoding="utf-8")
+git_in(root, "init", "-q", "-b", "dev")
+git_in(root, "add", ".")
+git_in(root, "commit", "-qm", "base")
+git_in(root, "checkout", "-qb", "lane1")
+git_in(root, "checkout", "-q", "dev")
+Path(root, merged[0]).write_text(merged[1], encoding="utf-8")
+git_in(root, "add", ".")
+git_in(root, "commit", "-qm", "lane4's entry reaches dev")
+git_in(root, "checkout", "-q", "lane1")
+git_in(root, "merge", "-q", "dev")
+state = tempfile.mkdtemp(prefix="session-intent-state-")
+Path(state, "claims.log").write_text(
+    "A4 2026-11-01T00:00:00Z lane1 abc First\n"
+    "A5 2026-11-01T00:00:00Z lane4 abc Merged from dev\n"
+    "A7 2026-11-01T00:00:00Z lane4 abc Lane4's own\n"
+    "A8 2026-11-01T00:00:00Z lane4 abc On dev's tip\n", encoding="utf-8")
+
+
+def check_with(extra: dict[str, str]) -> tuple[int, str]:
+    for name, text in extra.items():
+        Path(root, name).write_text(text, encoding="utf-8")
+    run(root, "index")
+    try:
+        return run(root, "check", "--state", state)
+    finally:
+        for name in extra:
+            Path(root, name).unlink()
+
+
+code, out = check_with(dict([action(4, "claimed-here")]))
+case("an entry this checkout claimed passes, the entries older than the log and the one merged from dev too", code == 0 and out.strip() == "", out)
+code, out = check_with(dict([action(6, "numbered-by-hand")]))
+case("an entry one above a real claim with no claim of its own is refused, the refusal naming next",
+     code == 1 and "A6-numbered-by-hand.md: `A6` is never claimed" in out and "session-intent next action" in out, out)
+code, out = check_with(dict([action(7, "lane4s-number")]))
+case("an entry whose id another checkout claimed is refused, naming that checkout",
+     code == 1 and "claimed by lane4, not by this checkout, lane1" in out, out)
+git_in(root, "checkout", "-q", "dev")
+tip = action(8, "on-dev-tip")
+Path(root, tip[0]).write_text(tip[1], encoding="utf-8")
+git_in(root, "add", ".")
+git_in(root, "commit", "-qm", "dev moves on")
+git_in(root, "checkout", "-q", "lane1")
+Path(state, "claims.log").write_text(Path(state, "claims.log").read_text(encoding="utf-8") + "A8 2026-11-02T00:00:00Z lane1 abc Mine too\n", encoding="utf-8")
+code, out = check_with(dict([action(8, "mine-too")]))
+case("an entry whose id dev's tip gives to another file is refused, though this checkout claimed it",
+     code == 1 and "`A8` is also A8-on-dev-tip.md on dev" in out, out)
 
 LEVELS_SETTINGS = (
     '{"intent": {"directory": "notes/intent", "levels": ['
@@ -250,11 +327,11 @@ case("the waiting status and its ask come from the level", "(an epic to close)" 
 code, out = run(root, "check")
 case("a record under its own levels passes", code == 0 and out == "", out)
 state = tempfile.mkdtemp(prefix="session-intent-state-")
-code, out = run(root, "next", "T", "--state", state)
+code, out = run(root, "next", "T", "--state", state, "--title", "A task")
 case("next takes a level from the settings", code == 0 and out.strip() == "T2", out)
-code, out = run(root, "next", "task", "--state", state)
+code, out = run(root, "next", "task", "--state", state, "--title", "A task")
 case("a settings level may be named by its word", code == 0 and out.strip() == "T3", out)
-code, out = run(root, "next", "A", "--state", state)
+code, out = run(root, "next", "A", "--state", state, "--title", "An action")
 case("a level outside the settings is refused, naming the ones there", code == 2 and "one of E, T" in out, out)
 code, out = run(root, "names")
 case("names prints the ladder in the settings' order", code == 0 and out == "E1 An epic\nT1 A task\n", out)

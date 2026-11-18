@@ -576,7 +576,7 @@ disposition = "keep"
 why = "the plugin's own directory when the engine's variable is unset, a named constant"
 
 [[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
+site = "plugins/session-kit/intent/claims.py"
 where = "Lock.__enter__"
 form = "or"
 code = "holder or 'unknown'"
@@ -585,7 +585,7 @@ disposition = "keep"
 why = "the substituted word is what the reader sees printed"
 
 [[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
+site = "plugins/session-kit/intent/claims.py"
 where = "Lock.__exit__"
 form = "except-returns"
 code = "except FileNotFoundError: pass"
@@ -595,7 +595,7 @@ disposition = "keep"
 why = "a lock already released has nothing to remove, which is the state wanted"
 
 [[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
+site = "plugins/session-kit/intent/claims.py"
 where = "Lock.holder"
 form = "except-returns"
 code = "except (OSError, ValueError): return None"
@@ -604,7 +604,7 @@ disposition = "keep"
 why = "the absence is in the return type and the docstring, and the caller decides"
 
 [[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
+site = "plugins/session-kit/intent/claims.py"
 where = "alive"
 form = "except-returns"
 code = "except PermissionError: return True"
@@ -613,7 +613,7 @@ disposition = "keep"
 why = "a pid that cannot be signalled is dead, and one that may not be is alive, so a lock is never reclaimed from a live holder"
 
 [[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
+site = "plugins/session-kit/intent/claims.py"
 where = "alive"
 form = "except-returns"
 code = "except ProcessLookupError: return False"
@@ -668,7 +668,7 @@ disposition = "keep"
 why = "an entry without the list has none, and the check names what is missing"
 
 [[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
+site = "plugins/session-kit/intent/claims.py"
 where = "claim"
 form = "or"
 code = "git(root, 'rev-parse', '--short', 'HEAD') or 'none'"
@@ -677,7 +677,7 @@ disposition = "keep"
 why = "the substituted word is what the reader sees printed"
 
 [[fallbacks]]
-site = "plugins/session-kit/intent/session_intent.py"
+site = "plugins/session-kit/intent/claims.py"
 where = "git"
 form = "except-returns"
 code = "except (OSError, subprocess.SubprocessError): return None"
@@ -1848,3 +1848,48 @@ code = "except ValueError: continue"
 class = "silent"
 disposition = "keep"
 why = "a line cut by a write in flight is skipped, and the next review reads it whole"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/claims.py"
+where = "check_claims"
+form = "get"
+code = "holders.get(e.id, set())"
+class = "declared"
+disposition = "keep"
+why = "an id nobody claimed has no holders, and the check names it as never claimed"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/claims.py"
+where = "entry_files"
+form = "or"
+code = "git(root, 'ls-tree', '-r', '--name-only', commit, '--', ladder.directory) or ''"
+class = "declared"
+disposition = "keep"
+why = "a commit whose tree has no intent directory holds no entries"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/claims.py"
+where = "git"
+form = "or"
+code = "out.stdout.strip() or None"
+class = "spoken"
+disposition = "keep"
+why = "no output is the same absence as a failed call, in the return type and the docstring, and the caller decides"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/claims.py"
+where = "read_claims"
+form = "except-returns"
+code = "except OSError: return None"
+class = "spoken"
+disposition = "keep"
+why = "a machine with no claims log checks no claims, in the return type, the docstring and A104"
+
+[[fallbacks]]
+site = "plugins/session-kit/intent/session_intent.py"
+where = "read_ladder"
+form = "if-none"
+code = "integration.strip() if isinstance(integration, str) else ''"
+class = "declared"
+disposition = "keep"
+why = "no integration branch set means the remote's default branch, as the module says"

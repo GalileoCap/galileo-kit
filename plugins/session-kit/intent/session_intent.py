@@ -11,12 +11,14 @@ a status without a date, a retired entry nothing supersedes and whose
 ``retired_because`` gives no reason, a ``retired_because`` on an entry
 that is not retired, a file whose
 name does not carry its id, a missing field, the ``CLAUDE.md`` Intent block
-out of step with the active entries, and an ``INDEX.md`` that is missing or
-stale. It exits 1 on any. ``session-intent names [id ...]`` prints each
+out of step with the active entries, an ``INDEX.md`` that is missing or
+stale, and an entry this branch adds whose id this checkout never claimed
+or the integration branch has since given to another file. It exits 1 on
+any. ``session-intent names [id ...]`` prints each
 entry's id and name, every entry when no id is given, so a session that
 lost the names to a compaction gets them back in one call; an unknown id is
-a problem. ``session-intent next <level>`` claims the next id of a level
-under a lock and prints it: the floor is the highest id the record holds or
+a problem. ``session-intent next <level> --title <name>`` claims the next id of a level
+under a lock and prints it, one consecutive id per ``--title`` given: the floor is the highest id the record holds or
 the last one claimed, whichever is higher, so a fresh clone needs no
 seeding, and an id once claimed is never given again, since by then it is
 usually in a reply, a commit message or a handoff that outlives the claim.
@@ -24,14 +26,18 @@ The claims live outside every checkout, under ``~/.claude/session-kit/intent/``,
 one directory per clone (named after its git common directory, so every
 worktree shares it), with one ``<level>.next`` file per level and an
 append-only ``claims.log`` saying which checkout took each id, at which
-commit, with what title. Links are written upward only, so everything
+commit, with what title. ``check`` reads that log: an entry the branch adds
+(against ``integration`` in the settings, by default the remote's default
+branch, else every entry) needs a claim this checkout made, except ids
+below its level's first claim, which are older than the log, and a machine
+with no log checks no claims. Links are written upward only, so everything
 downward is derived here and never kept by hand.
 
 The levels are the project's. By default they are the ladder of
 ``goals-objectives-actions.md``: ``G`` goals, ``O`` objectives under them,
 ``A`` actions under those, ``C`` constraints in a section of their own.
 ``.claude/claude-kit.json`` may set, under ``intent``, the ``directory``
-(``docs/intent``) and the ``levels``, each with its ``letter``, ``word``,
+(``docs/intent``), the ``integration`` branch and the ``levels``, each with its ``letter``, ``word``,
 ``from`` (the letters it hangs from), ``statuses``, ``waiting`` (the status
 that waits on the owner) with its ``ask``, ``fields`` (required beyond id,
 source and status), ``listed`` (in the Intent block when active), ``place``
@@ -43,16 +49,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
-import subprocess
 import sys
-import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from pathlib import Path
 
-LOCK_WAIT_SECONDS = 10.0
+from claims import check_claims, claim, state_dir
+
 STATUS = re.compile(r"^(\w+)(?:\s+(\d{4}-\d{2}-\d{2}))?$")
 PATH_FIELDS = ("implemented_by", "proven_by")
 DEFAULT_DIRECTORY = "docs/intent"
@@ -88,6 +91,7 @@ DEFAULT_LEVELS = (
 class Ladder:
     levels: tuple[Level, ...]
     directory: str = DEFAULT_DIRECTORY
+    integration: str = ""
 
     def __post_init__(self) -> None:
         letters = "".join(l.letter for l in self.levels)
@@ -130,7 +134,9 @@ def read_ladder(root: Path) -> Ladder:
     directory = directory.strip("/") if isinstance(directory, str) and directory.strip("/") else DEFAULT_DIRECTORY
     given = block.get("levels")
     levels = [l for l in (read_level(e) for e in given) if l] if isinstance(given, list) else []
-    return Ladder(tuple(levels) or DEFAULT_LEVELS, directory)
+    integration = block.get("integration")
+    integration = integration.strip() if isinstance(integration, str) else ""
+    return Ladder(tuple(levels) or DEFAULT_LEVELS, directory, integration)
 
 
 def strings(value: object) -> tuple[str, ...]:
@@ -403,117 +409,19 @@ def names(entries: dict[str, Entry], wanted: list[str], ladder: Ladder) -> tuple
     return lines, problems
 
 
-def git(root: Path, *args: str) -> str | None:
-    """git's first output line from the root, or None outside a repository."""
-    try:
-        out = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, timeout=10, check=False)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if out.returncode != 0:
-        return None
-    return out.stdout.strip().splitlines()[0] if out.stdout.strip() else None
-
-
-def state_dir(root: Path, override: str | None) -> Path:
-    """Where the claims live: outside every checkout, one directory per clone."""
-    if override:
-        return Path(override).resolve()
-    common = git(root, "rev-parse", "--git-common-dir")
-    key = (root / common).resolve() if common else root
-    slug = str(key).replace(os.sep, "-")
-    return Path.home() / ".claude" / "session-kit" / "intent" / slug
-
-
-class Lock:
-    """A mkdir mutex, the one atomic primitive every filesystem gives. The
-    holder's pid is kept inside so a lock a dead process left is reclaimed."""
-
-    def __init__(self, directory: Path) -> None:
-        self.path = directory / ".lock"
-
-    def __enter__(self) -> "Lock":
-        deadline = time.monotonic() + LOCK_WAIT_SECONDS
-        while True:
-            try:
-                self.path.mkdir()
-                break
-            except FileExistsError:
-                holder = self.holder()
-                if holder is not None and not alive(holder):
-                    for child in self.path.iterdir():
-                        child.unlink()
-                    self.path.rmdir()
-                    continue
-                if time.monotonic() > deadline:
-                    raise TimeoutError(f"{self.path}: held by pid {holder or 'unknown'} and not released in {LOCK_WAIT_SECONDS:g}s")
-                time.sleep(0.05)
-        (self.path / "pid").write_text(str(os.getpid()), encoding="utf-8")
-        return self
-
-    def __exit__(self, *_: object) -> None:
-        try:
-            (self.path / "pid").unlink()
-        except FileNotFoundError:
-            pass
-        try:
-            self.path.rmdir()
-        except FileNotFoundError:
-            pass
-
-    def holder(self) -> int | None:
-        try:
-            return int((self.path / "pid").read_text(encoding="utf-8").strip())
-        except (OSError, ValueError):
-            return None
-
-
-def alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
-
-
-def highest(entries: dict[str, Entry], level: str) -> int:
-    return max((e.key()[1] for e in entries.values() if e.level == level), default=0)
-
-
-def claim(entries: dict[str, Entry], level: str, state: Path, root: Path, title: str) -> str:
-    """The next id of the level, taken under the lock and logged. Never reissued."""
-    state.mkdir(parents=True, exist_ok=True)
-    with Lock(state):
-        counter = state / f"{level}.next"
-        try:
-            kept = int(counter.read_text(encoding="utf-8").strip())
-        except (OSError, ValueError):
-            kept = 1
-        number = max(kept, highest(entries, level) + 1)
-        tmp = state / f".{level}.next.{os.getpid()}"
-        tmp.write_text(f"{number + 1}\n", encoding="utf-8")
-        tmp.replace(counter)
-        id_ = f"{level}{number}"
-        when = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        commit = git(root, "rev-parse", "--short", "HEAD") or "none"
-        with (state / "claims.log").open("a", encoding="utf-8") as log:
-            log.write(f"{id_} {when} {root.name} {commit} {title.replace(chr(10), ' ')}\n")
-    return id_
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="The index, check, names and next id over the intent record.")
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--root", default=".", help="the project root; its intent directory, CLAUDE.md and settings are read")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("index", parents=[common], help="write the record's INDEX.md")
-    commands.add_parser("check", parents=[common], help="the problems in the record, one per line")
+    check_parser = commands.add_parser("check", parents=[common], help="the problems in the record, one per line")
+    check_parser.add_argument("--state", default=None, help="where the claims live, instead of ~/.claude/session-kit/intent/<clone>")
     names_parser = commands.add_parser("names", parents=[common], help="each entry's id and name")
     names_parser.add_argument("ids", nargs="*", help="the ids to print, all when none")
     next_parser = commands.add_parser("next", parents=[common], help="claim the next id of a level")
     next_parser.add_argument("level", help="a level's letter or word, as the settings or the default ladder name them")
-    next_parser.add_argument("--title", default="", help="what the entry will be, kept in the claims log")
+    next_parser.add_argument("--title", action="append", required=True, help="what the entry will be, kept in the claims log; once per id to claim several")
     next_parser.add_argument("--state", default=None, help="where the claims live, instead of ~/.claude/session-kit/intent/<clone>")
     args = parser.parse_args()
     root = Path(args.root).resolve()
@@ -535,8 +443,12 @@ def main() -> int:
         if level is None:
             print(f"{args.level}: no such level; one of {ladder.letters}")
             return 2
+        if not all(t.strip() for t in args.title):
+            print("--title: empty; the claims log says what each id is for")
+            return 2
         try:
-            print(claim(entries, level, state_dir(root, args.state), root, args.title))
+            for id_ in claim(entries, level, state_dir(root, args.state), root, args.title):
+                print(id_)
         except TimeoutError as error:
             print(error)
             return 1
@@ -551,6 +463,7 @@ def main() -> int:
         return 0
     problems += check_record(entries, root, ladder)
     problems += check_block(entries, root, ladder)
+    problems += check_claims(entries, root, ladder, state_dir(root, args.state))
     if not index.exists():
         problems.append(f"{shown}: missing; run `session-intent index`")
     elif index.read_text(encoding="utf-8") != render_index(entries, ladder):

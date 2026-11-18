@@ -15,7 +15,7 @@ A new entry's id comes from `session-intent next <level>`, which claims it under
 
 ## Context
 
-Until now a session picked an id by reading `docs/intent/` and adding one, which is a read-modify-write race with prose for a database. The first project did the same across its worktrees and paid for it: four renumberings and two live collisions, one beyond repair because a tag on the remote quotes it, before it wrote an allocator behind a mutex. The kit's ids are what the communication objective (`O18`) rests on, and an id that names two entries is worse than one with no name.
+Before the allocator, a session picked an id by reading `docs/intent/` and adding one, which is a read-modify-write race with prose for a database. The first project did the same across its worktrees and paid for it: four renumberings and two live collisions, one beyond repair because a tag on the remote quotes it, before it wrote an allocator behind a mutex. The kit's ids are what the communication objective (`O18`) rests on, and an id that names two entries is worse than one with no name.
 
 ## Options
 
@@ -25,4 +25,4 @@ Until now a session picked an id by reading `docs/intent/` and adding one, which
 
 ## Consequences
 
-A session that takes an id by hand is not stopped, and the next `next` moves past it. The counter is one machine's, so two machines claiming the same level at once can still collide until one pushes. The floor from the record then catches it on the other machine's next claim. Undone if the claims log is never read and the directory is never shared across a machine's clones, which would mean the lock could live in the tree after all.
+A session that takes an id by hand is stopped by `check` since 2026-11-18 (`A104`, every new entry's id is claimed, and check refuses one that was not). The counter is one machine's, so two machines claiming the same level at once can still collide until one pushes. The floor from the record then catches it on the other machine's next claim. Undone if the claims log is never read and the directory is never shared across a machine's clones, which would mean the lock could live in the tree after all.
