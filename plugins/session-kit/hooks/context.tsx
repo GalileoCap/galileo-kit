@@ -62,6 +62,7 @@ import { WRAP_UP_TOOL, carryQuestion, noteQuestion } from './question'
 import { askWhy } from './load'
 import { desktopRecordPath, markWaiting, markWorking, startRecord } from './registry'
 import { holdStatus, refreshStatus } from './status'
+import { scratchFile } from './scratch'
 
 const NO_WINDOWS: SessionRateLimit[] = []
 const NO_MARKS: Record<string, number> = {}
@@ -413,12 +414,8 @@ export function judgePrompt(ev: Evidence): string {
   ].join('\n\n')
 }
 
-/** Where a session's chain writes its stages: a host that draws no log line still leaves this file. */
-export function journalPath(tempdir: string, sessionId: string): string {
-  const safe = sessionId.replace(/[^\w-]/g, '_') || 'session'
-
-  return `${tempdir.replace(/\/+$/, '')}/session-kit-chain-${safe}.log`
-}
+/** The name of the file a session's chain writes its stages to in local-scratch/: a host that draws no log line still leaves this file. */
+export const JOURNAL_PREFIX = 'session-kit-chain'
 
 let journal: Promise<void> = Promise.resolve()
 
@@ -427,7 +424,7 @@ let journal: Promise<void> = Promise.resolve()
 let chainDismissals = 0
 
 async function journalLine($: EngineInterface, line: string): Promise<void> {
-  const path = journalPath((await $.env.get('TMPDIR')) ?? '/tmp', await $.session.id())
+  const path = await scratchFile($, JOURNAL_PREFIX)
   let before = ''
   try {
     before = await $.fs.read(path)

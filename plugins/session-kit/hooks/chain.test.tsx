@@ -2,7 +2,8 @@ import { expect, mock, test } from 'claude-code/testing'
 
 import type { On, SessionUsage, TurnCompleteInput } from 'claude-code'
 
-import { journalPath } from './context'
+import { JOURNAL_PREFIX } from './context'
+import { scratchPath } from './scratch'
 
 const WINDOW = 1_000_000
 const TOOL = 'mcp__session-kit__clear_point'
@@ -428,8 +429,8 @@ test('every stage of a chain leaves a line in the session\'s chain file, which a
   const clock = mock.clock(on)
   engine(on)
   const files: Record<string, string> = {}
-  mock.env(on, { TMPDIR: '/var/tmp/t' })
   on('session.id', () => ({ value: 'sess-1' }))
+  on('fs.exists', (_, e) => ({ value: e.path in files }))
   on('fs.read', (_, e) => {
     const text = files[e.path]
     if (text === undefined) {
@@ -452,7 +453,7 @@ test('every stage of a chain leaves a line in the session\'s chain file, which a
   await clock.settle()
   await clock.advance(1000)
 
-  const journal = files[journalPath('/var/tmp/t', 'sess-1')] ?? ''
+  const journal = files[scratchPath('/', JOURNAL_PREFIX, 'sess-1')] ?? ''
   const stages = [/writing the handoff/, /handoff command returned/, /compacting/, /sending the continue prompt/]
   let from = 0
   for (const stage of stages) {

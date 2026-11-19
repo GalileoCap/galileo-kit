@@ -4,7 +4,7 @@ from: [O12]
 source: owner
 status: decided 2026-11-19
 kind: rule
-implemented_by: [global/CLAUDE.md, global/RATIONALE.md, .gitignore, plugins/session-kit/hooks/test_log.ts, plugins/session-kit/bin/session-watched]
+implemented_by: [global/CLAUDE.md, global/RATIONALE.md, .gitignore, plugins/session-kit/hooks/test_log.ts, plugins/session-kit/bin/session-watched, plugins/session-kit/hooks/scratch.ts, plugins/session-kit/hooks/context.tsx]
 proven_by: [unproven]
 supersedes: []
 ---
@@ -26,7 +26,7 @@ The same day a transcript snapshot made for the owner was left under a session's
 
 ## Consequences
 
-Every project gains a `local-scratch/` line in its `.gitignore` on first use. The engine's system prompt points sessions at its scratchpad, and this rule overrides it. The kit's test log (`A11`, the test log) moved there in 0.56.2, with a `.gitignore` of `*` that the hook writes into `local-scratch/`, so a project without the line in its own `.gitignore` sees no new untracked file. `session-watched`'s stall diagnostics (`A37`, the watched run) followed in 0.56.3.
+Every project gains a `local-scratch/` line in its `.gitignore` on first use. The engine's system prompt points sessions at its scratchpad, and this rule overrides it. The kit's test log (`A11`, the test log) moved there in 0.56.2, with a `.gitignore` of `*` that the hook writes into `local-scratch/`, so a project without the line in its own `.gitignore` sees no new untracked file. `session-watched`'s stall diagnostics (`A37`, the watched run) followed in 0.56.3, and the chain file (`A17`, the model signals a clear point, the mod runs the chain) in 0.56.4, both of the kit's files through `hooks/scratch.ts`. `direnv_env.sh`'s error file stays under `TMPDIR`: it lives for one call and is removed at once.
 
 ## Proof
 

@@ -304,6 +304,12 @@ The last test run's log is written to `local-scratch/claude-kit-last-test-<sessi
 
 A stalled run's diagnostics are written to `local-scratch/session-watched-stall.<random>` at the git root, beside the same `.gitignore` of `*`. To see: in any project, `session-watched --stall 2 -- sleep 30` from a subfolder names a directory under the root's `local-scratch/`, and `git status` shows nothing new.
 
+## At the install of session-kit 0.56.4
+
+### main, A109: the chain file moves to local-scratch
+
+Each stage of a chain is written to `local-scratch/session-kit-chain-<session id>.log` at the session's root, beside the same `.gitignore` of `*`. To see: after a chain runs (`clear_point` with `next_step: session`), the file is under the root's `local-scratch/`, and `git status` shows nothing new.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

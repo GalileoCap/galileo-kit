@@ -11,7 +11,7 @@ supersedes: []
 
 # A11 The test log
 
-A `tool.call` hook on Bash writes the last test run's whole output to `<tempdir>/claude-kit-last-test-<session id>.log` and names the file when a run fails.
+A `tool.call` hook on Bash writes the last test run's whole output to `local-scratch/claude-kit-last-test-<session id>.log` at the session's root and names the file when a run fails.
 
 ## Context
 
