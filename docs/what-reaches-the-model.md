@@ -18,7 +18,7 @@ The context warning, after a tool call, from 150,000 tokens and every 25,000 aft
 
 With the `chain` option on, "tell the user it is safe to compact" becomes "call the clear_point tool", and the firmest tier "call the clear_point tool now".
 
-The test log, after a failed test run through Bash: "The test run failed; its whole output is in <tempdir>/claude-kit-last-test-<session id>.log."
+The test log, after a failed test run through Bash: "The test run failed; its whole output is in <root>/local-scratch/claude-kit-last-test-<session id>.log."
 
 At a `git commit`, when the last test run failed: "The last test run (<command>, at <hh:mm>) failed, and none has passed since. Run the tests again before this is delivered as green, or deliver it red with the evidence." When it passed and files have changed since: "The last test run (<command>, at <hh:mm>) passed on a different tree, and files have changed since it ran. Run the tests again before this is delivered as green, or say they did not run on this tree." (`A52`, a check result stamped with the tree it ran on.) A run that passed on this tree, or none recorded, adds nothing.
 
