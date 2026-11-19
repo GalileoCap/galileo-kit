@@ -19,4 +19,4 @@ A test run's output is evidence. Kept whole in a file, it is read again instead 
 
 ## Consequences
 
-No process started since 0.8.0, in `hooks/test_log.ts`: the hook sees the output in-process and writes it with `$.fs`. A failed run is the result's `isError`, so one hook covers what took a PostToolUse and a PostToolUseFailure hook. The temporary directory is `TMPDIR`, else `/tmp`, read through `$.env`.
+No process started since 0.8.0, in `hooks/test_log.ts`: the hook sees the output in-process and writes it with `$.fs`. A failed run is the result's `isError`, so one hook covers what took a PostToolUse and a PostToolUseFailure hook. Since 0.56.2 the log is `local-scratch/claude-kit-last-test-<session id>.log` at the session's root (`A109`, temporary files go in the project's local-scratch), and the hook writes a `.gitignore` of `*` into `local-scratch/` when it has none, so the log never counts as an uncommitted change or as part of a run's tree.

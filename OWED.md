@@ -292,6 +292,12 @@ A reply's ids of the project's intent are drawn with their names beside them, `A
 
 Two defects seen in the Antialgorithm session on 2026-11-19. After a shell `cd`, the first prompt of a fresh context was told `CLAUDE.local.md` was missing, since the kit looked in the shell's directory. The kit now reads the handoff, the intent index and the suppressions index at the session's root. A prompt the person typed while the chain's `/compact` ran was followed, once its turn ended, by the chain's continue with the old next step, and that continue is now dropped. To see: in a session with a handoff, `cd` into a subfolder and compact, and the first prompt carries no missing-handoff note. Type a prompt while a chain compacts, and no "Continue" follows its turn.
 
+## At the install of session-kit 0.56.2
+
+### main, A109: the test log moves to local-scratch
+
+The last test run's log is written to `local-scratch/claude-kit-last-test-<session id>.log` at the project's root, beside a `.gitignore` of `*` the kit writes into `local-scratch/`. To see: run a failing test in any project, and the one-line note names the path under `local-scratch/`, while `git status` shows nothing new.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

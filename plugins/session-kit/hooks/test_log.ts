@@ -1,6 +1,6 @@
 // The test log, in-process: after a Bash call that ran tests, the run's whole
-// output is written to `<tempdir>/claude-kit-last-test-<session id>.log`,
-// replaced each run, and a failed run tells the model in one line where it
+// output is written to `<root>/local-scratch/claude-kit-last-test-<session id>.log`
+// (`A109`), replaced each run, and a failed run tells the model in one line where it
 // is. A command is a test run when one of the builtin runners or a
 // `test_commands` entry of the nearest `.claude/claude-kit.json` at or above
 // the session's folder starts a command segment, read as the guard reads it:
@@ -93,10 +93,22 @@ export function isCommit(command: string): boolean {
   return /(?:^|[;&|(]\s*)git\s+(?:-[cC]\s+\S+\s+|-\S+\s+)*commit(?![\w-])/.test(command)
 }
 
-export function logPath(tempdir: string, sessionId: string): string {
+export function scratchDir(root: string): string {
+  return `${root.replace(/\/+$/, '')}/local-scratch`
+}
+
+export function logPath(root: string, sessionId: string): string {
   const safe = sessionId.replace(/[^\w-]/g, '_') || 'session'
 
-  return `${tempdir.replace(/\/+$/, '')}/claude-kit-last-test-${safe}.log`
+  return `${scratchDir(root)}/claude-kit-last-test-${safe}.log`
+}
+
+/** `local-scratch/` ignores itself, so the log is never an uncommitted change nor part of the tree a run is stamped with. */
+async function ensureIgnored($: EngineInterface, root: string): Promise<void> {
+  const ignore = `${scratchDir(root)}/.gitignore`
+  if (!(await $.fs.exists(ignore))) {
+    await $.fs.write(ignore, '*\n')
+  }
 }
 
 /** FNV-1a over the text under two seeds, sixteen hex characters: tells two texts apart, and is no secret. */
@@ -328,7 +340,9 @@ export const register: Register = (on) => {
     const output = failed
       ? ran.text ?? (typeof ran.result === 'string' ? ran.result : '')
       : `${ran.result.stdout}\n--- stderr ---\n${ran.result.stderr}`
-    const path = logPath((await $.env.get('TMPDIR')) ?? '/tmp', await $.session.id())
+    const root = await $.session.root()
+    await ensureIgnored($, root)
+    const path = logPath(root, await $.session.id())
     const at = await $.clock.now()
     const tree = await treeFingerprint($, cwd)
     await $.fs.write(

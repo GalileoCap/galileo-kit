@@ -4,7 +4,7 @@ import type { On } from 'claude-code'
 
 import { world } from './world.test-helper'
 
-const LOG = '/var/tmp/t/claude-kit-last-test-sess-1.log'
+const LOG = '/proj/local-scratch/claude-kit-last-test-sess-1.log'
 
 test('a passing test run writes the command, cwd, stdout and stderr to the log and says nothing', async ($, on) => {
   const { files } = world(on, { tmpdir: '/var/tmp/t' })
@@ -53,15 +53,16 @@ test("from a folder inside the project, the project's runners still start a test
   expect(files[LOG]).toMatch(/Command: session-watched -- command claude plugin test \./)
 })
 
-test('each run replaces the log whole, and the log goes to /tmp without TMPDIR', async ($, on) => {
-  const { files } = world(on)
+test('each run replaces the log whole, under the root\'s local-scratch, which ignores itself, whatever the shell\'s cwd', async ($, on) => {
+  const { files } = world(on, { cwd: '/proj/eval' })
   let stdout = 'FAILED the-old-failure'
   on('tool.call', () => ({ result: { stdout, stderr: '', interrupted: false } }))
 
   await $.tool.call({ tool: 'Bash', command: 'pnpm test' })
   stdout = '5 passed'
   await $.tool.call({ tool: 'Bash', command: 'pnpm test' })
-  const log = files['/tmp/claude-kit-last-test-sess-1.log'] ?? ''
+  const log = files[LOG] ?? ''
+  expect(files['/proj/local-scratch/.gitignore']).toBe('*\n')
   expect(log).toMatch(/5 passed/)
   expect(log).not.toMatch(/the-old-failure/)
 })
