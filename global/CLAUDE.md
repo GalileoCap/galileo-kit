@@ -22,7 +22,7 @@ These come from `session-kit` (`global/CLAUDE.md`). A project's `CLAUDE.md` adds
 - **Every diagram is a mermaid block**, in documents and replies alike, rendered once to check that it parses.
 - **A new document gets its line in the index in the commit that adds it.** `session-docs check` holds it.
 - **A file you touch leaves with fewer prose tells.** A file only a mechanical sweep touched keeps its tells. Write none, and remove those in the comments and prose of every file you edit by rewriting the sentence: a dash swapped for a comma is the same sentence. A comment that tells history is deleted. Quoted text and strings a test asserts on stay. `session-tells show <file>` lists a file's.
-- **A temporary file is scoped to whoever wrote it.** Name it after the session or the worktree, or make it with `mktemp`.
+- **A temporary file goes in the project's `local-scratch/`**, including one that would otherwise land in `/tmp`, `/private/tmp/claude*` or the engine's scratchpad. A file with a place of its own, such as build output, stays there. `local-scratch/` is gitignored, with the line added when it is missing, and a file in it is named after the session or the worktree.
 - **This machine is Nix-managed.** A tool comes from the project's flake devShell or the nix-darwin configuration. Nothing is installed with brew, which is absent, or globally or per user (`pip install --user`, `npm i -g`). A Python one-off runs as `uv run --with <package>`.
 
 ## Intent
