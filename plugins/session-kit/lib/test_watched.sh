@@ -17,7 +17,7 @@ has() {  # label, text, file
     if grep -q -- "$2" "$3"; then echo "  ok   $1"; else echo "  FAIL $1 (no '$2' in $3)"; failed=$((failed + 1)); fi
 }
 
-work="$(mktemp -d)"
+work="$(cd "$(mktemp -d)" && pwd -P)"
 trap 'rm -rf "$work"' EXIT
 
 "$watched" --stall 5 -- sh -c 'echo hi; exit 3' > "$work/exit3.log" 2>&1; expect "the command's exit status passes through" 3 $?
@@ -27,9 +27,11 @@ has "the command's output passes through" "hi" "$work/exit3.log"
 
 "$watched" sleep 1 > "$work/usage.log" 2>&1; expect "no -- is a usage error" 2 $?
 
-"$watched" --stall 2 --sample 0.5 -- sleep 1234 > "$work/stall.log" 2>&1; expect "a stalled command is ended with 125" 125 $?
+git init -q "$work/repo" && mkdir "$work/repo/sub"
+(cd "$work/repo/sub" && "$watched" --stall 2 --sample 0.5 -- sleep 1234 > "$work/stall.log" 2>&1); expect "a stalled command is ended with 125" 125 $?
 has "the stall is said" "no progress in the last 2s" "$work/stall.log"
-has "the diagnostics are named" "diagnostics in" "$work/stall.log"
+has "the diagnostics go in the git root's local-scratch" "diagnostics in $work/repo/local-scratch/session-watched-stall\." "$work/stall.log"
+expect "local-scratch ignores itself" "*" "$(cat "$work/repo/local-scratch/.gitignore")"
 has "the tree is listed" "sleep 1234" "$work/stall.log"
 pgrep -f "sleep 1234" > /dev/null 2>&1; expect "the tree is gone" 1 $?
 
@@ -38,13 +40,13 @@ expect "every tick arrived" 8 "$(grep -c tick "$work/output.log")"
 
 "$watched" --stall 2 --sample 0.5 -- sh -c 'for i in 1 2 3 4 5 6; do sleep 0.7; done' > /dev/null 2>&1; expect "a process starting is progress" 0 $?
 
-"$watched" --warn --stall 1 --sample 0.5 -- sleep 3 > "$work/warn.log" 2>&1; expect "with --warn a stalled command is not ended" 0 $?
+(cd "$work" && "$watched" --warn --stall 1 --sample 0.5 -- sleep 3 > "$work/warn.log" 2>&1); expect "with --warn a stalled command is not ended" 0 $?
 has "the warning is said" "not ended (--warn)" "$work/warn.log"
 
 "$watched" --check 1 --stall 10 --sample 0.5 -- sleep 2.5 > "$work/check.log" 2>&1; expect "a check line does not end the command" 0 $?
 has "every --check seconds it says what it decided" "in, no progress for" "$work/check.log"
 
-"$watched" --label mine --stall 2 --sample 0.5 -- sleep 1234 > "$work/label.log" 2>&1
+(cd "$work" && "$watched" --label mine --stall 2 --sample 0.5 -- sleep 1234 > "$work/label.log" 2>&1)
 has "the label names the run" "(mine)" "$work/label.log"
 
 echo "$total cases, $failed failed"

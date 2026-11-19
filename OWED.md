@@ -298,6 +298,12 @@ Two defects seen in the Antialgorithm session on 2026-11-19. After a shell `cd`,
 
 The last test run's log is written to `local-scratch/claude-kit-last-test-<session id>.log` at the project's root, beside a `.gitignore` of `*` the kit writes into `local-scratch/`. To see: run a failing test in any project, and the one-line note names the path under `local-scratch/`, while `git status` shows nothing new.
 
+## At the install of session-kit 0.56.3
+
+### main, A109: session-watched's diagnostics move to local-scratch
+
+A stalled run's diagnostics are written to `local-scratch/session-watched-stall.<random>` at the git root, beside the same `.gitignore` of `*`. To see: in any project, `session-watched --stall 2 -- sleep 30` from a subfolder names a directory under the root's `local-scratch/`, and `git status` shows nothing new.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

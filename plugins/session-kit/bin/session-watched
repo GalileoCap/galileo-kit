@@ -137,10 +137,15 @@ kill_tree() {
 
 # What a person would otherwise have to catch by hand before the tree is
 # gone: the tree as it stood, and a stack sample of each process in it. Said
-# on stderr so it lands in whatever log the command was writing.
+# on stderr so it lands in whatever log the command was writing. They go in
+# the project's local-scratch/ (A109), at the git root or else here, beside a
+# .gitignore of * so the directory ignores itself.
 diagnose() {
-  local root="$1" dir p listed="" samplers=()
-  dir=$(mktemp -d "${TMPDIR:-/tmp}/session-watched-stall-$(basename "$PWD").XXXXXX")
+  local root="$1" dir p listed="" samplers=() scratch
+  scratch="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/local-scratch"
+  mkdir -p "$scratch"
+  [[ -e $scratch/.gitignore ]] || printf '*\n' > "$scratch/.gitignore"
+  dir=$(mktemp -d "$scratch/session-watched-stall.XXXXXX")
   listed=$(tree_pids "$root" | head -16 | paste -sd, -)
   if [[ -n $listed ]]; then
     ps -o pid=,ppid=,state=,time=,command= -p "$listed" 2>/dev/null | cut -c1-150 > "$dir/tree.txt" || true

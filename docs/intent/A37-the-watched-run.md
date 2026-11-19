@@ -15,7 +15,7 @@ supersedes: []
 
 ## Context
 
-tagents wrote the script after a proof stalled at 98% for forty-five minutes with every worker idle, holding the test slot, and the owner ruled that no script lasts over five minutes without an active decision. The 2026-10-25 reading named it the sixth tool, since any long run a session starts, in any project, can hang the same way, and the Bash tool's own timeout kills without diagnostics. A step that matters leaves a record a program wrote (`O6`), and here the record is the diagnostics directory.
+tagents wrote the script after a proof stalled at 98% for forty-five minutes with every worker idle, holding the test slot, and the owner ruled that no script lasts over five minutes without an active decision. The 2026-10-25 reading named it the sixth tool, since any long run a session starts, in any project, can hang the same way, and the Bash tool's own timeout kills without diagnostics. A step that matters leaves a record a program wrote (`O6`), and here the record is the diagnostics directory. Since 0.56.3 that directory is `local-scratch/session-watched-stall.<random>` at the git root, or the working directory outside git (`A109`, temporary files go in the project's local-scratch), beside a `.gitignore` of `*`.
 
 ## Options
 
@@ -25,7 +25,7 @@ tagents wrote the script after a proof stalled at 98% for forty-five minutes wit
 
 ## Proof
 
-Seventeen cases: the exit status and output pass through, the command is told it is watched, a stalled sleep is ended with 125 and its tree listed and gone, output growing into a file and a process starting each count as progress, `--warn` leaves a stalled run alone and warns, the check line is said, the label names the run. Not run inside a real session over a real test tier.
+Eighteen cases: the exit status and output pass through, the command is told it is watched, a stalled sleep is ended with 125 and its tree listed and gone, its diagnostics in the git root's `local-scratch/`, which ignores itself, output growing into a file and a process starting each count as progress, `--warn` leaves a stalled run alone and warns, the check line is said, the label names the run. Not run inside a real session over a real test tier.
 
 ## Consequences
 
