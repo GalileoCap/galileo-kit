@@ -68,7 +68,7 @@ async function note($: EngineInterface, path: string, added: string, before: str
   const was = new Set(suppressionsIn(before))
   const names = suppressionsIn(added).filter((name) => !was.has(name))
 
-  return names.length === 0 ? null : warning(names, await indexOf($, await $.session.cwd()))
+  return names.length === 0 ? null : warning(names, await indexOf($, await $.session.root()))
 }
 
 export const register: Register = (on) => {

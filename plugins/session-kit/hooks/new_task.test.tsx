@@ -30,6 +30,7 @@ function engine(on: On, { holdsTask = true } = {}) {
   on('session.messages', () => ({ value: holdsTask ? [{ role: 'assistant' as const, text: 'the last task', toolUses: [] }] : [] }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
+  on('session.root', () => ({ value: '/' }))
   on('tool.register', (_, e) => {
     asked.push(`register ${e.name}`)
 

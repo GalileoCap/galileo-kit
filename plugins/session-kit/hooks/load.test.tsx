@@ -43,6 +43,7 @@ function engine(on: On, options: { now: number; cwd: string; settings?: boolean;
   mock.env(on, { HOME, TMPDIR: '/var/tmp/t' })
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: options.cwd }))
+  on('session.root', () => ({ value: options.cwd }))
   on('session.id', () => ({ value: 'sess-1' }))
   on('session.usage', () => ({ value: { startedAt: 0, context: { tokens: 100_000, window: 1_000_000, percent: 10 }, rateLimits: [] } }))
   on('fs.read', (_, e) => {

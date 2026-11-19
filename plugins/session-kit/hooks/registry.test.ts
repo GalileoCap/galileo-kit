@@ -23,6 +23,7 @@ function engine(on: On, env: { [name: string]: string } = {}, seeded: { [path: s
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.end', (_, e) => ({ sessionId: e.sessionId }))
   on('session.cwd', () => ({ value: '/proj' }))
+  on('session.root', () => ({ value: '/proj' }))
   on('session.id', () => ({ value: now.id }))
   on('session.usage', () => ({ value: { startedAt: 0, context: { tokens: 100_000, window: 1_000_000, percent: 10 }, rateLimits: [] } }))
   on('fs.read', (_, e) => {

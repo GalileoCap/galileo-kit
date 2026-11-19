@@ -27,6 +27,7 @@ function engine(on: On, state: { percent: number }, deny = false) {
   on('session.usage', () => ({ value: usage(state.percent) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
+  on('session.root', () => ({ value: '/' }))
   on('tool.call', () => (deny ? { deny: 'no' } : { result: {} }))
 }
 
@@ -167,6 +168,7 @@ function reads(on: On, sizes: Record<string, number>) {
   on('session.usage', () => ({ value: usage(10) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
+  on('session.root', () => ({ value: '/' }))
   on('tool.register', (_, e) => ({ value: { tool: `mcp__session-kit__${e.name}` } }))
   on('tool.call', (_, e) => ({ result: {}, text: 'x'.repeat(e.tool === 'Read' ? sizes[e.file_path] ?? 0 : 0) }))
   on('turn.step', async function* (_, e) {

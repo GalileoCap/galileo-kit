@@ -63,6 +63,7 @@ function engine(on: On, state: State): Seen {
   on('session.usage', () => ({ value: usage(state.tokens) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
+  on('session.root', () => ({ value: '/' }))
   on('session.surfaces', () => ({ value: state.surfaces }))
   on('session.measure', (_, e) => ({ changed: e.changed }))
   on('session.turns', () => ({ value: 2 }))

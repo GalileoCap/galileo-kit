@@ -22,6 +22,7 @@ engine = "2.1.321"
   "$.prompt.submit",
   "$.session.cwd",
   "$.session.id",
+  "$.session.root",
   "$.session.messages (via opensFreshContext)",
   "$.session.surfaces (via moment)",
   "$.session.turns (via opensFreshContext)",
@@ -232,7 +233,8 @@ engine = "2.1.321"
 "$.model.complete" = "Haiku reads the unattended chain at its third, fifth and every later signal for a loop or a step beyond the task, on the session's own credentials."
 "$.process.run" = "git log and git status for the checkout checks and the pane's session section, the test log's tree print and the handoff's facts, and git cat-file for the commit ids a handoff names, with the repository's own config unable to run code, and the working window's wait for the band's answer, a shell loop apart from the session that ends when the band writes it, and the session registry's listing."
 "$.prompt.submit" = "The continue prompt after the chain's compaction, the person's prompt sent again after the new-task offer's clear, and one prompt per tagged item a reply left without a line."
-"$.session.cwd" = "The checkout the session runs in, for git, CLAUDE.local.md and the settings."
+"$.session.cwd" = "The directory the session runs in, for the timeline, the registry and the settings."
+"$.session.root" = "The project root, which a shell cd does not move, for git, CLAUDE.local.md and the indexes."
 "$.session.id" = "Names the chain file, the test log and the timeline's directory after the session."
 "$.session.messages" = "Whether the context holds an answer yet, so new_task in a fresh context answers that there is nothing to clear."
 "$.session.surfaces" = "Where the session is drawn, so a moment goes out as a toast where no band is drawn (the phone, VS Code)."

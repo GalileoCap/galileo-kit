@@ -27,6 +27,7 @@ function engine(on: On, state: { percent: number }) {
   on('session.usage', () => ({ value: usage(state.percent) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
+  on('session.root', () => ({ value: '/' }))
   on('tool.register', (_, e) => ({ value: { tool: `mcp__session-kit__${e.name}` } }))
   on('command.run', (_, e) => {
     asked.push(`command ${e.command}`)

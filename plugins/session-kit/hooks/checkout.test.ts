@@ -130,3 +130,15 @@ test('a clean tree with a current handoff, and a directory that is no repository
   await $.prompt.submit(typed('hello'))
   expect(sent).toEqual([undefined])
 })
+
+// Antialgorithm session, 2026-11-19: a shell `cd eval` moved the cwd, and the first prompt after the compaction was told the handoff at the root was missing.
+test('the handoff is looked for at the session\'s root, wherever a shell cd took the cwd', async ($, on) => {
+  const w = world(on, { cwd: '/proj/eval', files: { '/proj/CLAUDE.local.md': 'state' } })
+  w.context = FRESH
+  const { sent } = git(on, { commitSeconds: 1_700_000_000, status: '' })
+  handoffWrittenAt(on, 1_700_000_500_000)
+  await $.session.start({ cwd: '/proj', surface: 'terminal', isInteractive: true })
+
+  await $.prompt.submit(typed('hello'))
+  expect(sent).toEqual([undefined])
+})

@@ -120,7 +120,7 @@ export function itemsOf(body: string): string[] {
 
 /** Every read the pane makes of git and the files; a part that cannot be read is empty. */
 async function paneFacts($: EngineInterface, last: TestRun | null): Promise<Facts> {
-  const cwd = await $.session.cwd()
+  const cwd = await $.session.root()
   const since = Math.floor((await $.session.usage()).startedAt / 1000)
   const log = await gitOutput($, cwd, ['log', `--since=@${since}`, '--format=%h %s'])
   const status = await gitOutput($, cwd, ['status', '--porcelain'])

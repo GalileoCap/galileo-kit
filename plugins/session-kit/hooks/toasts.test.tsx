@@ -44,6 +44,7 @@ function engine(on: On, host: Host) {
   on('session.usage', () => ({ value: usage(host.percent) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
+  on('session.root', () => ({ value: '/' }))
   on('session.surfaces', () => {
     if (host.cannotSay) {
       throw new Error('no surfaces here')

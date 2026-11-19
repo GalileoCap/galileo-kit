@@ -286,6 +286,12 @@ Done on 2026-11-18: it does not. Checklist and tagents' lane1 loaded 0.56.0 with
 
 A reply's ids of the project's intent are drawn with their names beside them, `A20` as `A20` (one module per concern), at their first mention in each block, on the screen alone: the transcript keeps what the model wrote. To see: in this repository or tagents, a reply that names an id bare shows its name in parentheses after it, and one that already names it shows no second name.
 
+## At the install of session-kit 0.56.1
+
+### main: the handoff is looked for at the root, and a person's prompt replaces the continue
+
+Two defects seen in the Antialgorithm session on 2026-11-19. After a shell `cd`, the first prompt of a fresh context was told `CLAUDE.local.md` was missing, since the kit looked in the shell's directory. The kit now reads the handoff, the intent index and the suppressions index at the session's root. A prompt the person typed while the chain's `/compact` ran was followed, once its turn ended, by the chain's continue with the old next step, and that continue is now dropped. To see: in a session with a handoff, `cd` into a subfolder and compact, and the first prompt carries no missing-handoff note. Type a prompt while a chain compacts, and no "Continue" follows its turn.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

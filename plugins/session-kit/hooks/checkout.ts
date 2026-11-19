@@ -3,8 +3,10 @@
 // `CLAUDE.local.md` is missing or older than the last commit, as context
 // beside that prompt. At the end of a turn of the main loop, the person sees
 // one dim line when the tree holds uncommitted changes or the handoff
-// predates the last commit. Outside a git repository both stay silent. A hook
-// that fails leaves the prompt and the turn as they were.
+// predates the last commit, or is missing. Outside a git repository a missing
+// handoff is the only thing named. The handoff is looked for at the session's
+// root, which a shell `cd` does not move. A hook that fails leaves the prompt
+// and the turn as they were.
 //
 // The advice rides on `prompt.submit` and not on `prompt.context`, since a
 // mod seated ahead of the kit by an organisation's policy answers
@@ -94,7 +96,7 @@ export const register: Register = (on) => {
     if (e.command !== undefined || (await $.session.usage()).context.tokens !== undefined) {
       return next(e)
     }
-    const advice = handoffAdvice(await handoffState($, await $.session.cwd()))
+    const advice = handoffAdvice(await handoffState($, await $.session.root()))
     if (advice === null) {
       return next(e)
     }
@@ -107,7 +109,7 @@ export const register: Register = (on) => {
     if (e.agentId !== undefined) {
       return done
     }
-    const cwd = await $.session.cwd()
+    const cwd = await $.session.root()
     const line = turnEndLine((await uncommitted($, cwd)).length, await handoffState($, cwd))
     if (line !== null) {
       $.ui.log(line)

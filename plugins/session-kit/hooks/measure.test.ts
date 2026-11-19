@@ -38,6 +38,7 @@ function engine(on: On) {
   const now = { id: 'sess-1', tokens: 120_000, memory: [CLAUDE_MD] }
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/proj' }))
+  on('session.root', () => ({ value: '/proj' }))
   on('session.id', () => ({ value: now.id }))
   on('session.usage', (_, e) => ({
     value: {

@@ -107,7 +107,7 @@ async function directory($: EngineInterface, cwd: string): Promise<string> {
 let cached: { path: string; mtimeMs: number; names: Names } | null = null
 
 async function names($: EngineInterface): Promise<Names> {
-  const cwd = await $.session.cwd()
+  const cwd = await $.session.root()
   const path = `${cwd}/${await directory($, cwd)}/INDEX.md`
   if (!(await $.fs.exists(path))) {
     return new Map()

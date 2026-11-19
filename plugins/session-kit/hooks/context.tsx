@@ -469,7 +469,7 @@ async function notifyOwner($: EngineInterface, text: string): Promise<void> {
 }
 
 async function gitLines($: EngineInterface, args: string[]): Promise<string[] | null> {
-  const out = await gitOutput($, await $.session.cwd(), args)
+  const out = await gitOutput($, await $.session.root(), args)
 
   return out === null ? null : out.split('\n').filter((line) => line.trim() !== '')
 }
@@ -480,7 +480,7 @@ async function headOf($: EngineInterface): Promise<string | null> {
 
 async function ownerTask($: EngineInterface): Promise<string> {
   try {
-    const cwd = (await $.session.cwd()).replace(/\/+$/, '')
+    const cwd = (await $.session.root()).replace(/\/+$/, '')
     const task = taskSection(await $.fs.read(`${cwd}/CLAUDE.local.md`))
 
     return task === null ? '(CLAUDE.local.md has no Task section)' : clip(task, TEXT_SHOWN)
@@ -553,10 +553,25 @@ async function afterCompaction($: EngineInterface, state: ChainState, asOf: numb
     return
   }
   await update($, chain, () => null)
+  if (await personPromptedSince($, compactingSince)) {
+    stage($, 'compacted, and the person prompted during the compaction, so nothing continues')
+
+    return
+  }
   const step: ChainStep = { note: state.note, head: await headOf($) }
   await update($, chainSteps, (steps) => [...steps, step])
   stage($, 'compacted, sending the continue prompt')
-  await $.prompt.submit({ text: continuePrompt(state.note) })
+  pendingContinue = { text: continuePrompt(state.note), since: compactingSince }
+  await $.prompt.submit({ text: pendingContinue.text })
+}
+
+// When the chain's /compact began; a prompt of the person's from then on replaces the continue.
+let compactingSince = 0
+// The continue sent and not yet entered: the engine runs a plugin's prompt once the session is idle, so a person's queued prompt can run ahead of it.
+let pendingContinue: { text: string; since: number } | null = null
+
+async function personPromptedSince($: EngineInterface, since: number): Promise<boolean> {
+  return (await read($, lastPromptAt)) > since
 }
 
 /**
@@ -571,6 +586,7 @@ async function compactByCommand($: EngineInterface, state: ChainState, asOf: num
     return
   }
   stage($, 'compacting through the /compact command')
+  compactingSince = await $.clock.now()
   let printed
   try {
     printed = (await $.command.run({ command: COMPACT_COMMAND, args: COMPACT_INSTRUCTIONS })).text?.trim() ?? ''
@@ -1057,6 +1073,13 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('prompt.submit', async ($, e, next) => {
+    const sent = pendingContinue
+    if (sent !== null && e.origin.kind === 'plugin' && e.text === sent.text && (await personPromptedSince($, sent.since))) {
+      pendingContinue = null
+      stage($, 'the person prompted ahead of the queued continue, so it is dropped')
+
+      return { drop: 'the person prompted after the compaction began' }
+    }
     if (e.command === undefined && e.isMeta !== true && e.text.trim() !== '' && isThePersons(e.origin)) {
       await askWhy($, e.text, e.origin)
     }

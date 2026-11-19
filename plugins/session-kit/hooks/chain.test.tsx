@@ -46,6 +46,7 @@ function engine(on: On, { percent = 55, held }: Compaction = {}) {
   on('session.usage', () => ({ value: usage(percent) }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/' }))
+  on('session.root', () => ({ value: '/' }))
   on('tool.register', (_, e) => {
     // new_task is registered beside it, proven in new_task.test.tsx.
     if (e.name === 'clear_point') {
@@ -497,4 +498,42 @@ test('dismissing the band stops the chain where it stands, before the handoff or
   finish()
   await clock.advance(2000)
   expect(asked).toEqual(['register clear_point', 'command session-kit:handoff', expect.stringMatching(/^command compact /)])
+})
+
+// Antialgorithm session, 2026-11-19: the owner typed during the compaction, and after the owner's turn the kit's continue ran the old next step.
+test('a prompt of the person\'s during the compaction replaces the continue, whether it lands before the continue is sent or ahead of it in the queue', { options: { chain: true } }, async ($, on) => {
+  const clock = mock.clock(on)
+  let finish = () => {}
+  const held = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  const asked = engine(on, { held })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const continues = () => asked.filter((a) => a.startsWith('prompt Continue.'))
+
+  await $.tool.call({ tool: TOOL, next_step: 'session', note: 'the old step' })
+  await $.turn.complete(turn('t1'))
+  await clock.settle()
+  await $.turn.complete(turn('t2'))
+  await clock.settle()
+  // The owner types while /compact still runs.
+  await clock.advance(1000)
+  await $.prompt.submit({ text: 'something else', wait: false, origin: { kind: 'composer' } })
+  finish()
+  await clock.advance(2000)
+  expect(continues()).toEqual([])
+
+  // The queued case: the continue is sent, the owner's prompt runs ahead of it, and the continue reaches the hook after.
+  await $.tool.call({ tool: TOOL, next_step: 'session', note: 'the next step' })
+  await $.turn.complete(turn('t3'))
+  await clock.settle()
+  await $.turn.complete(turn('t4'))
+  await clock.settle()
+  expect(continues().length).toBe(1)
+  await clock.advance(1000)
+  await $.prompt.submit({ text: 'another thing', wait: false, origin: { kind: 'composer' } })
+  const queued = continues()[0]?.slice('prompt '.length) ?? ''
+  const late = await $.prompt.submit({ text: queued, wait: false, origin: { kind: 'plugin', name: 'session-kit' } })
+  expect(late.drop).toBeDefined()
+  expect(continues().length).toBe(1)
 })
