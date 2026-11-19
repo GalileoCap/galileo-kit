@@ -1,6 +1,6 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { type Engine, type MockClock, expect, mock, test } from 'claude-code/testing'
 
-import type { EngineInterface, MockClock, On, RenderSurface, SessionMeasureInput, SessionRateLimit, SessionUsage, TurnCompleteInput } from 'claude-code'
+import type { On, RenderSurface, SessionMeasureInput, SessionRateLimit, SessionUsage, TurnCompleteInput } from 'claude-code'
 
 const WINDOW = 1_000_000
 const MINUTE = 60_000
@@ -28,7 +28,7 @@ function fiveHour(percentUsed: number): SessionRateLimit {
 const BAND = {
   plugin: 'session-kit',
   component: 'AbovePrompt',
-  props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
 type Host = {
@@ -77,14 +77,14 @@ function engine(on: On, host: Host) {
   return toasts
 }
 
-async function dismissOffer($: EngineInterface): Promise<void> {
+async function dismissOffer($: Engine): Promise<void> {
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await ui.press({ key: 'new-task-dismiss' })
   await ui.unmount()
 }
 
 // Every moment the band would show: a warning, a window at 80, a new task, a clear point signalled and run.
-async function moments($: EngineInterface, clock: MockClock, host: Host, percent: number, window: number, id: string): Promise<void> {
+async function moments($: Engine, clock: MockClock, host: Host, percent: number, window: number, id: string): Promise<void> {
   host.percent = percent
   await $.tool.call({ tool: 'Bash', command: 'ls' })
   await $.session.measure(measured(percent, [fiveHour(window)]))

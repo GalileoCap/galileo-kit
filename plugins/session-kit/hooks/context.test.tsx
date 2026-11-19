@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { type Engine, expect, test } from 'claude-code/testing'
 
-import type { EngineInterface, On, SessionUsage } from 'claude-code'
+import type { On, SessionUsage } from 'claude-code'
 
 const WINDOW = 1_000_000
 
@@ -15,6 +15,7 @@ const BAND = {
   component: 'AbovePrompt',
   props: {
     hasSurvey: false,
+    isCollapsed: false,
     isWorking: false,
     maxRows: 5,
     bodyColumns: 80,
@@ -184,7 +185,7 @@ function reads(on: On, sizes: Record<string, number>) {
   })
 }
 
-async function warned($: EngineInterface, file: string): Promise<string | undefined> {
+async function warned($: Engine, file: string): Promise<string | undefined> {
   return (await $.tool.call({ tool: 'Read', file_path: file })).context?.[0]
 }
 

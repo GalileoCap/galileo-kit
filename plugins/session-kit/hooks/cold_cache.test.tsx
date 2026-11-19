@@ -1,6 +1,6 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { type Engine, type MockClock, expect, mock, test } from 'claude-code/testing'
 
-import type { EngineInterface, MockClock, On, SessionUsage, TurnCompleteInput } from 'claude-code'
+import type { On, SessionUsage, TurnCompleteInput } from 'claude-code'
 
 const WINDOW = 1_000_000
 const MINUTE = 60_000
@@ -18,7 +18,7 @@ function turn(turnId: string): TurnCompleteInput {
 const BAND = {
   plugin: 'session-kit',
   component: 'AbovePrompt',
-  props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
 // The engine beneath the plugin, recording what the chain asked of it, with the context at `state.percent`.
@@ -81,14 +81,14 @@ function subagent(lifetime: '5m' | '1h') {
   }
 }
 
-async function delegatingTurn($: EngineInterface, clock: MockClock, id: string): Promise<void> {
+async function delegatingTurn($: Engine, clock: MockClock, id: string): Promise<void> {
   await $.turn.start({ text: 'delegate', turnId: id })
-  await $.tool.call({ tool: 'Agent', prompt: 'look around' })
+  await $.tool.call({ tool: 'Agent', description: 'look around', prompt: 'look around' })
   await $.turn.complete(turn(id))
   await clock.settle()
 }
 
-async function personsTurn($: EngineInterface, clock: MockClock, id: string): Promise<void> {
+async function personsTurn($: Engine, clock: MockClock, id: string): Promise<void> {
   await $.turn.start({ text: 'go on', turnId: id })
   await $.tool.call({ tool: 'Bash', command: 'ls' })
   await $.turn.complete(turn(id))
@@ -253,7 +253,7 @@ function sleepingClock(on: On) {
   }
   on('clock.now', () => ({ value: awake + slept }))
   on('clock.after', (_, e) => new Promise((resolve) => {
-    timers.push({ due: awake + e.ms, fire: () => resolve({ value: null }) })
+    timers.push({ due: awake + e.ms, fire: () => resolve({ value: undefined }) })
   }))
 
   const clock = {

@@ -27,7 +27,7 @@ const SETTINGS = {
 const BAND = {
   plugin: 'session-kit',
   component: 'AbovePrompt',
-  props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
 const COMPOSER: PromptOrigin = { kind: 'composer' }

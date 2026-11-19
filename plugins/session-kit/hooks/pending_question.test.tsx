@@ -3,9 +3,9 @@
 // or a compaction over it; the cold timer, which cannot wait, carries it across
 // into the handoff and onto the band, with its buttons.
 
-import { expect, mock, test } from 'claude-code/testing'
+import { type Engine, expect, mock, test } from 'claude-code/testing'
 
-import type { EngineInterface, On, SessionUsage, TurnCompleteInput } from 'claude-code'
+import type { On, SessionUsage, TurnCompleteInput } from 'claude-code'
 
 const WINDOW = 1_000_000
 const MINUTE = 60_000
@@ -16,12 +16,12 @@ const QUESTION = 'Which Overview should draw value against spend?'
 const ACTIONS = [
   { label: 'The team one', message: 'Draw it on the team Overview.' },
   { label: 'Both', message: 'Draw it on both Overviews.' },
-]
+] as const
 
 const BAND = {
   plugin: 'session-kit',
   component: 'AbovePrompt',
-  props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
 function usage(percent: number): SessionUsage {
@@ -76,7 +76,7 @@ function engine(on: On, percent: number) {
   return { asked, sent }
 }
 
-async function asks($: EngineInterface): Promise<void> {
+async function asks($: Engine): Promise<void> {
   await $.tool.call({ tool: WRAP_UP, recap: 'The Overview is drawn.', ask: QUESTION, actions: ACTIONS, blocked: true })
 }
 

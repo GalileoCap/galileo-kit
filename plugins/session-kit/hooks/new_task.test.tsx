@@ -1,6 +1,6 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { type Engine, expect, mock, test } from 'claude-code/testing'
 
-import type { EngineInterface, On, SessionUsage, TurnCompleteInput } from 'claude-code'
+import type { On, SessionUsage, TurnCompleteInput } from 'claude-code'
 
 const TOOL = 'mcp__session-kit__new_task'
 const PROMPT = 'Now rewrite the README install section for the new name'
@@ -18,7 +18,7 @@ function turn(turnId: string): TurnCompleteInput {
 const BAND = {
   plugin: 'session-kit',
   component: 'AbovePrompt',
-  props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
 // The engine beneath the plugin, recording what it asked. `holdsTask`: the
@@ -255,7 +255,7 @@ function answersSteps(on: On) {
 }
 
 // A main-loop request sent at the session's effort, which the kit reads.
-async function stepAt($: EngineInterface, effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max') {
+async function stepAt($: Engine, effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max') {
   for await (const _ of $.turn.step({ turnId: 't0', index: 0, model: 'claude-fable-5-1', effort, messageCount: 3 })) {
     // Read to its end, as the engine does.
   }

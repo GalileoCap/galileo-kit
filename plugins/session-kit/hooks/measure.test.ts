@@ -96,7 +96,7 @@ function timeline(files: Record<string, string>, sessionId: string): Line[][] {
     .map((path) => (files[path] ?? '').split('\n').filter((line) => line !== '').map((line): Line => JSON.parse(line)))
 }
 
-function turn(turnId: string, extra: Partial<TurnCompleteInput> = {}): TurnCompleteInput {
+function turn(turnId: string, extra: Pick<TurnCompleteInput, 'agentId'> = {}): TurnCompleteInput {
   return { answer: 'done', durationMs: 5000, isAborted: false, turnId, reason: 'answer', usage: USAGE, ...extra }
 }
 

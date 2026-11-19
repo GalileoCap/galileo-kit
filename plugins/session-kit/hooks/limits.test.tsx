@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { type Engine, expect, test } from 'claude-code/testing'
 
-import type { EngineInterface, On, SessionMeasureInput, SessionRateLimit, SessionUsage, TurnCompleteInput } from 'claude-code'
+import type { On, SessionMeasureInput, SessionRateLimit, SessionUsage, TurnCompleteInput } from 'claude-code'
 
 const WINDOW = 1_000_000
 const RESETS_SOON = '2026-10-25T14:30:00Z'
@@ -27,7 +27,7 @@ function fiveHour(percentUsed: number): SessionRateLimit {
 const BAND = {
   plugin: 'session-kit',
   component: 'AbovePrompt',
-  props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
 // The engine beneath the plugin, with the context at `state.percent` and a line of its own in the band.
@@ -51,7 +51,7 @@ function engine(on: On, state: { percent: number }) {
   })
 }
 
-async function bandLine($: EngineInterface, pattern: RegExp, surface: 'terminal' | 'desktop' = 'desktop'): Promise<string | undefined> {
+async function bandLine($: Engine, pattern: RegExp, surface: 'terminal' | 'desktop' = 'desktop'): Promise<string | undefined> {
   const ui = await $.ui.mount({ ...BAND, surface })
   const row = await ui.find({ type: 'Text', text: pattern })
   await ui.unmount()
@@ -59,7 +59,7 @@ async function bandLine($: EngineInterface, pattern: RegExp, surface: 'terminal'
   return row?.text
 }
 
-async function press($: EngineInterface, key: string): Promise<void> {
+async function press($: Engine, key: string): Promise<void> {
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await ui.press({ key })
   await ui.unmount()

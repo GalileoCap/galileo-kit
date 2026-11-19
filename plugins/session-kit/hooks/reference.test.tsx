@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { type Engine, expect, test } from 'claude-code/testing'
 
-import type { EngineInterface, On } from 'claude-code'
+import type { On } from 'claude-code'
 
 import { world } from './world.test-helper'
 
@@ -24,7 +24,7 @@ function project(on: On) {
   })
 }
 
-async function drawn($: EngineInterface, text: string): Promise<string> {
+async function drawn($: Engine, text: string): Promise<string> {
   const ui = await $.ui.mount({ plugin: 'session-kit', component: 'AssistantMessage', surface: 'desktop', props: { text, isFirstOfReply: true } })
   const texts = await ui.findAll({ type: 'Text' })
   await ui.unmount()

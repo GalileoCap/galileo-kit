@@ -1,13 +1,13 @@
-import { expect, test } from 'claude-code/testing'
+import { type Engine, expect, test } from 'claude-code/testing'
 
-import type { EngineInterface, On, TurnCompleteInput } from 'claude-code'
+import type { On, TurnCompleteInput } from 'claude-code'
 
 import { world } from './world.test-helper'
 
 const BAND = {
   plugin: 'session-kit',
   component: 'AbovePrompt',
-  props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
 // What the engine beneath saw: the context each prompt reached it with, and the prompts the kit sent.
@@ -50,7 +50,7 @@ function lastItems(reached: { context: readonly string[] }[]): string {
   return /by id: (.*?)\. End the reply/.exec(lastContext(reached))?.[1] ?? ''
 }
 
-async function bandText($: EngineInterface): Promise<string> {
+async function bandText($: Engine): Promise<string> {
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const texts = await ui.findAll({ type: 'Text' })
   await ui.unmount()

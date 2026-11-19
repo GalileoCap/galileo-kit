@@ -1,6 +1,6 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { type Engine, expect, mock, test } from 'claude-code/testing'
 
-import type { EngineInterface, On, RenderSurface, SessionContextUsage, SessionUsage, TurnCompleteInput } from 'claude-code'
+import type { On, RenderSurface, SessionContextUsage, SessionUsage, TurnCompleteInput } from 'claude-code'
 
 const WINDOW = 1_000_000
 const MINUTE = 60_000
@@ -12,7 +12,7 @@ const START = { cwd: '/', surface: 'terminal', isInteractive: true } as const
 const BAND = {
   plugin: 'session-kit',
   component: 'AbovePrompt',
-  props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 5, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
 
 // What the test controls beneath the plugin.
@@ -145,7 +145,7 @@ type FoundElement = { type: string; key: string | undefined; props: Record<strin
 
 type Snapshot = { texts: FoundElement[]; buttons: FoundElement[] }
 
-async function snap($: EngineInterface, surface: 'terminal' | 'desktop' = 'desktop', isWorking = false): Promise<Snapshot> {
+async function snap($: Engine, surface: 'terminal' | 'desktop' = 'desktop', isWorking = false): Promise<Snapshot> {
   const ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, isWorking }, surface })
   const drawn = { texts: await ui.findAll({ type: 'Text' }), buttons: await ui.findAll({ type: 'Button' }) }
   await ui.unmount()
@@ -161,7 +161,7 @@ function buttonOf(drawn: Snapshot, key: string): FoundElement | undefined {
   return drawn.buttons.find((b) => b.key === key)
 }
 
-async function press($: EngineInterface, seen: Seen, key: string): Promise<void> {
+async function press($: Engine, seen: Seen, key: string): Promise<void> {
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect(await ui.find({ type: 'Button', key })).toBeDefined()
   await ui.press({ key })
@@ -170,7 +170,7 @@ async function press($: EngineInterface, seen: Seen, key: string): Promise<void>
 }
 
 // A turn of the person's: it starts, reads the context once, and ends.
-async function personsTurn($: EngineInterface, seen: Seen, id: string): Promise<void> {
+async function personsTurn($: Engine, seen: Seen, id: string): Promise<void> {
   await $.turn.start({ text: 'go on', turnId: id })
   await $.tool.call({ tool: 'Bash', command: 'ls' })
   await $.turn.complete(turn(id))
@@ -178,7 +178,7 @@ async function personsTurn($: EngineInterface, seen: Seen, id: string): Promise<
 }
 
 // The turn the handoff command starts, which the engine would run and end.
-async function handoffTurn($: EngineInterface, seen: Seen, id: string): Promise<void> {
+async function handoffTurn($: Engine, seen: Seen, id: string): Promise<void> {
   await $.turn.start({ text: '', turnId: id })
   await $.turn.complete(turn(id))
   await seen.clock.settle()
