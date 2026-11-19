@@ -310,6 +310,12 @@ A stalled run's diagnostics are written to `local-scratch/session-watched-stall.
 
 Each stage of a chain is written to `local-scratch/session-kit-chain-<session id>.log` at the session's root, beside the same `.gitignore` of `*`. To see: after a chain runs (`clear_point` with `next_step: session`), the file is under the root's `local-scratch/`, and `git status` shows nothing new.
 
+## At the install of session-kit 0.56.5
+
+### main, A39: a reason over several comment lines counts
+
+`session-suppressions` reads a reason on through the comment lines under its marker and through the comment block above it, reads quoted words in a reason, and takes prose inside a block comment for no marker. A project's index may go stale, since some reasons now read longer and some prose sites leave it. In each project that keeps one, run `session-suppressions index` and commit it with the project's own objective, then `session-suppressions check`. To see: in tagents' lane2 the check fails 54 markers, down from 129, each with no reason or a short one.
+
 ## On each machine whose ~/.claude/CLAUDE.md links to the kit
 
 ### main, A80: the global rules imported into the user's file

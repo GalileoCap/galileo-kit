@@ -4,7 +4,10 @@ A suppression (the noqa and ignore comments of ruff, mypy and pyright, the
 ts-ignore and expect-error directives, the eslint, oxlint and biome disables,
 and the any and unknown casts) carries its reason in place: a comment on its
 line, after the marker and its codes, or on the line above, of three words
-or more. ``session-suppressions list`` prints every marker in the tree's
+or more. A reason may run on: from a marker whose comment stands alone on its
+line through the comment lines under it, and from the line above through the
+comment lines over it, each run ending at code, a blank line or another
+directive. ``session-suppressions list`` prints every marker in the tree's
 source files with its reason, ``index`` writes the index (``docs/suppressions.md``,
 a table of where, marker and reason) for the owner to review, and ``check``
 prints one line per problem and exits 1: a marker without a reason, and an
@@ -16,8 +19,10 @@ itself, dependencies and virtual environments (a directory holding
 marker inside a string or a docstring is a mention, a test's fixture or a
 reader's pattern, and is no site: Python files are read through the
 tokenizer and only their comments are searched, and in a TypeScript or
-JavaScript file the string literals of a line are dropped before the search,
-with a directive counted only in the line's comment.
+JavaScript file the string literals of a line are blanked before the search,
+with a directive counted only where a comment begins on its line: a block
+comment's later lines are prose. A reason is read as written, its quotes
+included.
 """
 
 from __future__ import annotations
@@ -50,7 +55,7 @@ MARKERS: list[tuple[str, re.Pattern[str]]] = [
     ("as unknown " + "as", re.compile(r"\bas\s+unknown\s+" + "as" + r"\b")),
 ]
 CODE = r"(?:\[[^\]]*\]|[A-Z]+\d+|[a-z0-9]+(?:[-/@][\w-]+)+|\d+)"
-CODES = re.compile(rf"^[\w-]*[\s:,]*{CODE}?(?:\s*,\s*{CODE})*[\s:,.-]*")
+CODES = re.compile(rf"^[\w-]*[\s:,]*{CODE}?(?:\s*,\s*{CODE})*[\s:,.\u2014\u2013-]*")
 """What follows a marker before its reason: the rest of its own token, then its codes."""
 WORD = re.compile(r"[A-Za-z]{2,}")
 INTRO = (
@@ -114,6 +119,25 @@ def source_files(root: Path, settings: Settings) -> list[Path]:
 
 COMMENT_MARKERS = {name for name, _ in MARKERS if name.startswith(("@ts-", "eslint-", "oxlint-", "biome-"))}
 STRINGS = re.compile(r"'(?:\\.|[^'\\\n])*'|\"(?:\\.|[^\"\\\n])*\"|`(?:\\.|[^`\\])*`")
+ENABLE = re.compile("(?:eslint|oxlint)-" + "enable")
+CLOSER = re.compile(r"\*/\s*\}?\s*$")
+
+
+@dataclass(frozen=True)
+class Line:
+    """A source line as the check reads it.
+
+    ``code`` and ``comment`` are searched for markers, their string literals blanked. ``said``
+    is the comment as written, character for character beside ``comment``. ``words`` is the
+    text a reason is read from, which takes in a block comment's later lines, whose directives
+    are prose. ``alone`` is a comment with no code beside it, so a reason may run on through it.
+    """
+
+    code: str
+    comment: str
+    said: str
+    words: str
+    alone: bool
 
 
 def python_comments(text: str) -> dict[int, str]:
@@ -125,50 +149,113 @@ def python_comments(text: str) -> dict[int, str]:
     return {tok.start[0]: tok.string for tok in tokens if tok.type == tokenize.COMMENT}
 
 
-def script_parts(line: str) -> tuple[str, str]:
-    """A TypeScript or JavaScript line without its string literals, split into its code and its comment."""
-    bare = STRINGS.sub("''", line)
+def python_lines(lines: list[str]) -> dict[int, Line]:
+    comments = python_comments("\n".join(lines) + "\n")
+    return {n: Line("", c, c, c, alone=lines[n - 1].lstrip().startswith("#")) for n, c in comments.items()}
+
+
+def blank(literal: re.Match[str]) -> str:
+    """A string literal emptied to its quotes, its length kept so the line's places hold."""
+    text = literal.group(0)
+    return text[0] + " " * (len(text) - 2) + text[-1]
+
+
+def script_parts(line: str) -> tuple[str, str, str]:
+    """A TypeScript or JavaScript line split into its code and its comment, its string literals
+    blanked, and the comment as written."""
+    bare = STRINGS.sub(blank, line)
     at = min((i for i in (bare.find("//"), bare.find("/*")) if i >= 0), default=-1)
-    return (bare, "") if at < 0 else (bare[:at], bare[at:])
+    return (bare, "", "") if at < 0 else (bare[:at], bare[at:], line[at:])
 
 
-def searchable(path: Path, lines: list[str]) -> dict[int, list[tuple[str, str]]]:
-    """Per line, the texts to search and which markers apply to each."""
-    if path.suffix in {".py", ".pyi"}:
-        return {n: [(comment, "comment")] for n, comment in python_comments("\n".join(lines) + "\n").items()}
-    out: dict[int, list[tuple[str, str]]] = {}
+def opens_block(comment: str) -> bool:
+    """Whether a line's comment leaves a block comment open at its end."""
+    at, inside = 0, False
+    while at < len(comment):
+        if inside:
+            close = comment.find("*/", at)
+            if close < 0:
+                return True
+            inside, at = False, close + 2
+        elif comment.startswith("//", at):
+            return False
+        elif comment.startswith("/*", at):
+            inside, at = True, at + 2
+        else:
+            at += 1
+    return inside
+
+
+def script_lines(lines: list[str]) -> dict[int, Line]:
+    """Each line of a TypeScript or JavaScript file, a block comment followed across lines."""
+    out: dict[int, Line] = {}
+    inside = False
     for n, line in enumerate(lines, start=1):
-        code, comment = script_parts(line)
-        out[n] = [(code, "code"), (comment, "comment")]
+        held, rest = "", line
+        if inside:
+            close = line.find("*/")
+            if close < 0:
+                out[n] = Line("", "", "", line, alone=True)
+                continue
+            held, rest = line[: close + 2], line[close + 2 :]
+        code, comment, said = script_parts(rest)
+        inside = opens_block(comment)
+        words = f"{held} {said}".strip()
+        out[n] = Line(code, comment, said, words, alone=bool(words) and not code.strip(" \t{}"))
     return out
 
 
 def words_of(text: str) -> str:
     """The text as a reason when it holds enough words, else nothing."""
-    cleaned = text.strip().lstrip("#/* ").strip(" :,-")
+    cleaned = text.strip().lstrip("#/* ").strip(" :,-\u2014\u2013")
     return cleaned if len(WORD.findall(cleaned)) >= MIN_WORDS else ""
 
 
-def reason_after(comment: str, pattern: re.Pattern[str]) -> str:
-    """The reason written after the marker and its codes in the same comment."""
-    m = pattern.search(comment)
-    if not m:
+def prose(comment: str) -> str:
+    """A comment's text without its opening and closing marks."""
+    return CLOSER.sub("", comment.strip()).lstrip("#/*{! ").strip()
+
+
+def holds_directive(line: Line) -> bool:
+    return ENABLE.search(line.words) is not None or any(p.search(line.words) for _, p in MARKERS)
+
+
+def block_below(lines: dict[int, Line], n: int) -> list[str]:
+    """The comment lines standing alone under line ``n``, up to code or another directive."""
+    out: list[str] = []
+    at = n + 1
+    while (line := lines.get(at)) is not None and line.alone and not holds_directive(line):
+        out.append(prose(line.words))
+        at += 1
+    return out
+
+
+def block_above(lines: dict[int, Line], n: int) -> str:
+    """The comment of the line above ``n``, with the comment lines standing alone above it."""
+    above = lines.get(n - 1)
+    if above is None or not above.words:
         return ""
-    return words_of(CODES.sub("", comment[m.end():], count=1))
+    texts = [prose(above.words)]
+    at = n - 2
+    while above.alone and (line := lines.get(at)) is not None and line.alone and not holds_directive(line):
+        texts.insert(0, prose(line.words))
+        at -= 1
+    return " ".join(text for text in texts if text)
 
 
-def comment_of(parts: dict[int, list[tuple[str, str]]], n: int) -> str:
-    return next((text for text, kind in parts.get(n, []) if kind == "comment"), "")
-
-
-def reason_of(parts: dict[int, list[tuple[str, str]]], n: int, text: str, kind: str, pattern: re.Pattern[str]) -> str:
-    """The marker's reason: after it in its comment, in the line's comment, or on the line above."""
-    found = reason_after(text, pattern) if kind == "comment" else ""
-    if not found and kind == "code":
-        found = words_of(comment_of(parts, n))
-    if not found:
-        found = words_of(comment_of(parts, n - 1))
-    return found
+def reason_of(lines: dict[int, Line], n: int, text: str, kind: str, pattern: re.Pattern[str]) -> str:
+    """The marker's reason: after it in its comment and on through the comment lines standing alone
+    under it, in its line's comment, or in the comment above."""
+    line = lines[n]
+    found = ""
+    if kind == "comment" and (m := pattern.search(text)):
+        texts = [prose(CODES.sub("", line.said[m.end() :], count=1))]
+        if line.alone:
+            texts.extend(block_below(lines, n))
+        found = words_of(" ".join(texts))
+    elif kind == "code":
+        found = words_of(prose(line.words))
+    return found or words_of(block_above(lines, n))
 
 
 def sites_in(path: Path) -> list[Site]:
@@ -176,15 +263,16 @@ def sites_in(path: Path) -> list[Site]:
         lines = path.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeDecodeError):
         return []
+    python = path.suffix in {".py", ".pyi"}
+    read = python_lines(lines) if python else script_lines(lines)
     found: list[Site] = []
-    parts = searchable(path, lines)
-    for n, texts in sorted(parts.items()):
-        for text, kind in texts:
+    for n, line in sorted(read.items()):
+        for text, kind in ((line.code, "code"), (line.comment, "comment")):
             for name, pattern in MARKERS:
-                if (name in COMMENT_MARKERS) != (kind == "comment") and path.suffix not in {".py", ".pyi"}:
+                if (name in COMMENT_MARKERS) != (kind == "comment") and not python:
                     continue
                 if pattern.search(text):
-                    found.append(Site(path, n, name, reason_of(parts, n, text, kind, pattern)))
+                    found.append(Site(path, n, name, reason_of(read, n, text, kind, pattern)))
     return found
 
 

@@ -109,6 +109,51 @@ case("the project's own index path and skipped directories apply", code == 0 and
 code, out = run(root, "check")
 case("check reads the project's index path", code == 0 and "docs/escapes.md current" in out, out)
 
+NOQA_PRINT = "# " + "noqa: T201"
+ESLINT_BLOCK = "eslint-" +"disable shadcn/no-arbitrary-values"
+root = project({
+    "w.tsx": (
+        "<div\n"
+        f"  // {ESLINT_BLOCK} -- reserves\n"
+        "  // the footer's own two-line height\n"
+        '  className="min-h-[2.25rem]"\n'
+        "/>\n"
+    ),
+    "x.tsx": (
+        f"{{/* {ESLINT_BLOCK} -- a\n"
+        "    character-based measure for readable line length */}\n"
+        '<div className="max-w-[26ch]" />\n'
+    ),
+    "y.py": (
+        "# Both checkers flag the private seam,\n"
+        "# which has no public name.\n"
+        f"x = routing._seam  {NOQA}\n"
+    ),
+    "z.py": f"x = 1  {NOQA}\n# the next line's own comment\ny = 2\n",
+})
+code, out = run(root, "list")
+case("a reason that wraps onto the comment lines after its marker counts, read whole",
+     "w.tsx:2  eslint-disable  reserves the footer's own two-line height" in out
+     and "x.tsx:1  eslint-disable  a character-based measure for readable line length" in out, out)
+case("a reason over several comment lines above the marker counts", "y.py:3  noqa  Both checkers flag the private seam, which has no public name." in out, out)
+case("the comment after a marker beside code is the next line's, not its reason", "z.py:1  noqa  unjustified" in out, out)
+
+root = project({
+    "p.ts": f"/**\n * The request carries the same credentials {AS_ANY} GET.\n */\nconst p = 1\n",
+    "q.py": f"x = 1  {NOQA_PRINT} — the command line prints\n",
+})
+code, out = run(root, "list")
+case("a marker spelled in a block comment's prose is no site", "p.ts" not in out, out)
+case("a dash before the reason is not part of it", "q.py:1  noqa  the command line prints" in out, out)
+
+root = project({
+    "r.tsx": f'<b\n  // {ESLINT_BLOCK} -- Button is `variant="bare"`.\n  className="w-[3px]"\n/>\n',
+    "s.ts": f"// the hook warns on '{TS_IGNORE[3:]}' alone\nconst s = 1\n",
+})
+code, out = run(root, "list")
+case("a quoted word in a reason counts", 'r.tsx:2  eslint-disable  Button is `variant="bare"`.' in out, out)
+case("a directive quoted in a comment is no site", "s.ts" not in out, out)
+
 print(f"{len(failures)} failures")
 if failures:
     print("\n".join(failures))

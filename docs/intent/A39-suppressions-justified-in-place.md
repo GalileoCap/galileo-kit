@@ -25,3 +25,5 @@ The owner, reading `docs/what-reaches-the-model.md` on 2026-10-25, changed the r
 ## Consequences
 
 The kit's seven markers carry their reasons and `docs/decisions.md` is gone. A project that took the ledger moves each row's reason beside its marker and runs `index`. Undone if the reasons become the same phrase pasted at every site, which would mean the floor is too low.
+
+2026-11-19, session-kit 0.56.5, by the owner's order "Fix the kit's checker": a reason may run over several comment lines, and the check reads it whole. In tagents, 129 markers failed, and 75 of them did carry their reasons. Their reasons wrapped onto the comment lines under the marker or sat in a comment block above it, or the check had dropped their quoted words with the string literals. Three were prose inside block comments ("as any GET"). The 54 left have no reason or a short one.

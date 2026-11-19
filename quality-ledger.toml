@@ -1463,15 +1463,6 @@ why = "a setting that is no list reads as empty, the module's reading of the fil
 
 [[fallbacks]]
 site = "plugins/session-kit/suppressions/session_suppressions.py"
-where = "comment_of"
-form = "get"
-code = "parts.get(n, [])"
-class = "declared"
-disposition = "keep"
-why = "a line with no searchable parts has no comment"
-
-[[fallbacks]]
-site = "plugins/session-kit/suppressions/session_suppressions.py"
 where = "describe"
 form = "or"
 code = "site.reason or 'unjustified'"
